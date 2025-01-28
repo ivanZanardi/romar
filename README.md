@@ -11,7 +11,7 @@ ROMAr is a Python library designed to implement model reduction techniques for c
 - Physical model:
 
 ```bibtex
-@article{Argon_Kapper_2011,
+@article{Kapper_2011_Argon,
     author = {Kapper, M. G. and Cambier, J.-L.},
     title = {Ionizing shocks in argon. Part I: Collisional-radiative model and steady-state structure},
     journal = {Journal of Applied Physics},
@@ -28,7 +28,7 @@ ROMAr is a Python library designed to implement model reduction techniques for c
 - Model reduciton:
 
 ```bibtex
-@article{CoBRAS_Otto_2023,
+@article{Otto_2023_CoBRAS,
   author = {Otto, Samuel E. and Padovan, Alberto and Rowley, Clarence W.},
   title = {Model Reduction for Nonlinear Systems by Balanced Truncation of State and Gradient Covariance},
   journal = {SIAM Journal on Scientific Computing},
@@ -68,18 +68,6 @@ pip install romar
 
 ```bash
 conda activate romar
-```
-
-## Citation
-
-If you use this code or find this work useful in your research, please cite us:
-
-```bibtex
-@article{Zanardi_Ronek_2024,
-  author    = {Zanardi, Ivan and Padovan, Alberto and Bodony, Daniel Joseph and Panesi, Marco},
-  title     = {Petrov-Galerkin model reduction for thermochemical nonequilibrium gas mixtures},
-  year      = {2024}
-}
 ```
 
 ## Explore
