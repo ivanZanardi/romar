@@ -6,7 +6,7 @@
 
 ROMAr is a Python library designed to implement model reduction techniques for collisional-radiative Argon plasma, leveraging the CoBRAS method.
 
-### References:
+#### References:
 
 - Physical model:
 
