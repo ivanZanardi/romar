@@ -1,41 +1,73 @@
-# RONEK
+# ROMAr
 
-**Reduced Order modeling for Non-Equilibrium Kinetics**
+**Reduced order modeling for Argon plasma**
 
 ---
 
-RONEK is a Python library designed to perform model reduction for non-equilibrium kinetics, based on balanced truncation techniques. It currently supports mixtures consisting of two species: one atom and one molecule, with a single chemical component. For instance, it can manage mixtures like $\mathcal{S}=\left[\text{N},\text{N}2\right]$ or $\mathcal{S}=\left[\text{O},\text{O}2\right]$.
+ROMAr is a Python library designed to implement model reduction techniques for collisional-radiative Argon plasma, leveraging the CoBRAS method.
 
-It leverages PyTorch for GPU acceleration. This implementation excels in performance, making it well-suited for high-dimensional problems.
+### References:
+
+- Physical model:
+
+```bibtex
+@article{Argon_Kapper_2011,
+    author = {Kapper, M. G. and Cambier, J.-L.},
+    title = {Ionizing shocks in argon. Part I: Collisional-radiative model and steady-state structure},
+    journal = {Journal of Applied Physics},
+    volume = {109},
+    number = {11},
+    pages = {113308},
+    year = {2011},
+    month = {06},
+    issn = {0021-8979},
+    doi = {10.1063/1.3585688}
+}
+```
+
+- Model reduciton:
+
+```bibtex
+@article{CoBRAS_Otto_2023,
+  author = {Otto, Samuel E. and Padovan, Alberto and Rowley, Clarence W.},
+  title = {Model Reduction for Nonlinear Systems by Balanced Truncation of State and Gradient Covariance},
+  journal = {SIAM Journal on Scientific Computing},
+  volume = {45},
+  number = {5},
+  pages = {A2325-A2355},
+  year = {2023},
+  doi = {10.1137/22M1513228}
+}
+```
 
 ## Installation
 
-To install RONEK, follow these steps:
+To install ROMAr, follow these steps:
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/ivanZanardi/ronek.git
-cd ronek
+git clone https://github.com/ivanZanardi/romar.git
+cd romar
 ```
 
 2. Create a Conda environment:
 
 ```bash
 conda env create -f conda/env.yml
-conda activate ronek
+conda activate romar
 ```
 
 3. Install the package:
 
 ```bash
-pip install ronek
+pip install romar
 ```
 
-4. Activate the Conda environment whenever using RONEK:
+4. Activate the Conda environment whenever using ROMAr:
 
 ```bash
-conda activate ronek
+conda activate romar
 ```
 
 ## Citation
@@ -52,8 +84,8 @@ If you use this code or find this work useful in your research, please cite us:
 
 ## Explore
 
-Check out the [examples](https://github.com/ivanZanardi/ronek/tree/main/examples) provided in the repository to see RONEK in action.
+Check out the [examples](https://github.com/ivanZanardi/romar/tree/main/examples) provided in the repository to see ROMAr in action.
 
 ## License
 
-RONEK is distributed under the [Apache-2.0 license](https://github.com/ivanZanardi/ronek/blob/main/LICENSE). You are welcome to utilize, modify, and contribute to this project in accordance with the terms outlined in the license.
+ROMAr is distributed under the [Apache-2.0 license](https://github.com/ivanZanardi/romar/blob/main/LICENSE). You are welcome to utilize, modify, and contribute to this project in accordance with the terms outlined in the license.
