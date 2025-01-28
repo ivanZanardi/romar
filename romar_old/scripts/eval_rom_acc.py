@@ -18,14 +18,14 @@ args = parser.parse_args()
 with open(args.inpfile) as file:
   inputs = json.load(file)
 
-# Import 'ronek' package
+# Import 'romar' package
 # =====================================
-if (importlib.util.find_spec("ronek") is None):
+if (importlib.util.find_spec("romar") is None):
   sys.path.append(inputs["path_to_lib"])
 
 # Environment
 # =====================================
-from ronek import env
+from romar import env
 env.set(**inputs["env"])
 
 # Libraries
@@ -36,10 +36,10 @@ import matplotlib.pyplot as plt
 plt.style.use(inputs["plot"].get("style", None))
 
 from tqdm import tqdm
-from ronek import utils
-from ronek import postproc as pp
-from ronek import systems as sys_mod
-from ronek.roms import CoarseGrainingM0
+from romar import utils
+from romar import postproc as pp
+from romar import systems as sys_mod
+from romar.roms import CoarseGrainingM0
 from silx.io.dictdump import dicttoh5, h5todict
 
 _VALID_MODELS = ("cobras", "pod")

@@ -18,14 +18,14 @@ args = parser.parse_args()
 with open(args.inpfile) as file:
   inputs = json.load(file)
 
-# Import 'ronek' package
+# Import 'romar' package
 # =====================================
-if (importlib.util.find_spec("ronek") is None):
+if (importlib.util.find_spec("romar") is None):
   sys.path.append(inputs["path_to_lib"])
 
 # Environment
 # =====================================
-from ronek import env
+from romar import env
 env.set(**inputs["env"])
 
 # Libraries
@@ -33,10 +33,10 @@ env.set(**inputs["env"])
 import numpy as np
 
 from tqdm import tqdm
-from ronek import ops
-from ronek import utils
-from ronek.roms import LinCoBRAS
-from ronek import systems as sys_mod
+from romar import ops
+from romar import utils
+from romar.roms import LinCoBRAS
+from romar import systems as sys_mod
 
 # Main
 # =====================================

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-from ronek.systems.species import Species
+from romar.systems.species import Species
 
 
 class CoarseGrainingM0(object):

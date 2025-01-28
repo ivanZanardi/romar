@@ -3,7 +3,7 @@ requires = ["setuptools>=65", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ronek"
+name = "romar"
 version = "0.0.1"
 dynamic = ["dependencies"]
 description = "Reduced Order modeling for Non-Equilibrium Kinetics"
@@ -37,10 +37,10 @@ classifiers = [
 dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
-Homepage = "https://github.com/ivanZanardi/ronek"
-"Bug Tracker" = "https://github.com/ivanZanardi/ronek/issues"
-# Changelog = "https://github.com/ivanZanardi/ronek/releases"
-# Documentation = "https://ronek.readthedocs.io"
+Homepage = "https://github.com/ivanZanardi/romar"
+"Bug Tracker" = "https://github.com/ivanZanardi/romar/issues"
+# Changelog = "https://github.com/ivanZanardi/romar/releases"
+# Documentation = "https://romar.readthedocs.io"
 
 [tool.autopep8]
 max_line_length = 79

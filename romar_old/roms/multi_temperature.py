@@ -2,8 +2,8 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
-from ronek import const
-from ronek.systems.species import Species
+from romar import const
+from romar.systems.species import Species
 
 
 class MultiTemperature(object):

@@ -6,7 +6,7 @@ import scipy as sp
 
 from .. import utils
 from .. import backend as bkd
-from ronek.ops import svd_lowrank
+from romar.ops import svd_lowrank
 from silx.io.dictdump import dicttoh5
 from typing import Tuple, Optional
 

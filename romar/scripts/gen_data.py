@@ -17,14 +17,14 @@ args = parser.parse_args()
 with open(args.inpfile) as file:
   inputs = json.load(file)
 
-# Import 'ronek' package
+# Import 'romar' package
 # =====================================
-if (importlib.util.find_spec("ronek") is None):
+if (importlib.util.find_spec("romar") is None):
   sys.path.append(inputs["path_to_lib"])
 
 # Environment
 # =====================================
-from ronek import env
+from romar import env
 env.set(**inputs["env"])
 
 # Libraries
@@ -32,8 +32,8 @@ env.set(**inputs["env"])
 import numpy as np
 import pandas as pd
 
-from ronek import utils
-from ronek import systems as sys_mod
+from romar import utils
+from romar import systems as sys_mod
 
 # Main
 # =====================================
