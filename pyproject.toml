@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=65", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ronek"
+version = "0.0.1"
+dynamic = ["dependencies"]
+description = "Reduced Order modeling for Non-Equilibrium Kinetics"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Ivan Zanardi", email = "zanardi3@illinois.edu"}
+]
+requires-python = ">=3.8"
+keywords = [
+  "Python",
+  "PyTorch",
+  "ROM",
+  "Reduced Order Modeling",
+  "Non-Equilibrium",
+  "Kinetics"
+]
+classifiers = [
+  "Development Status :: 1 - Beta",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache-2.0 License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/ivanZanardi/ronek"
+"Bug Tracker" = "https://github.com/ivanZanardi/ronek/issues"
+# Changelog = "https://github.com/ivanZanardi/ronek/releases"
+# Documentation = "https://ronek.readthedocs.io"
+
+[tool.autopep8]
+max_line_length = 79
+ignore = ["E501", "W6"]
+in-place = true
+recursive = true
+aggressive = 3
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["docs*", "examples*"]
+
+# [project.optional-dependencies]
+# test = ["pytest"]
+
+# [tool.pytest.ini_options]
+# addopts = "-v"
+# testpaths = ["tests"]
