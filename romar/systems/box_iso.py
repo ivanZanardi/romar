@@ -50,7 +50,11 @@ class BoxIso(Basic):
 
   # Solving
   # ===================================
-  def _set_up(self, y0, rho):
+  def _set_up(
+    self,
+    y0: torch.Tensor,
+    rho: torch.Tensor
+  ) -> torch.Tensor:
     # Unpack the state vector
     w, T, pe = y0[:-2], y0[-2], y0[-1]
     # Set density
@@ -63,9 +67,3 @@ class BoxIso(Basic):
     # Set the function and Jacobian
     self.set_fun_jac()
     return w
-
-  def _encode(self, y):
-    return y @ self.P.T if self.use_proj else y @ self.psi
-
-  def _decode(self, z):
-    return z @ self.P.T if self.use_proj else z @ self.phi.T

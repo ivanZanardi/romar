@@ -76,25 +76,13 @@ class BoxAd(Basic):
 
   # Solving
   # ===================================
-  def _set_up(self, y0, rho):
+  def _set_up(
+    self,
+    y0: torch.Tensor,
+    rho: torch.Tensor
+  ) -> torch.Tensor:
     # Set density
     self.mix.set_rho(rho)
     # Set function and Jacobian
     self.set_fun_jac()
     return y0
-
-  def _encode(self, y):
-    # Split variables
-    w_0, w_i, e = y[...,:1], y[...,1:-3], y[...,-3:]
-    # Encode
-    z = w_i @ self.P.T if self.use_proj else w_i @ self.psi
-    # Concatenate
-    return torch.cat([w_0, z, e], dim=-1)
-
-  def _decode(self, y):
-    # Split variables
-    w_0, z, e = y[...,:1], y[...,1:-3], y[...,-3:]
-    # Decode
-    w = z @ self.P.T if self.use_proj else z @ self.phi.T
-    # Concatenate
-    return torch.cat([w_0, w, e], dim=-1)

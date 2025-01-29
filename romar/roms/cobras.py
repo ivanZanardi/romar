@@ -7,7 +7,7 @@ import dill as pickle
 
 from .. import ops
 from .. import backend as bkd
-from ..systems import BoxAd, BoxIso
+from ..systems import SYS_TYPES
 
 from tqdm import tqdm
 from typing import Dict, Tuple, Optional, Union
@@ -33,12 +33,12 @@ class CoBRAS(object):
   # ===================================
   def __init__(
     self,
-    system: Union[BoxAd, BoxIso],
+    system: SYS_TYPES,
     tgrid: Dict[str, float],
     mu_quad: Dict[str, np.ndarray],
     path_to_saving: str = "./",
     saving: bool = True
-  ):
+  )-> None:
     """
     Initialize the CoBRAS class with the specified system, quadrature points,
     time grid, and saving configurations.
@@ -71,7 +71,6 @@ class CoBRAS(object):
     self.saving = saving
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
-    self.sol_interp = None
 
   # Calling
   # ===================================
@@ -79,8 +78,10 @@ class CoBRAS(object):
     self,
     X: Optional[np.ndarray] = None,
     Y: Optional[np.ndarray] = None,
-    nb_meas: int = 10,
     xnot: Optional[list] = None,
+    nb_meas: int = 5,
+    noise: bool = False,
+    err_max: float = 25.0,
     modes: bool = True,
     pod: bool = False
   ) -> Union[None, Tuple[np.ndarray]]:
@@ -110,17 +111,19 @@ class CoBRAS(object):
              values.
     :rtype: Union[None, Tuple[np.ndarray, np.ndarray]]
     """
+    # Compute covariance matrices
     if ((X is None) or (Y is None)):
-      X, Y = self.compute_cov_mats(nb_meas)
-    if (xnot is not None):
-      mask = self.make_mask(xnot)
-      X, Y = X[mask], Y[mask]
+      X, Y = self.compute_cov_mats(nb_meas, noise, err_max)
+    # Perfom masking
+    mask = self.make_mask(xnot)
+    X, Y = X[mask], Y[mask]
+    # Compute modes
     if modes:
       self.compute_modes(X, Y, pod)
     else:
       return X, Y
 
-  def make_mask(self, xnot):
+  def make_mask(self, xnot: list) -> np.ndarray:
     """
     Generate a mask to exclude specific states from ROM computations.
 
@@ -130,19 +133,22 @@ class CoBRAS(object):
     :return: Boolean mask indicating included states.
     :rtype: np.ndarray
     """
-    xnot = np.array(xnot).astype(int).reshape(-1)
     mask = np.ones(self.system.nb_eqs)
-    mask[xnot] = 0
-    return mask.astype(bool)
+    if (xnot is not None):
+      xnot = np.array(xnot).astype(int).reshape(-1)
+      mask[xnot] = 0
+    mask = mask.astype(bool)
+    np.savetxt(self.path_to_saving+"/rom_mask.txt", mask, fmt='%d')
+    return mask
 
   # Covariance matrices
   # -----------------------------------
   def compute_cov_mats(
     self,
     nb_meas: int = 5,
-    err_max: float = 25.0,
-    noise: bool = False
-  ) -> Tuple[np.ndarray, np.ndarray]:
+    noise: bool = False,
+    err_max: float = 25.0
+  ) -> Tuple[np.ndarray]:
     """
     Compute state and gradient covariance matrices based on quadrature
     points and system dynamics.
@@ -189,12 +195,12 @@ class CoBRAS(object):
       # Solve the nonlinear forward problem to compute the state evolution
       y = self.system.solve_fom(t, y0, rho, linear=False)[0].T
       # Build an interpolator for the solution
-      self.build_sol_interp(t, y)
+      sol_interp = self.build_sol_interp(t, y)
       # Loop over each initial time for adjoint simulations
       for j in range(len(t)-1):
         # Generate a time grid for the j-th linear model
         tj = np.geomspace(t[j], t[-1], num=100)
-        yj = self.sol_interp(tj)
+        yj = sol_interp(tj)
         tj -= tj[0]
         # Determine the maximum valid time for linear model approximation
         tmax = self.system.compute_lin_tmax(tj, yj, rho, err_max)
@@ -241,9 +247,9 @@ class CoBRAS(object):
     self,
     t: np.ndarray,
     x: np.ndarray
-  ) -> None:
+  ) -> sp.interpolate.interp1d:
     axis = 0 if (x.shape[0] == len(t)) else 1
-    self.sol_interp = sp.interpolate.interp1d(t, x, kind="cubic", axis=axis)
+    return sp.interpolate.interp1d(t, x, kind="cubic", axis=axis)
 
   # Linear adjoint model
   # -----------------------------------
@@ -293,7 +299,7 @@ class CoBRAS(object):
     Y: np.ndarray,
     pod: bool = False,
     rank: int = 100,
-    niter: int = 30
+    niter: int = 50
   ) -> None:
     """
     Compute balancing (and POD) modes based on input covariance matrices.

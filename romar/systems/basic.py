@@ -87,7 +87,7 @@ class Basic(object):
 
   # Properties
   # ===================================
-  # Linear Model
+  # Linear model operators
   @property
   def A(self):
     return self._A
@@ -236,13 +236,25 @@ class Basic(object):
 
   # ROM Model
   # ===================================
-  def set_basis(self, phi, psi):
+  def set_rom(self, phi, psi, mask):
     # Biorthogonalize
     phi = phi @ sp.linalg.inv(psi.T @ phi)
     # Projector
     P = phi @ psi.T
+    # Mask
+    if isinstance(mask, str):
+      mask = np.loadtxt(mask)
     # Convert
-    self.phi, self.psi, self.P = [bkd.to_torch(z) for z in (phi, psi, P)]
+    self.phi, self.psi, self.P, self.mask = [
+      bkd.to_torch(z) for z in (phi, psi, P, mask)
+    ]
+    self.mask = self.mask.bool()
+    # Dimension
+    shape = list(self.phi.shape)
+    if self.use_proj:
+      self.rom_dim = shape[0]
+    else:
+      self.rom_dim = shape[1]
 
   # Output
   # ===================================
@@ -305,7 +317,7 @@ class Basic(object):
       t_eval=t,
       first_step=1e-14,
       rtol=1e-6,
-      atol=1e-15,
+      atol=1e-20,
       jac=self.jac_lin if linear else self.jac,
     ).y
     # Linear model
@@ -348,13 +360,26 @@ class Basic(object):
     y = self.decode(z.T).T
     return y, runtime
 
-  @abc.abstractmethod
   def _encode(self, y):
-    pass
+    # Split variables
+    yhat = y[..., self.mask]
+    ynot = y[...,~self.mask]
+    # Encode
+    z = yhat @ self.P.T if self.use_proj else yhat @ self.psi
+    # Concatenate
+    return torch.cat([z, ynot], dim=-1)
 
-  @abc.abstractmethod
-  def _decode(self, y):
-    pass
+  def _decode(self, z):
+    # Split variables
+    z, ynot = z[...,:self.rom_dim], z[...,self.rom_dim:]
+    # Decode
+    yhat = z @ self.P.T if self.use_proj else z @ self.phi.T
+    # Fill decoded tensor
+    shape = list(z.shape)[:-1]+[self.nb_eqs]
+    y = torch.zeros(shape)
+    y[..., self.mask] = yhat
+    y[...,~self.mask] = ynot
+    return y
 
   def get_tgrid(
     self,
