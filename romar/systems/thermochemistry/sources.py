@@ -3,6 +3,8 @@ import torch
 from ... import const
 from .mixture import Mixture
 from .kinetics import Kinetics
+from .radiation import Radiation
+from typing import Optional
 
 
 class Sources(object):
@@ -13,8 +15,8 @@ class Sources(object):
     self,
     mixture: Mixture,
     kinetics: Kinetics,
-    radiation=None
-  ):
+    radiation: Optional[Radiation] = None,
+  ) -> None:
     self.mix = mixture
     self.kin = kinetics
     self.rad = radiation
@@ -28,12 +30,14 @@ class Sources(object):
   def call_ad(self, n, T, Te):
     # Mixture
     self.mix.update(n, T, Te)
-    # Kinetics
-    # > Operators
+    # Operators
+    # > Kinetics
     kin_ops = self.compose_kin_ops(T, Te)
-    # > Production terms
-    omega_exc = self.omega_kin_exc(kin_ops)
-    omega_ion = self.omega_kin_ion(kin_ops)
+    # > Radiation
+    rad_ops = self.compose_rad_ops(T, Te) if self.rad.active else None
+    # Production terms
+    omega_exc = self.omega_exc(kin_ops, rad_ops)
+    omega_ion = self.omega_ion(kin_ops, rad_ops)
     # Partial densities [kg/(m^3 s)]
     # > Argon nd
     f_nn = omega_exc - torch.sum(omega_ion, dim=1)
@@ -49,7 +53,7 @@ class Sources(object):
     # > Total energy
     f_et = self.omega_energy()
     # > Electron energy
-    f_ee = self.omega_energy_el(T, Te, kin_ops)
+    f_ee = self.omega_energy_el(T, Te, kin_ops, rad_ops)
     # Return
     return f_rho, f_et, f_ee
 
@@ -60,13 +64,16 @@ class Sources(object):
     self.mix.update_species_thermo(T, Te)
     # Kinetics
     self.kin_ops = self.compose_kin_ops(T, Te, isothermal=True)
+    # Radiation
+    if self.rad.active:
+      self.rad_ops = self.compose_rad_ops(T, Te, isothermal=True)
 
   def call_iso(self, n):
     # Mixture
     self.mix.update_composition(n)
-    # Kinetics
-    omega_exc = self.omega_kin_exc(self.kin_ops)
-    omega_ion = self.omega_kin_ion(self.kin_ops)
+    # Kinetics/Radiation
+    omega_exc = self.omega_exc(self.kin_ops, self.rad_ops)
+    omega_ion = self.omega_ion(self.kin_ops, self.rad_ops)
     # Partial densities [kg/(m^3 s)]
     # > Argon nd
     f_nn = omega_exc - torch.sum(omega_ion, dim=1)
@@ -81,7 +88,7 @@ class Sources(object):
     # Return
     return f_rho
 
-  # Kinetics
+  # Kinetics/Radiation
   # ===================================
   def compose_kin_ops(self, T, Te, isothermal=False):
     """Compose kinetics operators"""
@@ -92,25 +99,43 @@ class Sources(object):
     # > Excitation processes
     for k in ("EXh", "EXe"):
       rates = self.kin.rates[k]
-      ops[k] = self._compose_kin_ops_exc(rates)
+      ops[k] = self._compose_ops_exc(rates)
       if (k == "EXe"):
-        ops[k+"_e"] = self._compose_kin_ops_exc(rates, apply_energy=True)
+        ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
     # > Ionization processes
     for k in ("Ih", "Ie"):
       rates = self.kin.rates[k]
-      ops[k] = self._compose_kin_ops_ion(rates)
+      ops[k] = self._compose_ops_ion(rates)
       if (k == "Ie"):
-        ops[k+"_e"] = self._compose_kin_ops_ion(rates, apply_energy=True)
+        ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
-  def _compose_kin_ops_exc(self, rates, apply_energy=False):
+  def compose_rad_ops(self, T, Te, isothermal=False):
+    """Compose radiation operators"""
+    # Rates
+    self.rad.update(T, Te, isothermal)
+    # Operators
+    ops = {}
+    # > Excitation processes
+    for k in ("BB",):
+      rates = self.rad.rates[k]
+      ops[k] = self._compose_ops_exc(rates)
+      ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
+    # > Ionization processes
+    for k in ("BF",):
+      rates = self.rad.rates[k]
+      ops[k] = self._compose_ops_ion(rates)
+      ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
+    return ops
+
+  def _compose_ops_exc(self, rates, apply_energy=False):
     k = rates["fwd"] + rates["bwd"]
     k = (k - torch.diag(torch.sum(k, dim=-1))).T
     if apply_energy:
       k = k * self.mix.de["Ar-Ar"]
     return k
 
-  def _compose_kin_ops_ion(self, rates, apply_energy=False):
+  def _compose_ops_ion(self, rates, apply_energy=False):
     k = {d: rates[d].T for d in ("fwd", "bwd")}
     if apply_energy:
       k["fwd"] = k["fwd"] * self.mix.de["Arp-Ar"].T
@@ -119,30 +144,45 @@ class Sources(object):
 
   # Masses
   # ===================================
-  def omega_kin_exc(self, kin_ops):
+  def omega_exc(self, kin_ops, rad_ops=None):
     nn, ne = [self.mix.species[k].n for k in ("Ar", "em")]
-    return (kin_ops["EXh"] * nn[0] + kin_ops["EXe"] * ne) @ nn
+    omega = kin_ops["EXh"] * nn[0] + kin_ops["EXe"] * ne
+    if (rad_ops is not None):
+      omega += rad_ops["BB"]
+    return omega @ nn
 
-  def omega_kin_ion(self, kin_ops):
+  def omega_ion(self, kin_ops, rad_ops=None):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
     omega = {}
     for k in ("fwd", "bwd"):
       omega[k] = kin_ops["Ih"][k] * nn[0] + kin_ops["Ie"][k] * ne
+      if (rad_ops is not None):
+        omega[k] += rad_ops["BF"][k]
       omega[k] *= nn if (k == "fwd") else (ni * ne)
     return omega["fwd"].T - omega["bwd"]
 
   # Energies
   # ===================================
-  def omega_energy(self):
-    return torch.zeros(1)
+  def omega_energy(self, rad_ops=None):
+    if (rad_ops is not None):
+      nn = self.mix.species["Ar"].n
+      return - torch.sum(rad_ops["BB_e"] @ nn)
+    else:
+      return torch.zeros(1)
 
-  def omega_energy_el(self, T, Te, kin_ops):
+  def omega_energy_el(self, T, Te, kin_ops, rad_ops=None):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
+    # Kinetics
     f = torch.sum(kin_ops["EXe_e"] @ nn) \
       - torch.sum(kin_ops["Ie_e"]["fwd"] * nn) \
       + torch.sum(kin_ops["Ie_e"]["bwd"] * ni * ne) \
       + 1.5 * const.UKB * (T-Te) * self._get_nu_eh()
     f = f * ne
+    # Radiation
+    if (rad_ops is not None):
+      f += torch.sum(rad_ops["BF_e"]["fwd"] * nn) \
+         - torch.sum(rad_ops["BF_e"]["bwd"] * ni * ne) \
+         - self.rad.rates["FF"] * torch.sum(ni) * ne
     return f.reshape(1)
 
   def _get_nu_eh(self):

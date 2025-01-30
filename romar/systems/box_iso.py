@@ -14,8 +14,8 @@ class BoxIso(Basic):
     rad_dtb=None,
     use_rad=False,
     use_proj=False,
-    use_factorial=False,
-    use_coll_int_fit=False,
+    use_factorial=True,
+    use_coll_int_fit=True
     fixed_ne=False
   ):
     super(BoxIso, self).__init__(

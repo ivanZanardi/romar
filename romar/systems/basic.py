@@ -10,6 +10,7 @@ from .. import backend as bkd
 from .thermochemistry import Sources
 from .thermochemistry import Mixture
 from .thermochemistry import Kinetics
+from .thermochemistry import Radiation
 from .thermochemistry import Equilibrium
 
 
@@ -24,8 +25,8 @@ class Basic(object):
     rad_dtb=None,
     use_rad=False,
     use_proj=False,
-    use_factorial=False,
-    use_coll_int_fit=False
+    use_factorial=True,
+    use_coll_int_fit=True
   ):
     # Thermochemistry
     # -------------
@@ -34,18 +35,20 @@ class Basic(object):
     self.mix = Mixture(
       species,
       species_order=self.species_order,
-      use_factorial=use_factorial
+      use_factorial=bool(use_factorial)
     )
     self.mix.build()
     # Kinetics
     self.kin = Kinetics(
       mixture=self.mix,
       reactions=kin_dtb,
-      use_fit=use_coll_int_fit
+      use_fit=bool(use_coll_int_fit)
     )
     # Radiation
-    self.use_rad = bool(use_rad)
-    self.rad = rad_dtb
+    self.rad = Radiation(
+      reactions=rad_dtb,
+      active=bool(use_rad)
+    )
     # Sources
     # -------------
     self.sources = Sources(
