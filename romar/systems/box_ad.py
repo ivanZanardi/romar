@@ -16,7 +16,7 @@ class BoxAd(Basic):
     use_rad=False,
     use_proj=False,
     use_factorial=True,
-    use_interp=True
+    use_tables=True
   ):
     super(BoxAd, self).__init__(
       species=species,
@@ -25,7 +25,7 @@ class BoxAd(Basic):
       use_rad=use_rad,
       use_proj=use_proj,
       use_factorial=use_factorial,
-      use_interp=use_interp
+      use_tables=use_tables
     )
 
   # Function/Jacobian

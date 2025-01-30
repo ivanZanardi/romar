@@ -69,12 +69,14 @@ class Sources(object):
     for k in ("EXh", "EXe"):
       rates = self.kin.rates[k]
       ops[k] = self._compose_ops_exc(rates)
-      ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
+      if (k == "EXe"):
+        ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
     # Ionization processes
     for k in ("Ih", "Ie"):
       rates = self.kin.rates[k]
       ops[k] = self._compose_ops_ion(rates)
-      ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
+      if (k == "Ie"):
+        ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
   def compose_rad_ops(self, T, Te, isothermal=False):
@@ -132,7 +134,7 @@ class Sources(object):
   def omega_exc(self, kin_ops, rad_ops):
     nn, ne = [self.mix.species[k].n for k in ("Ar", "em")]
     omega = kin_ops["EXh"] * nn[0] + kin_ops["EXe"] * ne
-    if self.kin.active:
+    if self.rad.active:
       omega += rad_ops["BB"]
     return omega @ nn
 
@@ -141,7 +143,7 @@ class Sources(object):
     omega = {}
     for k in ("fwd", "bwd"):
       omega[k] = kin_ops["Ih"][k] * nn[0] + kin_ops["Ie"][k] * ne
-      if self.kin.active:
+      if self.rad.active:
         omega[k] += rad_ops["BF"][k]
       omega[k] *= nn if (k == "fwd") else (ni * ne)
     return omega["fwd"].T - omega["bwd"]
@@ -171,13 +173,9 @@ class Sources(object):
   # Kinetics
   # -----------------------------------
   def omega_kin(self, omegas, T, Te, kin_ops):
-    if self.kin.active:
-      omegas["kin_ela"] = self._omega_kin_ela(T, Te)
-      omegas["kin_exc"] = self._omega_kin_exc(kin_ops)
-      omegas["kin_ion"] = self._omega_kin_ion(kin_ops)
-    else:
-      for k in ("kin_ela", "kin_exc", "kin_ion"):
-        omegas[k] = torch.zeros(1)
+    omegas["kin_ela"] = self._omega_kin_ela(T, Te)
+    omegas["kin_exc"] = self._omega_kin_exc(kin_ops)
+    omegas["kin_ion"] = self._omega_kin_ion(kin_ops)
     return omegas
 
   def _omega_kin_ela(self, T, Te):
