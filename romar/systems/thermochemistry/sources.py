@@ -16,7 +16,7 @@ class Sources(object):
     mixture: Mixture,
     kinetics: Kinetics,
     radiation: Optional[Radiation] = None
-  ) -None:
+  ) -> None:
     self.mix = mixture
     self.kin = kinetics
     self.rad = radiation
