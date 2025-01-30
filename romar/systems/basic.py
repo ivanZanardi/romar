@@ -60,8 +60,7 @@ class Basic(object):
     # Equilibrium
     # -------------
     self.equil = Equilibrium(
-      mixture=self.mix,
-      clipping=True
+      mixture=self.mix
     )
     # ROM
     # -------------
