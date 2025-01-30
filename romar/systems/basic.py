@@ -26,7 +26,7 @@ class Basic(object):
     use_rad=False,
     use_proj=False,
     use_factorial=True,
-    use_coll_int_fit=True
+    use_interp=False
   ):
     # Thermochemistry
     # -------------
@@ -41,13 +41,14 @@ class Basic(object):
     # Kinetics
     self.kin = Kinetics(
       mixture=self.mix,
-      reactions=kin_dtb,
-      use_fit=bool(use_coll_int_fit)
+      processes=kin_dtb,
+      use_interp=use_interp
     )
     # Radiation
     self.rad = Radiation(
-      reactions=rad_dtb,
-      active=bool(use_rad)
+      processes=rad_dtb,
+      use_interp=use_interp,
+      active=use_rad
     )
     # Sources
     # -------------

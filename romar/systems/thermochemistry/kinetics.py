@@ -17,39 +17,39 @@ class Kinetics(object):
   def __init__(
     self,
     mixture,
-    reactions,
-    use_fit=False,
+    processes,
+    use_tables=False,
     active=True
   ):
     # Set mixtures
     self.mix = mixture                  # Reference mixture
     self.mix_e = copy.deepcopy(mixture) # Te-based thermo mixture
-    # Collision integrals fit
-    self.use_fit = use_fit
-    # Collision integrals fit
+    # Collision integrals look-up tables
+    self.use_tables = use_tables
+    # Initialize processes rates
+    self._init_processes(processes)
+    # Kinetics enabled
     self.active = active
-    # Initialize reactions rates
-    self._init_reactions(reactions)
 
-  def _init_reactions(self, reactions):
-    # Load reactions
-    self.reactions = reactions
-    if (not isinstance(self.reactions, dict)):
-      self.reactions = pickle.load(open(self.reactions, "rb"))
-    # Convert reactions
-    self.reactions = utils.map_nested_dict(self.reactions, bkd.to_torch)
-    # Get reaction parameters
-    for (name, reaction) in self.reactions.items():
+  def _init_processes(self, processes):
+    # Load processes
+    self.processes = processes
+    if (not isinstance(self.processes, dict)):
+      self.processes = pickle.load(open(self.processes, "rb"))
+    # Convert processes
+    self.processes = utils.map_nested_dict(self.processes, bkd.to_torch)
+    # Get process parameters
+    for (name, process) in self.processes.items():
       if (name not in ("T", "EN", "EI")):
-        self.reactions[name]["param"] = chem_eq.get_param(reaction["equation"])
+        self.processes[name]["param"] = chem_eq.get_param(process["equation"])
+    # Electron-neutral collision rate (EN)
     self._init_en_rate()
 
   def _init_en_rate(self):
-    # Electron-neutral collision rate (EN)
-    if (("EN" in self.reactions) and (not self.use_fit)):
-      self.reactions["EN"]["interp"] = PolyHarmInterpolator(
-        c=self.reactions["T"].reshape(1,-1,1),
-        f=self.reactions["EN"]["values"].reshape(1,-1,1),
+    if (("EN" in self.processes) and self.use_tables):
+      self.processes["EN"]["interp"] = PolyHarmInterpolator(
+        c=self.processes["T"].reshape(1,-1,1),
+        f=self.processes["EN"]["values"].reshape(1,-1,1),
         order=1,
         smoothing=0.0,
         dtype=bkd.floatx(bkd="torch")
@@ -60,19 +60,19 @@ class Kinetics(object):
   def update(self, T, Te, isothermal=False):
     # Update electron temperature-based thermo
     self.mix_e.update_species_thermo(Te)
-    # Compute reaction rates
+    # Compute process rates
     # > Zeroth order moment
     self.rates = {}
-    if ("EXh" in self.reactions):
+    if ("EXh" in self.processes):
       self.rates["EXh"] = self._compute_EXh_rates(T)
-    if ("EXe" in self.reactions):
+    if ("EXe" in self.processes):
       self.rates["EXe"] = self._compute_EXe_rates(Te)
-    if ("Ih" in self.reactions):
+    if ("Ih" in self.processes):
       self.rates["Ih"] = self._compute_Ih_rates(T)
-    if ("Ie" in self.reactions):
+    if ("Ie" in self.processes):
       self.rates["Ie"] = self._compute_Ie_rates(Te)
     # > First order moment
-    if ((not isothermal) and ("EN" in self.reactions)):
+    if ((not isothermal) and ("EN" in self.processes)):
       ve = self._compute_ve(Te)
       self.rates["EN"] = self._compute_en_rate(Te, ve)
       self.rates["EI"] = self._compute_ei_rate(T, Te, ve)
@@ -89,7 +89,7 @@ class Kinetics(object):
     # Arrhenius law
     return A * torch.exp(beta*torch.log(T) - Ta/T)
 
-  def _compute_bwd_rates(self, reaction, mixture, kf):
+  def _compute_bwd_rates(self, process, mixture, kf):
     # Initialize backward rates
     kb = torch.clone(kf)
     # Set shapes
@@ -99,7 +99,7 @@ class Kinetics(object):
     # Loov over species
     i = 0
     for side in ("reactants", "products"):
-      for (stoich, name, level) in reaction["param"][side]:
+      for (stoich, name, level) in process["param"][side]:
         # Define i-th partition function
         qi = mixture.species[name].q
         if (level != "*"):
@@ -117,7 +117,7 @@ class Kinetics(object):
         # Update species counter
         i += 1
     # Transpose backward rates
-    shifts = -reaction["param"]["nb_reactants"]
+    shifts = -process["param"]["nb_reactants"]
     dims = np.arange(nb_species)
     dims = np.roll(dims, shift=shifts).tolist()
     return torch.permute(kb, dims=dims)
@@ -131,9 +131,9 @@ class Kinetics(object):
     - Forward rate:   kf = kf(T)
     - Backward rate:  kb = kb(T)
     """
-    reaction = self.reactions[identifier]
-    kf = self._compute_fwd_rates(T, **reaction["values"])
-    kb = self._compute_bwd_rates(reaction, self.mix, kf)
+    process = self.processes[identifier]
+    kf = self._compute_fwd_rates(T, **process["values"])
+    kb = self._compute_bwd_rates(process, self.mix, kf)
     return {"fwd": kf, "bwd": kb}
 
   def _compute_EXe_rates(self, Te, identifier="EXe"):
@@ -143,9 +143,9 @@ class Kinetics(object):
     - Forward rate:   kf = kf(Te)
     - Backward rate:  kb = kb(Te)
     """
-    reaction = self.reactions[identifier]
-    kf = self._compute_fwd_rates(Te, **reaction["values"])
-    kb = self._compute_bwd_rates(reaction, self.mix_e, kf)
+    process = self.processes[identifier]
+    kf = self._compute_fwd_rates(Te, **process["values"])
+    kb = self._compute_bwd_rates(process, self.mix_e, kf)
     return {"fwd": kf, "bwd": kb}
 
   def _compute_Ih_rates(self, T, identifier="Ih"):
@@ -155,9 +155,9 @@ class Kinetics(object):
     - Forward rate:   kf = kf(T)
     - Backward rate:  kb = kb(T,Te)
     """
-    reaction = self.reactions[identifier]
-    kf = self._compute_fwd_rates(T, **reaction["values"])
-    kb = self._compute_bwd_rates(reaction, self.mix, kf)
+    process = self.processes[identifier]
+    kf = self._compute_fwd_rates(T, **process["values"])
+    kb = self._compute_bwd_rates(process, self.mix, kf)
     return {"fwd": kf, "bwd": kb}
 
   def _compute_Ie_rates(self, Te, identifier="Ie"):
@@ -167,26 +167,26 @@ class Kinetics(object):
     - Forward rate:   kf = kf(Te)
     - Backward rate:  kb = kb(Te)
     """
-    reaction = self.reactions[identifier]
-    kf = self._compute_fwd_rates(Te, **reaction["values"])
-    kb = self._compute_bwd_rates(reaction, self.mix_e, kf)
+    process = self.processes[identifier]
+    kf = self._compute_fwd_rates(Te, **process["values"])
+    kb = self._compute_bwd_rates(process, self.mix_e, kf)
     return {"fwd": kf, "bwd": kb}
 
   # Collisional processes - First order moment
   # -----------------------------------
   def _compute_en_rate(self, Te, ve):
     """Electron-neutral collision rate (EN)"""
-    if self.use_fit:
+    if self.use_tables:
+      # Look-up table
+      # > See: Kapper's PhD thesis, The Ohio State University, 2009
+      return 2.0 * self.processes["EN"]["interp"](Te.reshape(1,1,1)).squeeze()
+    else:
       # Curve fit model
       # > See: https://doi.org/10.1007/978-1-4419-8172-1 - Eq. 11.3
       return 8.0/3.0 * ve * self._compute_en_Q11_capitelli(Te)
-    else:
-      # Look-up table
-      # > See: Kapper's PhD thesis, The Ohio State University, 2009
-      return 2.0 * self.reactions["EN"]["interp"](Te.reshape(1,1,1)).squeeze()
 
   def _compute_en_Q11_capitelli(self, Te):
-    c = self.reactions["EN"]["Q11_fit"]
+    c = self.processes["EN"]["Q11_fit"]
     lnT = torch.log(Te)
     fac = torch.exp((lnT - c[0])/c[1])
     Q11 = c[2]*lnT**c[5]*fac/(fac + 1.0/fac) \
@@ -201,12 +201,12 @@ class Kinetics(object):
     # Electron and ion number densities
     ne = self.mix.species["em"].n.reshape(1)
     ni = torch.sum(self.mix.species["Arp"].n).reshape(1)
-    if self.use_fit:
+    if self.use_tables:
+      # Look-up table
+      return 2.0 * ve * self._compute_ei_Q11_kapper(ne, Te)
+    else:
       # Curve fit model
       return 8.0/3.0 * ve * self._compute_ei_Q11_magin(ne, ni, T, Te)
-    else:
-      # Analytical table
-      return 2.0 * ve * self._compute_ei_Q11_kapper(ne, Te)
 
   def _compute_ei_Q11_magin(self, ne, ni, T, Te):
     """
@@ -228,7 +228,7 @@ class Kinetics(object):
     lnT4 = lnT3*lnT1
     efac = torch.pi*Ds*Ds/(Tse*Tse)
     # Collision integral for 'em-Arp' and 'em-em' interactions
-    c = self.reactions["EI"]["Q11_fit"]
+    c = self.processes["EI"]["Q11_fit"]
     Q11 = torch.exp(c[0]*lnT4 + c[1]*lnT3 + c[2]*lnT2 + c[3]*lnT1 + c[4])
     return efac * Q11
 

@@ -15,7 +15,7 @@ class BoxIso(Basic):
     use_rad=False,
     use_proj=False,
     use_factorial=True,
-    use_coll_int_fit=True,
+    use_interp=True,
     fixed_ne=False
   ):
     super(BoxIso, self).__init__(
@@ -25,7 +25,7 @@ class BoxIso(Basic):
       use_rad=use_rad,
       use_proj=use_proj,
       use_factorial=use_factorial,
-      use_coll_int_fit=use_coll_int_fit
+      use_interp=use_interp
     )
     self.fixed_ne = fixed_ne
     self.nb_eqs = self.nb_comp

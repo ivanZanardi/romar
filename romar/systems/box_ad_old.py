@@ -16,7 +16,7 @@ class BoxAd(Basic):
     use_rad=False,
     use_proj=False,
     use_factorial=True,
-    use_interp=True
+    use_coll_int_fit=True
   ):
     super(BoxAd, self).__init__(
       species=species,
@@ -25,7 +25,7 @@ class BoxAd(Basic):
       use_rad=use_rad,
       use_proj=use_proj,
       use_factorial=use_factorial,
-      use_interp=use_interp
+      use_coll_int_fit=use_coll_int_fit
     )
 
   # Function/Jacobian
@@ -37,11 +37,11 @@ class BoxAd(Basic):
     n, T, Te = self.get_prim(y)
     # Compute sources
     # > Conservative variables
-    f_rho, f_et, f_ee = self.sources.call_ad(n, T, Te)
+    f_rho, f_eh, f_ee = self.sources.call_ad(n, T, Te)
     # > Primitive variables
     f = torch.cat([
       self.mix.ov_rho * f_rho,
-      self.omega_T(f_rho, f_et, f_ee),
+      self.omega_T(f_rho, f_eh),
       self.omega_pe(f_ee)
     ])
     # ROM activated
@@ -62,9 +62,9 @@ class BoxAd(Basic):
   def clip_temp(self, T):
     return torch.clip(T, const.TMIN, const.TMAX)
 
-  def omega_T(self, f_rho, f_e, f_ee):
+  def omega_T(self, f_rho, f_eh):
     # Translational temperature
-    f_T = f_e - (f_ee + self.mix._e_h(f_rho))
+    f_T = f_eh - self.mix._e_h(f_rho)
     f_T = f_T / (self.mix.rho * self.mix.cv_h)
     return f_T.reshape(1)
 

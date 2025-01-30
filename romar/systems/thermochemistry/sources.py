@@ -15,8 +15,8 @@ class Sources(object):
     self,
     mixture: Mixture,
     kinetics: Kinetics,
-    radiation: Optional[Radiation] = None,
-  ) -> None:
+    radiation: Optional[Radiation] = None
+  ) -None:
     self.mix = mixture
     self.kin = kinetics
     self.rad = radiation
@@ -30,30 +30,13 @@ class Sources(object):
   def call_ad(self, n, T, Te):
     # Mixture
     self.mix.update(n, T, Te)
-    # Operators
-    # > Kinetics
+    # Kinetics/Radiation operators
     kin_ops = self.compose_kin_ops(T, Te)
-    # > Radiation
     rad_ops = self.compose_rad_ops(T, Te) if self.rad.active else None
-    # Production terms
-    omega_exc = self.omega_exc(kin_ops, rad_ops)
-    omega_ion = self.omega_ion(kin_ops, rad_ops)
     # Partial densities [kg/(m^3 s)]
-    # > Argon nd
-    f_nn = omega_exc - torch.sum(omega_ion, dim=1)
-    # > Argon ion nd
-    f_ni = torch.sum(omega_ion, dim=0)
-    # > Electron nd
-    f_ne = torch.sum(omega_ion).reshape(1)
-    # > Concatenate
-    f_n = torch.cat([f_nn, f_ni, f_ne])
-    # > Convert
-    f_rho = self.mix.get_rho(f_n)
+    f_rho = self.omega_mass(kin_ops, rad_ops)
     # Energies [J/(kg s)]
-    # > Total energy
-    f_et = self.omega_energy(rad_ops)
-    # > Electron energy
-    f_ee = self.omega_energy_el(T, Te, kin_ops, rad_ops)
+    f_et, f_ee = self.omega_energy(T, Te, kin_ops, rad_ops)
     # Return
     return f_rho, f_et, f_ee
 
@@ -71,22 +54,8 @@ class Sources(object):
   def call_iso(self, n):
     # Mixture
     self.mix.update_composition(n)
-    # Kinetics/Radiation
-    omega_exc = self.omega_exc(self.kin_ops, self.rad_ops)
-    omega_ion = self.omega_ion(self.kin_ops, self.rad_ops)
     # Partial densities [kg/(m^3 s)]
-    # > Argon nd
-    f_nn = omega_exc - torch.sum(omega_ion, dim=1)
-    # > Argon ion nd
-    f_ni = torch.sum(omega_ion, dim=0)
-    # > Electron nd
-    f_ne = torch.sum(omega_ion).reshape(1)
-    # > Concatenate
-    f_n = torch.cat([f_nn, f_ni, f_ne])
-    # > Convert
-    f_rho = self.mix.get_rho(f_n)
-    # Return
-    return f_rho
+    return self.omega_mass(self.kin_ops, self.rad_ops)
 
   # Kinetics/Radiation
   # ===================================
@@ -96,18 +65,16 @@ class Sources(object):
     self.kin.update(T, Te, isothermal)
     # Operators
     ops = {}
-    # > Excitation processes
+    # Excitation processes
     for k in ("EXh", "EXe"):
       rates = self.kin.rates[k]
       ops[k] = self._compose_ops_exc(rates)
-      if (k == "EXe"):
-        ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
-    # > Ionization processes
+      ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
+    # Ionization processes
     for k in ("Ih", "Ie"):
       rates = self.kin.rates[k]
       ops[k] = self._compose_ops_ion(rates)
-      if (k == "Ie"):
-        ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
+      ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
   def compose_rad_ops(self, T, Te, isothermal=False):
@@ -116,16 +83,19 @@ class Sources(object):
     self.rad.update(T, Te, isothermal)
     # Operators
     ops = {}
-    # > Excitation processes
+    # Excitation processes
     for k in ("BB",):
-      rates = self.rad.rates[k]
-      ops[k] = self._compose_ops_exc(rates)
-      ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
-    # > Ionization processes
-    for k in ("BF",):
-      rates = self.rad.rates[k]
-      ops[k] = self._compose_ops_ion(rates)
-      ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
+      if (k in self.rad.rates):
+        rates = self.rad.rates[k]
+        ops[k] = self._compose_ops_exc(rates)
+        ops[k+"_e"] = self._compose_ops_exc(rates, apply_energy=True)
+    # Ionization processes
+    for k in ("BF", "BFp"):
+      if (k in self.rad.rates):
+        rates = self.rad.rates[k]
+        ops[k] = self._compose_ops_ion(rates)
+        if (k == "BF"):
+          ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
   def _compose_ops_exc(self, rates, apply_energy=False):
@@ -144,50 +114,111 @@ class Sources(object):
 
   # Masses
   # ===================================
-  def omega_exc(self, kin_ops, rad_ops=None):
+  def omega_mass(self, kin_ops, rad_ops):
+    # Production terms
+    omega_exc = self.omega_exc(kin_ops, rad_ops)
+    omega_ion = self.omega_ion(kin_ops, rad_ops)
+    # Argon nd
+    f_nn = omega_exc - torch.sum(omega_ion, dim=1)
+    # Argon ion nd
+    f_ni = torch.sum(omega_ion, dim=0)
+    # Electron nd
+    f_ne = torch.sum(omega_ion).reshape(1)
+    # Concatenate
+    f_n = torch.cat([f_nn, f_ni, f_ne])
+    # Convert
+    return self.mix.get_rho(f_n)
+
+  def omega_exc(self, kin_ops, rad_ops):
     nn, ne = [self.mix.species[k].n for k in ("Ar", "em")]
     omega = kin_ops["EXh"] * nn[0] + kin_ops["EXe"] * ne
-    if (rad_ops is not None):
+    if self.kin.active:
       omega += rad_ops["BB"]
     return omega @ nn
 
-  def omega_ion(self, kin_ops, rad_ops=None):
+  def omega_ion(self, kin_ops, rad_ops):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
     omega = {}
     for k in ("fwd", "bwd"):
       omega[k] = kin_ops["Ih"][k] * nn[0] + kin_ops["Ie"][k] * ne
-      if (rad_ops is not None):
+      if self.kin.active:
         omega[k] += rad_ops["BF"][k]
       omega[k] *= nn if (k == "fwd") else (ni * ne)
     return omega["fwd"].T - omega["bwd"]
 
   # Energies
   # ===================================
-  def omega_energy(self, rad_ops=None):
-    if (rad_ops is not None):
-      nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
-      return torch.sum(rad_ops["BB_e"] @ nn)
+  def omega_energy(self, T, Te, kin_ops, rad_ops):
+    omegas = {}
+    omegas = self.omega_kin(omegas, T, Te, kin_ops)
+    omegas = self.omega_rad(omegas, rad_ops)
+    f_et = self.omega_energy_t(omegas)
+    f_ee = self.omega_energy_e(omegas)
+    return f_et, f_ee
+
+  def omega_energy_t(self, omegas):
+    f = torch.zeros(1)
+    for k in ("rad_bb", "rad_bf"):
+      f += omegas[k]
+    return f
+
+  def omega_energy_e(self, omegas):
+    f = torch.zeros(1)
+    for k in ("kin_exc", "kin_ion", "kin_ela", "rad_ff", "rad_bf"):
+      f += omegas[k]
+    return f
+
+  # Kinetics
+  # -----------------------------------
+  def omega_kin(self, omegas, T, Te, kin_ops):
+    if self.kin.active:
+      omegas["kin_ela"] = self._omega_kin_ela(T, Te)
+      omegas["kin_exc"] = self._omega_kin_exc(kin_ops)
+      omegas["kin_ion"] = self._omega_kin_ion(kin_ops)
     else:
-      return torch.zeros(1)
+      for k in ("kin_ela", "kin_exc", "kin_ion"):
+        omegas[k] = torch.zeros(1)
+    return omegas
 
-  def omega_energy_el(self, T, Te, kin_ops, rad_ops=None):
+  def _omega_kin_ela(self, T, Te):
+    """Elastic collisions"""
+    sn, si, se = [self.mix.species[k] for k in ("Ar", "Arp", "em")]
+    # Electron-heavy particle relaxation frequency [1/s]
+    nu = const.UME * self.kin.rates["EN"] * torch.sum(sn.n) / sn.m \
+       + const.UME * self.kin.rates["EI"] * torch.sum(si.n) / si.m
+    return 1.5 * const.UKB * (T-Te) * se.n * nu
+
+  def _omega_kin_exc(self, kin_ops):
+    nn, ne = [self.mix.species[k].n for k in ("Ar", "em")]
+    return torch.sum(kin_ops["EXe_e"] @ nn) * ne
+
+  def _omega_kin_ion(self, kin_ops):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
-    # Kinetics
-    f = torch.sum(kin_ops["EXe_e"] @ nn) \
-      - torch.sum(kin_ops["Ie_e"]["fwd"] * nn) \
-      + torch.sum(kin_ops["Ie_e"]["bwd"] * ni * ne) \
-      + 1.5 * const.UKB * (T-Te) * self._get_nu_eh()
-    f = f * ne
-    # Radiation
-    if (rad_ops is not None):
-      f += torch.sum(rad_ops["BF_e"]["fwd"] * nn) \
-         - torch.sum(rad_ops["BF_e"]["bwd"] * ni * ne) \
-         - self.rad.rates["FF"] * torch.sum(ni) * ne
-    return f.reshape(1)
+    return torch.sum(kin_ops["Ie_e"]["bwd"] * ni * ne) * ne \
+         - torch.sum(kin_ops["Ie_e"]["fwd"] * nn) * ne
 
-  def _get_nu_eh(self):
-    """Electron-heavy particle relaxation frequency [1/s]"""
-    sn, si = [self.mix.species[k] for k in ("Ar", "Arp")]
-    nu = self.kin.rates["EN"] * torch.sum(sn.n) / sn.m \
-       + self.kin.rates["EI"] * torch.sum(si.n) / si.m
-    return const.UME * nu
+  # Radiation
+  # -----------------------------------
+  def omega_rad(self, omegas, rad_ops):
+    if self.rad.active:
+      omegas["rad_bb"] = self._omega_rad_bb(rad_ops)
+      omegas["rad_bf"] = self._omega_rad_bf(rad_ops)
+      omegas["rad_ff"] = self._omega_rad_ff()
+    else:
+      for k in ("rad_bb", "rad_bf", "rad_ff"):
+        omegas[k] = torch.zeros(1)
+    return omegas
+
+  def _omega_rad_bb(self, rad_ops):
+    nn = self.mix.species["Ar"].n
+    return - torch.sum(rad_ops["BB_e"] @ nn)
+
+  def _omega_rad_bf(self, rad_ops):
+    nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
+    identifier = "BFp" if self.rad.use_tables else "BF_e"
+    return torch.sum(rad_ops[identifier]["fwd"] * nn) \
+         - torch.sum(rad_ops[identifier]["bwd"] * ni * ne)
+
+  def _omega_rad_ff(self):
+    ni, ne = [self.mix.species[k].n for k in ("Arp", "em")]
+    return - self.rad.rates["FF"] * torch.sum(ni) * ne
