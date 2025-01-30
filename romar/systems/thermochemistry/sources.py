@@ -169,7 +169,6 @@ class Sources(object):
       return torch.sum(rad_ops["BB_e"] @ nn)
     else:
       return torch.zeros(1)
-    # return torch.zeros(1)
 
   def omega_energy_el(self, T, Te, kin_ops, rad_ops=None):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
