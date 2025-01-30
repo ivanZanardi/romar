@@ -5,13 +5,19 @@ import numpy as np
 import scipy as sp
 from typing import Tuple
 
+import abc
+import time
+import numpy as np
+import scipy as sp
+import pandas as pd
+
+from pyDOE import lhs
+
+
 from .. import utils
 from .. import backend as bkd
-from .thermochemistry import Sources
-from .thermochemistry import Mixture
-from .thermochemistry import Kinetics
-from .thermochemistry import Radiation
-from .thermochemistry import Equilibrium
+from .thermochemistry import *
+from typing import Dict, List, Optional, Tuple
 
 
 class Basic(object):
@@ -394,3 +400,145 @@ class Basic(object):
     t = np.geomspace(start, stop, num=num-1)
     t = np.insert(t, 0, 0.0)
     return t
+
+  # Data generation and testing
+  # ===================================
+  def construct_design_mat_mu(
+    self,
+    limits: Dict[str, List[float]],
+    nb_samples: int,
+    log_vars: Tuple[str] = ("Te", "rho"),
+    vars: Tuple[str] = ("T", "Te", "rho"),
+    eps: float = 1e-8
+  ) -> Tuple[pd.DataFrame]:
+    # Sample remaining parameters
+    design_space = [np.sort(limits[k]) for k in vars]
+    design_space = np.array(design_space).T
+    # Log-scale
+    ilog = [i for (i, k) in enumerate(vars) if (k in log_vars)]
+    design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
+    # Construct
+    ddim = design_space.shape[1]
+    dmat = lhs(ddim, int(nb_samples))
+    # Rescale
+    amin, amax = design_space
+    mu = dmat * (amax - amin) + amin
+    mu[:,ilog] = np.exp(mu[:,ilog]) - eps
+    # Convert to dataframe
+    mu = pd.DataFrame(data=mu, columns=vars)
+    return mu
+
+  def compute_fom_sol(
+    self,
+    t: np.ndarray,
+    mu: np.ndarray,
+    noise: bool = False,
+    path: Optional[str] = None,
+    index: Optional[int] = None,
+    shift: int = 0,
+    filename: Optional[str] = None
+  ) -> np.ndarray:
+    mui = mu[index] if (index is not None) else mu
+    y0, rho = self.get_init_sol(mui, noise)
+    y, runtime = self.solve_fom(t, y0, rho)
+    if (y.shape[1] == len(t)):
+      # Converged
+      data = {"index": index, "mu": mui, "t": t, "y0": y0, "rho": rho, "y": y}
+      if (index is not None):
+        index += shift
+      utils.save_case(path=path, index=index, data=data, filename=filename)
+    else:
+      # Not converged
+      runtime = None
+    return runtime
+
+  def compute_sol_rom(
+    self,
+    path: Optional[str] = None,
+    index: Optional[int] = None,
+    filename: Optional[str] = None,
+    eval_err: bool = False,
+    eps: float = 1e-8
+  ) -> Tuple[np.ndarray]:
+    # Load test case
+    icase = utils.load_case(path=path, index=index, filename=filename)
+    t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
+    # Solve ROM
+    y_rom, runtime = self.solve_rom(t, y0, rho)
+    if (y_rom.shape[1] == len(t)):
+      # Converged
+      if eval_err:
+        return {
+          "dist": self.compute_err_dist(y_fom, y_rom, eps),
+          "temp": self.compute_err_temp(y_fom, y_rom, eps),
+          "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
+        }
+      else:
+        return t, y_fom, y_rom, rho, runtime
+
+  def compute_err_dist(
+    self,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    eps: float = 1e-8
+  ) -> Dict[str, np.ndarray]:
+    error = {}
+    for (name, s) in self.mix.species.items():
+      error[name] = utils.absolute_percentage_error(
+        y_true=y_true[s.indices],
+        y_pred=y_pred[s.indices],
+        eps=eps
+      )
+    return error
+
+  def compute_err_temp(
+    self,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    eps: float = 1e-8
+  ) -> Dict[str, np.ndarray]:
+    return utils.absolute_percentage_error(
+      y_true=y_true[-2:],
+      y_pred=y_pred[-2:],
+      eps=eps
+    )
+
+  def compute_err_mom(
+    self,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    rho: float,
+    eps: float = 1e-8
+  ) -> Dict[str, np.ndarray]:
+    self.mix.set_rho(rho)
+    n_true = self.mix.get_n(w=y_true[:-2])
+    n_pred = self.mix.get_n(w=y_pred[:-2])
+    error = {}
+    for (name, s) in self.mix.species.items():
+      error[name] = self._compute_err_mom(
+        species=s,
+        n_true=n_true[s.indices],
+        n_pred=n_pred[s.indices],
+        eps=eps
+      )
+    return error
+
+  def _compute_err_mom(
+    self,
+    species: Species,
+    n_true: np.ndarray,
+    n_pred: np.ndarray,
+    eps: float = 1e-7
+  ) -> np.ndarray:
+    error = []
+    for m in range(2):
+      m_true = species.compute_mom(n=n_true, m=m)
+      m_pred = species.compute_mom(n=n_pred, m=m)
+      if (m == 0):
+        m0_true = m_true
+        m0_pred = m_pred
+      else:
+        m_true /= m0_true
+        m_pred /= m0_pred
+      error.append(utils.absolute_percentage_error(m_true, m_pred, eps))
+    return np.vstack(error)

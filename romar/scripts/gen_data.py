@@ -41,19 +41,12 @@ if (__name__ == '__main__'):
 
   print("Initialization ...")
 
-  # Isothermal master equation model
+  # System
   # -----------------------------------
-  path_to_dtb = inputs["paths"]["dtb"]
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(
-    species={
-      k: path_to_dtb + f"/species/{k}.json" for k in ("atom", "molecule")
-    },
-    rates_coeff=path_to_dtb + "/kinetics.hdf5",
-    **inputs["system"]["kwargs"]
-  )
+  )(**inputs["system"]["kwargs"])
 
   # Data generation
   # -----------------------------------

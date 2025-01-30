@@ -14,9 +14,11 @@ __all__ = [
   "backend",
   "const",
   "env",
+  "ops",
   "postproc",
   "roms",
-  "systems"
+  "systems",
+  "utils"
 ]
 
 # Ignore all warnings
