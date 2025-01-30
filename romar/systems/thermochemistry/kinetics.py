@@ -18,8 +18,7 @@ class Kinetics(object):
     self,
     mixture,
     processes,
-    use_tables=False,
-    active=True
+    use_tables=False
   ):
     # Set mixtures
     self.mix = mixture                  # Reference mixture
@@ -28,8 +27,6 @@ class Kinetics(object):
     self.use_tables = use_tables
     # Initialize processes rates
     self._init_processes(processes)
-    # Kinetics enabled
-    self.active = active
 
   def _init_processes(self, processes):
     # Load processes

@@ -42,20 +42,15 @@ class Equilibrium(object):
   # ===================================
   def __init__(
     self,
-    mixture: Mixture,
-    clipping: bool = True
+    mixture: Mixture
   ) -> None:
     """
     Initializes the equilibrium solver for a given mixture.
 
     :param mixture: The `Mixture` object representing the chemical mixture.
     :type mixture: `Mixture`
-    :param clipping: Flag to control whether molar fractions are
-                     clipped to avoid too small values.
-    :type clipping: bool, optional, default is True
     """
     self.mix = mixture
-    self.clipping = clipping
     self.lsq_opts = dict(
       method="trf",
       ftol=bkd.epsilon(),
