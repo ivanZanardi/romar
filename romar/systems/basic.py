@@ -81,8 +81,9 @@ class Basic(object):
     self.nb_comp = self.mix.nb_comp
     self.nb_temp = 2
     self.nb_eqs = self.nb_temp + self.nb_comp
-    # Class methods
-    # -------------
+    self.set_methods()
+
+  def set_methods(self):
     self.encode = bkd.make_fun_np(self._encode)
     self.decode = bkd.make_fun_np(self._decode)
     self.set_up = bkd.make_fun_np(self._set_up)

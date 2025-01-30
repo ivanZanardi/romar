@@ -51,7 +51,7 @@ class Sources(object):
     f_rho = self.mix.get_rho(f_n)
     # Energies [J/(kg s)]
     # > Total energy
-    f_et = self.omega_energy()
+    f_et = self.omega_energy(rad_ops)
     # > Electron energy
     f_ee = self.omega_energy_el(T, Te, kin_ops, rad_ops)
     # Return
@@ -165,10 +165,11 @@ class Sources(object):
   # ===================================
   def omega_energy(self, rad_ops=None):
     if (rad_ops is not None):
-      nn = self.mix.species["Ar"].n
-      return - torch.sum(rad_ops["BB_e"] @ nn)
+      nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
+      return torch.sum(rad_ops["BB_e"] @ nn)
     else:
       return torch.zeros(1)
+    # return torch.zeros(1)
 
   def omega_energy_el(self, T, Te, kin_ops, rad_ops=None):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]

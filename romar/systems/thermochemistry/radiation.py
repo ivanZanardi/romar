@@ -62,7 +62,7 @@ class Radiation(object):
     reaction = self.reactions[identifier]
     k = reaction["values"]
     l = reaction["lambda"]
-    return {"fwd": (1.0-l)*k, "bwd": l*k}
+    return {"fwd": (1.0-l)*k, "bwd": (l*k).T}
 
   def _compute_BF_rates(self, Te, identifier="BF"):
     """
@@ -74,7 +74,7 @@ class Radiation(object):
     reaction = self.reactions[identifier]
     k = self._compute_fwd_rates(Te, **reaction["values"])
     l = reaction["lambda"]
-    return {"fwd": (1.0-l)*k, "bwd": l*k}
+    return {"fwd": (1.0-l)*k, "bwd": (l*k).T}
 
   # First order moment
   # -----------------------------------
@@ -82,4 +82,4 @@ class Radiation(object):
     """Bremsstrahlung emission (FF)"""
     return 1.42e-40 * torch.sqrt(Te) \
       * self.reactions["FF"]["Z_sq_eff"] \
-      * self.reactions["FF"]["g_hat"]
+      * self.reactions["FF"]["g_bar"]
