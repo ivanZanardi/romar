@@ -66,11 +66,11 @@ class Mixture(object):
 
   # Update
   # ===================================
-  def update(self, n, T, Te=None):
+  def update(self, n, Th, Te=None):
     # Update composition
     self.update_composition(n)
     # Update species thermo
-    self.update_species_thermo(T, Te)
+    self.update_species_thermo(Th, Te)
     # Update mixture thermo
     self.update_mixture_thermo()
 
@@ -103,11 +103,11 @@ class Mixture(object):
 
   # Thermodynamics
   # -----------------------------------
-  def update_species_thermo(self, T, Te=None):
+  def update_species_thermo(self, Th, Te=None):
     if (Te is None):
-      Te = T
+      Te = Th
     for s in self.species.values():
-      Ti = Te if (s.name == "em") else T
+      Ti = Te if (s.name == "em") else Th
       s.update(Ti)
 
   def update_mixture_thermo(self):

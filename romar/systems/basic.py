@@ -148,6 +148,10 @@ class Basic(object):
   def _fun(self, t, y):
     pass
 
+  @abc.abstractmethod
+  def _get_prim(self, y):
+    pass
+
   # Linear Model
   # ===================================
   def fun_lin(self, t, y):
@@ -475,11 +479,10 @@ class Basic(object):
       t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
       # Solve ROM
       y_rom, runtime = self.solve_rom(t, y0, rho)
-      # Extract primitive variables
-      prim_fom = self.get_prim(y_fom)
-      prim_rom = self.get_prim(y_rom)
       if (y_rom.shape[1] == len(t)):
         # Converged
+        prim_fom = self.get_prim(y_fom)
+        prim_rom = self.get_prim(y_rom)
         if eval_err:
           error = {
             "t": t,

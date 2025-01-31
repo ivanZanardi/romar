@@ -27,29 +27,29 @@ class Sources(object):
   # ===================================
   # Adiabatic case
   # -----------------------------------
-  def call_ad(self, n, T, Te):
+  def call_ad(self, n, Th, Te):
     # Mixture
-    self.mix.update(n, T, Te)
+    self.mix.update(n, Th, Te)
     # Kinetics/Radiation operators
-    kin_ops = self.compose_kin_ops(T, Te)
-    rad_ops = self.compose_rad_ops(T, Te) if self.rad.active else None
+    kin_ops = self.compose_kin_ops(Th, Te)
+    rad_ops = self.compose_rad_ops(Th, Te) if self.rad.active else None
     # Partial densities [kg/(m^3 s)]
     f_rho = self.omega_mass(kin_ops, rad_ops)
     # Energies [J/(kg s)]
-    f_et, f_ee = self.omega_energy(T, Te, kin_ops, rad_ops)
+    f_et, f_ee = self.omega_energy(Th, Te, kin_ops, rad_ops)
     # Return
     return f_rho, f_et, f_ee
 
   # Isothermal case
   # -----------------------------------
-  def init_iso(self, T, Te):
+  def init_iso(self, Th, Te):
     # Mixture
-    self.mix.update_species_thermo(T, Te)
+    self.mix.update_species_thermo(Th, Te)
     # Kinetics
-    self.kin_ops = self.compose_kin_ops(T, Te, isothermal=True)
+    self.kin_ops = self.compose_kin_ops(Th, Te, isothermal=True)
     # Radiation
     if self.rad.active:
-      self.rad_ops = self.compose_rad_ops(T, Te, isothermal=True)
+      self.rad_ops = self.compose_rad_ops(Th, Te, isothermal=True)
 
   def call_iso(self, n):
     # Mixture
@@ -59,10 +59,10 @@ class Sources(object):
 
   # Kinetics/Radiation
   # ===================================
-  def compose_kin_ops(self, T, Te, isothermal=False):
+  def compose_kin_ops(self, Th, Te, isothermal=False):
     """Compose kinetics operators"""
     # Rates
-    self.kin.update(T, Te, isothermal)
+    self.kin.update(Th, Te, isothermal)
     # Operators
     ops = {}
     # Excitation processes
@@ -79,10 +79,10 @@ class Sources(object):
         ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
-  def compose_rad_ops(self, T, Te, isothermal=False):
+  def compose_rad_ops(self, Th, Te, isothermal=False):
     """Compose radiation operators"""
     # Rates
-    self.rad.update(T, Te, isothermal)
+    self.rad.update(Th, Te, isothermal)
     # Operators
     ops = {}
     # Excitation processes
@@ -150,9 +150,9 @@ class Sources(object):
 
   # Energies
   # ===================================
-  def omega_energy(self, T, Te, kin_ops, rad_ops):
+  def omega_energy(self, Th, Te, kin_ops, rad_ops):
     omegas = {}
-    omegas = self.omega_kin(omegas, T, Te, kin_ops)
+    omegas = self.omega_kin(omegas, Th, Te, kin_ops)
     omegas = self.omega_rad(omegas, rad_ops)
     f_et = self.omega_energy_t(omegas)
     f_ee = self.omega_energy_e(omegas)
@@ -172,19 +172,19 @@ class Sources(object):
 
   # Kinetics
   # -----------------------------------
-  def omega_kin(self, omegas, T, Te, kin_ops):
-    omegas["kin_ela"] = self._omega_kin_ela(T, Te)
+  def omega_kin(self, omegas, Th, Te, kin_ops):
+    omegas["kin_ela"] = self._omega_kin_ela(Th, Te)
     omegas["kin_exc"] = self._omega_kin_exc(kin_ops)
     omegas["kin_ion"] = self._omega_kin_ion(kin_ops)
     return omegas
 
-  def _omega_kin_ela(self, T, Te):
+  def _omega_kin_ela(self, Th, Te):
     """Elastic collisions"""
     sn, si, se = [self.mix.species[k] for k in ("Ar", "Arp", "em")]
     # Electron-heavy particle relaxation frequency [1/s]
     nu = const.UME * self.kin.rates["EN"] * torch.sum(sn.n) / sn.m \
        + const.UME * self.kin.rates["EI"] * torch.sum(si.n) / si.m
-    return 1.5 * const.UKB * (T-Te) * se.n * nu
+    return 1.5 * const.UKB * (Th-Te) * se.n * nu
 
   def _omega_kin_exc(self, kin_ops):
     nn, ne = [self.mix.species[k].n for k in ("Ar", "em")]

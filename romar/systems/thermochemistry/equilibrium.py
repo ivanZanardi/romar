@@ -8,7 +8,7 @@ from .species import Species
 from ... import backend as bkd
 from typing import Dict, Tuple
 
-MU_VARS = ("rho", "T", "Te")
+MU_VARS = ("rho", "Th", "Te")
 
 
 class Equilibrium(object):
@@ -108,7 +108,7 @@ class Equilibrium(object):
     :rtype: np.ndarray
     """
     # Unpack the input array into individual parameters
-    rho, T, Te = mu
+    rho, Th, Te = mu
     # Compute the equilibrium state based on rho and Te
     y, _ = self.from_prim(rho, Te)
     # If noise requested, update the composition and recompute the state vector
@@ -119,11 +119,11 @@ class Equilibrium(object):
         sigma=sigma
       )
       y = self._compose_state_vector(
-        T=bkd.to_torch(Te).reshape(1),
+        Th=bkd.to_torch(Te).reshape(1),
         ze=self.mix.species["em"].x
       )
-    # Replace the equilibrium temperature Te with T for heat bath simulation
-    y[-2] = T
+    # Replace the equilibrium temperature Te with Th for heat bath simulation
+    y[-2] = Th
     return bkd.to_numpy(y), float(rho)
 
   # Primitive variables
@@ -289,7 +289,7 @@ class Equilibrium(object):
 
     :param rho: Density of the system.
     :type rho: torch.Tensor
-    :param T: Translational temperature of the system.
+    :param T: Temperature of the system.
     :type T: torch.Tensor
     :param xe: Electron molar fraction of the species.
     :type xe: torch.Tensor

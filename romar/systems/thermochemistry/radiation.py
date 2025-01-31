@@ -62,7 +62,7 @@ class Radiation(object):
 
   # Rates
   # ===================================
-  def update(self, T, Te, isothermal=False):
+  def update(self, Th, Te, isothermal=False):
     # Compute radiation rates
     # > Zeroth order moment
     if ("BF" in self.processes):

@@ -54,25 +54,25 @@ class Kinetics(object):
 
   # Rates
   # ===================================
-  def update(self, T, Te, isothermal=False):
+  def update(self, Th, Te, isothermal=False):
     # Update electron temperature-based thermo
     self.mix_e.update_species_thermo(Te)
     # Compute process rates
     # > Zeroth order moment
     self.rates = {}
     if ("EXh" in self.processes):
-      self.rates["EXh"] = self._compute_EXh_rates(T)
+      self.rates["EXh"] = self._compute_EXh_rates(Th)
     if ("EXe" in self.processes):
       self.rates["EXe"] = self._compute_EXe_rates(Te)
     if ("Ih" in self.processes):
-      self.rates["Ih"] = self._compute_Ih_rates(T)
+      self.rates["Ih"] = self._compute_Ih_rates(Th)
     if ("Ie" in self.processes):
       self.rates["Ie"] = self._compute_Ie_rates(Te)
     # > First order moment
     if ((not isothermal) and ("EN" in self.processes)):
       ve = self._compute_ve(Te)
       self.rates["EN"] = self._compute_en_rate(Te, ve)
-      self.rates["EI"] = self._compute_ei_rate(T, Te, ve)
+      self.rates["EI"] = self._compute_ei_rate(Th, Te, ve)
     # Squeeze tensors
     self.rates = utils.map_nested_dict(self.rates, torch.squeeze)
 
@@ -121,15 +121,15 @@ class Kinetics(object):
 
   # Collisional processes - Zeroth order moment
   # -----------------------------------
-  def _compute_EXh_rates(self, T, identifier="EXh"):
+  def _compute_EXh_rates(self, Th, identifier="EXh"):
     """
     Excitation by heavy-particle impact (EXh)
     - Equation:       Ar(*)+Ar(0)=Ar(*)+Ar(0)
-    - Forward rate:   kf = kf(T)
-    - Backward rate:  kb = kb(T)
+    - Forward rate:   kf = kf(Th)
+    - Backward rate:  kb = kb(Th)
     """
     process = self.processes[identifier]
-    kf = self._compute_fwd_rates(T, **process["values"])
+    kf = self._compute_fwd_rates(Th, **process["values"])
     kb = self._compute_bwd_rates(process, self.mix, kf)
     return {"fwd": kf, "bwd": kb}
 
@@ -145,15 +145,15 @@ class Kinetics(object):
     kb = self._compute_bwd_rates(process, self.mix_e, kf)
     return {"fwd": kf, "bwd": kb}
 
-  def _compute_Ih_rates(self, T, identifier="Ih"):
+  def _compute_Ih_rates(self, Th, identifier="Ih"):
     """
     Ionization by heavy-particle impact (Ih)
     - Equation:       Ar(*)+Ar(0)=Arp(*)+em+Ar(0)
-    - Forward rate:   kf = kf(T)
-    - Backward rate:  kb = kb(T,Te)
+    - Forward rate:   kf = kf(Th)
+    - Backward rate:  kb = kb(Th,Te)
     """
     process = self.processes[identifier]
-    kf = self._compute_fwd_rates(T, **process["values"])
+    kf = self._compute_fwd_rates(Th, **process["values"])
     kb = self._compute_bwd_rates(process, self.mix, kf)
     return {"fwd": kf, "bwd": kb}
 
@@ -193,7 +193,7 @@ class Kinetics(object):
     # Conversion: A^2 -> m^2
     return 1e-20 * Q11
 
-  def _compute_ei_rate(self, T, Te, ve):
+  def _compute_ei_rate(self, Th, Te, ve):
     """Electron-ion collision rate (EI)"""
     # Electron and ion number densities
     ne = self.mix.species["em"].n.reshape(1)
@@ -203,18 +203,18 @@ class Kinetics(object):
       return 2.0 * ve * self._compute_ei_Q11_kapper(ne, Te)
     else:
       # Curve fit model
-      return 8.0/3.0 * ve * self._compute_ei_Q11_magin(ne, ni, T, Te)
+      return 8.0/3.0 * ve * self._compute_ei_Q11_magin(ne, ni, Th, Te)
 
-  def _compute_ei_Q11_magin(self, ne, ni, T, Te):
+  def _compute_ei_Q11_magin(self, ne, ni, Th, Te):
     """
     See: Magin's PhD thesis, ULB, 2004
     """
     # Average closest impact parameters for 'em-Arp' and 'em-em' interactions
     f0 = const.UE*const.UE/(8.0*torch.pi*const.UEPS0*const.UKB)
-    bh = f0/T
+    bh = f0/Th
     be = f0/Te
     # Debye shielding distance (em and Arp contributions)
-    Ds = self._compute_Ds(ne, ni, T, Te)
+    Ds = self._compute_Ds(ne, ni, Th, Te)
     Ds = torch.minimum(Ds,10000.0*(be + bh))
     # Non-dimensional temperature for charge-charge interactions
     Tse = torch.maximum(Ds/(2.0*be), torch.tensor(0.1))
@@ -241,7 +241,7 @@ class Kinetics(object):
     # Compute momentum-averaged cross section
     return 5.85e-10*torch.log(lam)/T2
 
-  def _compute_Ds(self, ne, ni, T, Te):
+  def _compute_Ds(self, ne, ni, Th, Te):
     """Debye shielding distance"""
     f = (const.UEPS0*const.UKB)/(const.UE*const.UE)
-    return torch.sqrt(f/(ne/Te + ni/T))
+    return torch.sqrt(f/(ne/Te + ni/Th))
