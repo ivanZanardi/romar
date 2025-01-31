@@ -147,6 +147,10 @@ class Basic(object):
   def _fun(self, t, y):
     pass
 
+  @abc.abstractmethod
+  def get_prim(self, y):
+    pass
+
   # Linear Model
   # ===================================
   def fun_lin(self, t, y):
@@ -474,14 +478,17 @@ class Basic(object):
       t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
       # Solve ROM
       y_rom, runtime = self.solve_rom(t, y0, rho)
+      # Extract primitive variables
+      prim_fom = self.get_prim(y_fom)
+      prim_rom = self.get_prim(y_rom)
       if (y_rom.shape[1] == len(t)):
         # Converged
         if eval_err:
           error = {
             "t": t,
-            "dist": self.compute_err_dist(y_fom, y_rom, eps),
-            "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
-            "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
+            "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
+            "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
+            "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
           }
           return error, runtime
         else:
@@ -497,6 +504,26 @@ class Basic(object):
     except:
       return None, None
 
+  def postproc_sol(self, y):
+
+
+    # Extract T
+    Th_true = y_true[-2]
+    Th_pred = y_pred[-2]
+    # Compute Te
+    self.mix.set_rho(rho)
+    n_true = self.mix.get_n(w=y_true[:-2])
+    n_pred = self.mix.get_n(w=y_pred[:-2])
+    Te_true = self.mix.get_Te(pe=y_true[-1], ne=n_true[-1])
+    Te_pred = self.mix.get_Te(pe=y_pred[-1], ne=n_pred[-1])
+    # Compute error
+    return {
+      "Th": utils.absolute_percentage_error(Th_true, Th_pred, eps=eps),
+      "Te": utils.absolute_percentage_error(Te_true, Te_pred, eps=eps)
+    }
+
+  # Error computation
+  # -----------------------------------
   def compute_err(
     self,
     path: str,
@@ -558,48 +585,33 @@ class Basic(object):
 
   def compute_err_dist(
     self,
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
+    n_true: np.ndarray,
+    n_pred: np.ndarray,
     eps: float = 1e-8
   ) -> np.ndarray:
     return utils.absolute_percentage_error(
-      y_true=y_true[:-2],
-      y_pred=y_pred[:-2],
+      y_true=self.mix.get_w(n_true),
+      y_pred=self.mix.get_w(n_pred),
       eps=eps
     )
 
   def compute_err_temp(
     self,
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    rho: float,
+    Ti_true: np.ndarray,
+    Ti_pred: np.ndarray,
     eps: float = 1e-8
   ) -> Dict[str, np.ndarray]:
-    # Extract T
-    Th_true = y_true[-2]
-    Th_pred = y_pred[-2]
-    # Compute Te
-    self.mix.set_rho(rho)
-    n_true = self.mix.get_n(w=y_true[:-2])
-    n_pred = self.mix.get_n(w=y_pred[:-2])
-    Te_true = self.mix.get_Te(pe=y_true[-1], ne=n_true[-1])
-    Te_pred = self.mix.get_Te(pe=y_pred[-1], ne=n_pred[-1])
-    # Compute error
     return {
-      "Th": utils.absolute_percentage_error(Th_true, Th_pred, eps=eps),
-      "Te": utils.absolute_percentage_error(Te_true, Te_pred, eps=eps)
+      "Th": utils.absolute_percentage_error(Ti_true[0], Ti_pred[0], eps),
+      "Te": utils.absolute_percentage_error(Ti_true[1], Ti_pred[1], eps)
     }
 
   def compute_err_mom(
     self,
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    rho: float,
+    n_true: np.ndarray,
+    n_pred: np.ndarray,
     eps: float = 1e-8
   ) -> Dict[str, Dict[str, np.ndarray]]:
-    self.mix.set_rho(rho)
-    n_true = self.mix.get_n(w=y_true[:-2])
-    n_pred = self.mix.get_n(w=y_pred[:-2])
     error = {}
     for (name, s) in self.mix.species.items():
       error[name] = self._compute_err_mom(

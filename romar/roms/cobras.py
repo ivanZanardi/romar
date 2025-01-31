@@ -344,7 +344,7 @@ class CoBRAS(object):
         niter=niter
       )
       s, phi = [bkd.to_numpy(z) for z in (s, U)]
-      data = {"s": s, "phi": phi}
+      data = {"s": s, "phi": phi, "psi": phi}
       filename = self.path_to_saving+"/pod_bases.p"
       pickle.dump(data, open(filename, "wb"))
 

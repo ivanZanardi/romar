@@ -30,8 +30,10 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
+import numpy as np
+import dill as pickle
 import matplotlib.pyplot as plt
-plt.style.use(inputs["plot"].get("style", None))
+plt.style.use(inputs.get("mpl_style", "default"))
 
 from romar import roms
 from romar import utils
@@ -39,27 +41,20 @@ from romar import postproc as pp
 from romar import systems as sys_mod
 from silx.io.dictdump import h5todict
 
-_VALID_MODELS = ("cobras", "pod", "cg", "mt")
+_VALID_MODELS = ("cobras", "pod")
 
 # Main
 # =====================================
-if (__name__ == '__main__'):
+if (__name__ == "__main__"):
 
   print("Initialization ...")
 
-  # Isothermal master equation model
+  # System
   # -----------------------------------
-  path_to_dtb = inputs["paths"]["dtb"]
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(
-    species={
-      k: path_to_dtb + f"/species/{k}.json" for k in ("atom", "molecule")
-    },
-    rates_coeff=path_to_dtb + "/kinetics.hdf5",
-    **inputs["system"]["kwargs"]
-  )
+  )(**inputs["system"]["init"])
 
   # Testing
   # -----------------------------------
@@ -68,22 +63,17 @@ if (__name__ == '__main__'):
   # Path to saving
   path_to_saving = inputs["paths"]["saving"] + "/visual/"
   os.makedirs(path_to_saving, exist_ok=True)
-
   # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
       model = copy.deepcopy(model)
-      if (name in ("cobras", "pod")):
-        model["bases"] = h5todict(model["bases"])
-      elif (name == "cg"):
-        model["class"] = roms.CoarseGrainingM1(
-          molecule=path_to_dtb+"/species/molecule.json"
-        )
-      elif (name == "mt"):
-        model["class"] = roms.MultiTemperature(
-          molecule=path_to_dtb+"/species/molecule.json"
-        )
+      if (name in _VALID_MODELS):
+        model["bases"] = pickle.load(open(model["bases"], "rb"))
+        if ("mask" not in model):
+          raise ValueError(
+            f"Please, provide the path to ROM mask for '{name}' model."
+          )
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
@@ -98,8 +88,6 @@ if (__name__ == '__main__'):
     filename = inputs["data"]["path"]+f"/case_{icase}.p"
     data = utils.load_case(filename=filename)
     T, t, n0, n_fom = [data[k] for k in ("T", "t", "n0", "n")]
-    # > Update FOM operators
-    system.update_fom_ops(T)
     # > Loop over ROM dimensions
     for r in range(*inputs["rom_range"]):
       # > Solutions container
@@ -109,34 +97,12 @@ if (__name__ == '__main__'):
       os.makedirs(path_to_saving_i, exist_ok=True)
       # > Loop over ROM models
       for (name, model) in models.items():
-        if (name in ("cobras", "pod")):
-          pdata = (model["name"], r)
-          print("> Solving ROM '%s' with %i dimensions ..." % pdata)
-          system.update_rom_ops(
-            phi=model["bases"]["phi"][:,:r],
-            psi=model["bases"]["psi"][:,:r]
-          )
-          sols[model["name"]] = system.solve_rom(t, n0)[1]
-        # elif ((name == "cg") and (2*int(model["nb_bins"]) == r)):
-        elif (name == "cg"):
-          if (model["cases"].get(icase, None) is not None):
-            pdata = (model["name"], int(model["nb_bins"]))
-            print("> Reading ROM '%s' solution with %i bins ..." % pdata)
-            sols[model["name"]] = model["class"](
-              T=T,
-              filename=model["cases"][icase],
-              teval=t,
-              mapping=model["mapping"],
-              nb_bins=int(model["nb_bins"])
-            )
-        elif (name == "mt"):
-          if (model["cases"].get(icase, None) is not None):
-            pdata = (model["name"], 2)
-            print("> Reading ROM '%s' solution with %i dimensions ..." % pdata)
-            sols[model["name"]] = model["class"](
-              filename=model["cases"][icase],
-              teval=t
-            )
+        print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
+        system.update_rom_ops(
+          phi=model["bases"]["phi"][:,:r],
+          psi=model["bases"]["psi"][:,:r]
+        )
+        sols[model["name"]] = system.solve_rom(t, n0)[1]
       # > Postprocessing
       print(f"> Postprocessing with {r} dimensions ...")
       common_kwargs = dict(
