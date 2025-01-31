@@ -568,21 +568,6 @@ class Basic(object):
       eps=eps
     )
 
-  # def compute_err_dist(
-  #   self,
-  #   y_true: np.ndarray,
-  #   y_pred: np.ndarray,
-  #   eps: float = 1e-8
-  # ) -> Dict[str, np.ndarray]:
-  #   error = {}
-  #   for (name, s) in self.mix.species.items():
-  #     error[name] = utils.absolute_percentage_error(
-  #       y_true=y_true[s.indices],
-  #       y_pred=y_pred[s.indices],
-  #       eps=eps
-  #     )
-  #   return error
-
   def compute_err_temp(
     self,
     y_true: np.ndarray,
