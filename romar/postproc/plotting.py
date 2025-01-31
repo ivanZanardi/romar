@@ -279,15 +279,15 @@ def plot_err_evolution(
   for s in species:
     for m in range(max_mom):
       if (m == 0):
-        label = fr"$n_{labels[s.name]}$ error [\%]"
+        label = fr"$n_{labels[s]}$ error [\%]"
       else:
         if (m == 1):
-          label = fr"$e_{labels[s.name]}$ error [\%]"
+          label = fr"$e_{labels[s]}$ error [\%]"
         else:
           label = fr"$\gamma_{m}$ error [\%]"
       plot_evolution(
         x=t,
-        y={f"$r={r}$": error[r]["mom"][s.name][f"m{m}"]["mean"] for r in rlist},
+        y={f"$r={r}$": error[r]["mom"][s][f"m{m}"]["mean"] for r in rlist},
         xlim=tlim,
         # ylim=ylim_err["temp"] if (ylim_err is not None) else None,
         ls="-",
@@ -296,7 +296,7 @@ def plot_err_evolution(
         legend_loc="best",
         labels=[r"$t$ [s]", label],
         scales=["log", err_scale],
-        figname=path + f"/err_mom_{s.name}_m{m}",
+        figname=path + f"/err_mom_{s}_m{m}",
         save=True,
         show=False
       )
@@ -316,64 +316,6 @@ def plot_err_evolution(
     save=True,
     show=False
   )
-
-# def plot_err_evolution(
-#   path,
-#   err,
-#   eval_err,
-#   molecule_label,
-#   tlim=None,
-#   ylim_err=None,
-#   subscript="i",
-#   err_scale="linear",
-#   hline=None,
-#   max_mom=2
-# ):
-#   os.makedirs(path, exist_ok=True)
-#   rlist = sorted(list(err.keys()), key=int)
-#   for r in err.keys():
-#     t = err[r]["t"]
-#     break
-#   if (eval_err == "mom"):
-#     for m in range(max_mom):
-#       if (m == 0):
-#         label = fr"$n_{molecule_label}$ error [\%]"
-#       else:
-#         if (m == 1):
-#           label = fr"$e_{molecule_label}$ error [\%]"
-#         else:
-#           label = fr"$\gamma_{m}$ error [\%]"
-#       plot_evolution(
-#         x=t,
-#         y={f"$r={r}$": err[r]["mean"][m] for r in rlist},
-#         xlim=tlim,
-#         ylim=ylim_err,
-#         ls="-",
-#         hline=hline,
-#         # legend_loc="lower left",
-#         legend_loc="best",
-#         labels=[r"$t$ [s]", label],
-#         scales=["log", err_scale],
-#         figname=path + f"/mean_m{m}_err",
-#         save=True,
-#         show=False
-#       )
-#   else:
-#     plot_evolution(
-#       x=t,
-#       y={f"$r={r}$": err[r]["mean"] for r in rlist},
-#       xlim=tlim,
-#       ylim=ylim_err,
-#       ls="-",
-#       hline=hline,
-#       # legend_loc="lower left",
-#       legend_loc="best",
-#       labels=[r"$t$ [s]", fr"$w_{subscript}$ error [\%]"],
-#       scales=["log", err_scale],
-#       figname=path + "/mean_dist_err",
-#       save=True,
-#       show=False
-#     )
 
 # 2D distribution
 def as_si(x, ndp=0):

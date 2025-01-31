@@ -468,30 +468,33 @@ class Basic(object):
     eval_err: bool = False,
     eps: float = 1e-8
   ) -> Tuple[Optional[np.ndarray]]:
-    # Load test case
-    icase = utils.load_case(path=path, index=index, filename=filename)
-    t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
-    # Solve ROM
-    y_rom, runtime = self.solve_rom(t, y0, rho)
-    if (y_rom.shape[1] == len(t)):
-      # Converged
-      if eval_err:
-        error = {
-          "t": t,
-          "dist": self.compute_err_dist(y_fom, y_rom, eps),
-          "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
-          "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
-        }
-        return error, runtime
+    try:
+      # Load test case
+      icase = utils.load_case(path=path, index=index, filename=filename)
+      t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
+      # Solve ROM
+      y_rom, runtime = self.solve_rom(t, y0, rho)
+      if (y_rom.shape[1] == len(t)):
+        # Converged
+        if eval_err:
+          error = {
+            "t": t,
+            "dist": self.compute_err_dist(y_fom, y_rom, eps),
+            "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
+            "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
+          }
+          return error, runtime
+        else:
+          sol = {
+            "t": t,
+            "y_fom": y_fom,
+            "y_rom": y_rom,
+            "rho": rho
+          }
+          return sol, runtime
       else:
-        sol = {
-          "t": t,
-          "y_fom": y_fom,
-          "y_rom": y_rom,
-          "rho": rho
-        }
-        return sol, runtime
-    else:
+        return None, None
+    except:
       return None, None
 
   def compute_err(
@@ -530,6 +533,7 @@ class Basic(object):
     print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
     if (converged >= 0.8):
       # Stack error values
+      t = error[0]["t"]
       _error = error[0]
       for ierror in error[1:]:
         _error = tf.nest.map_structure(
@@ -543,10 +547,10 @@ class Basic(object):
         },
         _error
       )
-      error["t"] = error[0]["t"]
+      error["t"] = t
       runtime = {
-        "mean": np.mean(runtime, 0),
-        "std": np.std(runtime, 0)
+        "mean": float(np.mean(runtime, 0)),
+        "std": float(np.std(runtime, 0))
       }
       return error, runtime
     else:

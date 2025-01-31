@@ -22,34 +22,32 @@
       "use_proj": false,
       "use_factorial": true,
       "use_tables": false
-    },
-    "c_mat": {
-      "max_mom": 2,
-      "state_specs": false
     }
   },
   "models": {
     "cobras": {
-      "active": true,
+      "active": false,
       "name": "CoBRAS",
-      "bases": "./../../test/max_mom_2/cobras_bases.hdf5"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
     },
     "pod": {
-      "active": false,
+      "active": true,
       "name": "POD",
-      "bases": "./../../test/max_mom_2/pod_bases.hdf5"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt",
+      "error": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/error/pod_err.p"
     }
   },
   "paths": {
     "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/"
   },
-  "data_err": {
+  "data": {
     "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
-    "irange": [0,1000],
-    "nb_workers": 16,
+    "irange": [0,2],
+    "nb_workers": 1,
     "eps": 1e-8
   },
-  "style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",
   "plot": {
     "labels": {
       "Th": "T_h",
@@ -60,7 +58,7 @@
     },
     "tlim": null,
     "ylim_err": null,
-    "err_scale": "linear",
+    "err_scale": "log",
     "hline": {
       "temp": 1.0,
       "mom": 1.0,
@@ -68,5 +66,6 @@
     },
     "max_mom": 2
   },
-  "rom_range": [8,12]
+  "rom_range": [12,14],
+  "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

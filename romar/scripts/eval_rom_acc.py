@@ -31,38 +31,28 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import numpy as np
-import joblib as jl
 import dill as pickle
 import matplotlib.pyplot as plt
-plt.style.use(inputs["plot"].get("style", None))
+plt.style.use(inputs.get("mpl_style", "default"))
 
-from tqdm import tqdm
 from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
-from silx.io.dictdump import dicttoh5, h5todict
 
 _VALID_MODELS = ("cobras", "pod")
 
 # Main
 # =====================================
-if (__name__ == '__main__'):
+if (__name__ == "__main__"):
 
   print("Initialization ...")
 
-  # Isothermal master equation model
+  # System
   # -----------------------------------
-  path_to_dtb = inputs["paths"]["dtb"]
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(
-    species={
-      k: path_to_dtb + f"/species/{k}.json" for k in ("atom", "molecule")
-    },
-    rates_coeff=path_to_dtb + "/kinetics.hdf5",
-    **inputs["system"]["kwargs"]
-  )
+  )(**inputs["system"]["init"])
 
   # Testing
   # -----------------------------------
@@ -71,8 +61,6 @@ if (__name__ == '__main__'):
   # Path to saving
   path_to_saving = inputs["paths"]["saving"]+"/error/"
   os.makedirs(path_to_saving, exist_ok=True)
-  # Time grid
-  t = utils.load_case(path=inputs["data"]["path"], index=0, key="t")
   # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
@@ -106,20 +94,21 @@ if (__name__ == '__main__'):
         print("> Solving with %i dimensions ..." % r)
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r],
+          psi=model["bases"]["phi"][:,:r],
           mask=model["mask"]
         )
-        result = system.compute_err(**inputs["data_err"])
+        result = system.compute_err(**inputs["data"])
         if (None not in result):
           r = str(r)
           error[r], runtime[r] = result
+          r = str(r)
       # Save error statistics
       print("> Saving statistics ...")
       # > Error
-      filename = path_to_saving + f"/{model}_err.p"
+      filename = path_to_saving + f"/{name}_err.p"
       pickle.dump(error, open(filename, "wb"))
       # > Runtime
-      filename = path_to_saving + f"/{model}_runtime.json"
+      filename = path_to_saving + f"/{name}_runtime.json"
       with open(filename, "w") as file:
         json.dump(runtime, file, indent=2)
     else:
@@ -133,7 +122,7 @@ if (__name__ == '__main__'):
     pp.plot_err_evolution(
       path=path_to_saving+f"/{name}/",
       error=error,
-      species=system.mix.species,
+      species=list(system.mix.species.keys()),
       **inputs["plot"]
     )
 

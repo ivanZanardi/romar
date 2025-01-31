@@ -36,19 +36,19 @@
     },
     "mu": {
       "rho": {
-        "start": 1e-2,
+        "start": 1e-3,
         "stop": 1e0,
         "num": 3
       },
       "T":  {
-        "start": 1e4,
-        "stop": 3e4,
-        "num": 10
-      }, 
+        "start": 2e4,
+        "stop": 4e4,
+        "num": 20
+      },
       "Te":  {
-        "start": 3e2,
-        "stop": 5e3,
-        "num": 10
+        "start": 293.6,
+        "stop": 293.6,
+        "num": 1
       }
     }
   },
