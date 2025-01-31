@@ -12,33 +12,25 @@
     "t": {
       "start": 1e-12,
       "stop": 1e-1,
-      "num": 51
+      "num": 5
     },
     "mu": {
       "rho": {
         "start": 1e-2,
         "stop": 1e0,
-        "num": 3
+        "num": 2
       },
       "T":  {
         "start": 1e4,
         "stop": 3e4,
-        "num": 10
+        "num": 2
       },
       "Te":  {
         "start": 3e2,
         "stop": 5e3,
-        "num": 10
+        "num": 2
       }
     }
-  },
-  "cov_mats": {
-    "xnot": [0],
-    "read": false,
-    "save": false,
-    "nb_workers": 10,
-    "path_x": "./../../test/max_mom_2/X.npy",
-    "path_y": "./../../test/max_mom_2/Y.npy"
   },
   "system": {
     "name": "BoxAd",
@@ -54,11 +46,22 @@
       "use_proj": false,
       "use_factorial": true,
       "use_tables": false
+    },
+    "c_mat": {
+      "max_mom": 2,
+      "state_specs": false
     }
   },
-  "paths": {
-    "dtb": "/home/zanardi/Codes/ML/RONEK/ronek/examples/RVC_N3/database/",
-    "saving": "./../../test/max_mom_2/"
+  "cobras": {
+    "xnot": [0,-3,-2,-1],
+    "nb_meas": 2,
+    "noise": true,
+    "err_max": 25.0,
+    "modes": true,
+    "pod": true,
+    "nb_workers": 4
   },
-  "max_mom": 2
+  "paths": {
+    "saving": "./../../test/max_mom_2/"
+  }
 }

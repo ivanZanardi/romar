@@ -17,6 +17,7 @@ from pyDOE import lhs
 from .. import utils
 from .. import backend as bkd
 from .thermochemistry import *
+from .thermochemistry.equilibrium import MU_VARS
 from typing import Dict, List, Optional, Tuple
 
 
@@ -410,12 +411,11 @@ class Basic(object):
     log_vars: Tuple[str] = ("Te", "rho"),
     eps: float = 1e-8
   ) -> Tuple[pd.DataFrame]:
-    VARS = ("rho", "T", "Te")
     # Sample remaining parameters
-    design_space = [np.sort(limits[k]) for k in VARS]
+    design_space = [np.sort(limits[k]) for k in MU_VARS]
     design_space = np.array(design_space).T
     # Log-scale
-    ilog = [i for (i, k) in enumerate(VARS) if (k in log_vars)]
+    ilog = [i for (i, k) in enumerate(MU_VARS) if (k in log_vars)]
     design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
     # Construct
     ddim = design_space.shape[1]
@@ -425,7 +425,7 @@ class Basic(object):
     mu = dmat * (amax - amin) + amin
     mu[:,ilog] = np.exp(mu[:,ilog]) - eps
     # Convert to dataframe
-    mu = pd.DataFrame(data=mu, columns=VARS)
+    mu = pd.DataFrame(data=mu, columns=MU_VARS)
     return mu
 
   def compute_sol_fom(

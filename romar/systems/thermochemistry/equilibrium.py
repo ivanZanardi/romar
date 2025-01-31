@@ -8,6 +8,8 @@ from .species import Species
 from ... import backend as bkd
 from typing import Dict, Tuple
 
+MU_VARS = ("rho", "T", "Te")
+
 
 class Equilibrium(object):
 

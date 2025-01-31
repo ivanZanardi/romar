@@ -3,18 +3,14 @@ import sys
 import torch
 import numpy as np
 import scipy as sp
-import joblib as jl
 import dill as pickle
-import multiprocessing
 
 from .. import ops
 from .. import backend as bkd
 from ..systems import SYS_TYPES
 
 from tqdm import tqdm
-from typing import Dict, List, Optional, Tuple, Union
-
-from romar import env
+from typing import Dict, Tuple, Optional, Union
 
 
 class CoBRAS(object):
@@ -39,7 +35,7 @@ class CoBRAS(object):
     self,
     system: SYS_TYPES,
     tgrid: Dict[str, float],
-    quad_mu: Dict[str, np.ndarray],
+    mu_quad: Dict[str, np.ndarray],
     path_to_saving: str = "./",
     saving: bool = True
   )-> None:
@@ -55,11 +51,11 @@ class CoBRAS(object):
                   - "stop": End time of the simulation.
                   - "num": Number of time points in the grid.
     :type tgrid: Dict[str, float]
-    :param quad_mu: Dictionary containing quadrature points and weights
+    :param mu_quad: Dictionary containing quadrature points and weights
                     for initial conditions. Must include:
                     - "x": A 1D numpy array of quadrature points.
                     - "w": A 1D numpy array of corresponding weights.
-    :type quad_mu: Dict[str, np.ndarray]
+    :type mu_quad: Dict[str, np.ndarray]
     :param path_to_saving: Directory path where the computed data and modes
                            will be saved. Defaults to "./".
     :type path_to_saving: str, optional
@@ -70,7 +66,7 @@ class CoBRAS(object):
     # Store attributes
     self.system = system
     self.tgrid = tgrid
-    self.quad_mu = quad_mu
+    self.mu_quad = mu_quad
     # Configure saving options
     self.saving = saving
     self.path_to_saving = path_to_saving
@@ -86,7 +82,6 @@ class CoBRAS(object):
     nb_meas: int = 5,
     noise: bool = False,
     err_max: float = 25.0,
-    nb_workers: int = 1,
     modes: bool = True,
     pod: bool = False
   ) -> Union[None, Tuple[np.ndarray]]:
@@ -118,7 +113,7 @@ class CoBRAS(object):
     """
     # Compute covariance matrices
     if ((X is None) or (Y is None)):
-      X, Y = self.compute_cov_mats(nb_meas, noise, err_max, nb_workers)
+      X, Y = self.compute_cov_mats(nb_meas, noise, err_max)
     # Perfom masking
     mask = self.make_mask(xnot)
     X, Y = X[mask], Y[mask]
@@ -152,85 +147,6 @@ class CoBRAS(object):
     self,
     nb_meas: int = 5,
     noise: bool = False,
-    err_max: float = 25.0,
-    nb_workers: int = 1
-  ) -> Tuple[np.ndarray]:
-    """
-    Compute state and gradient covariance matrices based on quadrature
-    points and system dynamics.
-
-    :param nb_meas: Number of output measurements to use for adjoint
-                    simulations. Defaults to 10.
-    :type nb_meas: int
-    :param use_eig: Whether to use eigenvalue-based analysis to determine
-                    the maximum time (`tmax`) up to which the linear model
-                    is valid. If True, eigenvalues are used to calculate
-                    maximum valid timescales.
-    :type use_eig: bool
-    :param err_max: Maximum percentage error (in %) allowed between linear and
-                    nonlinear models for determining the maximum time (`tmax`)
-                    up to which the linear model is valid.
-                    Defaults to 30.0.
-    :type err_max: float
-
-    :return: Tuple containing:
-             - `X` (np.ndarray): State covariance matrix.
-             - `Y` (np.ndarray): Gradient covariance matrix.
-    :rtype: Tuple[np.ndarray, np.ndarray]
-    """
-    # Unpack initial conditions quadrature points and weights
-    mu, w_mu = self.quad_mu["x"], self.quad_mu["w"]
-    # Loop over initial conditions quadrature points
-    iterable = tqdm(
-      iterable=range(len(mu)),
-      ncols=80,
-      desc="Trajectories",
-      file=sys.stdout
-    )
-    with multiprocessing.Manager() as manager:
-      # Define input arguments for covariance matrices calculation
-      kwargs = dict(
-        X=manager.list(),
-        Y=manager.list(),
-        nb_meas=nb_meas,
-        noise=noise,
-        err_max=err_max
-      )
-      if (nb_workers > 1):
-        # Run parallel jobs
-        jl.Parallel(nb_workers)(
-          jl.delayed(self._compute_cov_mats_parallel)(
-            env_opts=env.get(),
-            mu=mu[i],
-            w_mu=w_mu[i],
-            **kwargs
-          ) for i in iterable
-        )
-      else:
-        # Run jobs in series
-        for i in iterable:
-          self._compute_cov_mats(
-            mu=mu[i],
-            w_mu=w_mu[i],
-            **kwargs
-          )
-      # Stack covariance matrices
-      X = np.vstack(list(kwargs["X"])).T
-      Y = np.vstack(list(kwargs["Y"])).T
-    return X, Y
-
-  def _compute_cov_mats_parallel(self, env_opts, **kwargs):
-    env.set(**env_opts)
-    return self._compute_cov_mats(**kwargs)
-
-  def _compute_cov_mats(
-    self,
-    X: List[np.ndarray],
-    Y: List[np.ndarray],
-    mu: np.ndarray,
-    w_mu: float,
-    nb_meas: int = 5,
-    noise: bool = False,
     err_max: float = 25.0
   ) -> Tuple[np.ndarray]:
     """
@@ -258,34 +174,49 @@ class CoBRAS(object):
     """
     # Scaling factor for output measurements
     w_meas = 1.0 / np.sqrt(nb_meas)
-    # Compute the initial solution for the system
-    y0, rho = self.system.equil.get_init_sol(mu, noise=noise, sigma=1e-1)
-    # Determine the smallest time scale for resolving system dynamics
-    tmin = self.system.compute_timescale(y0, rho)
-    # Generate a time quadrature grid and associated weights
-    t, w_t = self.get_tquad(tmin)
-    # Solve the nonlinear forward problem to compute the state evolution
-    y = self.system.solve_fom(t, y0, rho)[0].T
-    # Build an interpolator for the solution
-    sol_interp = self.build_sol_interp(t, y)
-    # Loop over each initial time for adjoint simulations
-    for j in range(len(t)-1):
-      # Generate a time grid for the j-th linear model
-      tj = np.geomspace(t[j], t[-1], num=100)
-      yj = sol_interp(tj)
-      tj -= tj[0]
-      # Determine the maximum valid time for linear model approximation
-      tmax = self.system.compute_lin_tmax(tj, yj, rho, err_max)
-      # Compute the combined quadrature weight (mu and t)
-      wij = w_mu * w_t[j]
-      if (tmax > tmin):
+    # Extract initial conditions quadrature points and weights
+    mu, w_mu = self.mu_quad["x"], self.mu_quad["w"]
+    # Initialize dynamic arrays for state/gradient covariance matrices
+    X, Y = [], []
+    # Loop over initial conditions to solve the forward problem
+    iterable = tqdm(
+      iterable=mu,
+      ncols=80,
+      desc="Trajectories",
+      file=sys.stdout
+    )
+    for (i, mui) in enumerate(iterable):
+      # Compute the initial solution for the system
+      y0, rho = self.system.equil.get_init_sol(mui, noise=noise, sigma=1e-1)
+      # Determine the smallest time scale for resolving system dynamics
+      tmin = self.system.compute_timescale(y0, rho)
+      # Generate a time quadrature grid and associated weights
+      t, w_t = self.get_tquad(tmin)
+      # Solve the nonlinear forward problem to compute the state evolution
+      y = self.system.solve_fom(t, y0, rho, linear=False)[0].T
+      # Build an interpolator for the solution
+      sol_interp = self.build_sol_interp(t, y)
+      # Loop over each initial time for adjoint simulations
+      for j in range(len(t)-1):
+        # Generate a time grid for the j-th linear model
+        tj = np.geomspace(t[j], t[-1], num=100)
+        yj = sol_interp(tj)
+        tj -= tj[0]
+        # Determine the maximum valid time for linear model approximation
+        tmax = self.system.compute_lin_tmax(tj, yj, rho, err_max)
         # Generate a time grid for the j-th linear adjoint simulation
         tadj = np.geomspace(tmin, tmax, num=nb_meas)
         # Solve the j-th linear adjoint model
         Yij = w_meas * self.solve_lin_adjoint(tadj, y[j], rho).T
+        # Compute the combined quadrature weight (mu and t)
+        wij = w_mu[i] * w_t[j]
         # Store weighted samples for state and gradient covariance matrices
+        X.append(wij * y[j])
         Y.append(wij * Yij)
-      X.append(wij * y[j])
+    # Stack the collected samples to form the final covariance matrices
+    X = np.vstack(X).T
+    Y = np.vstack(Y).T
+    return X, Y
 
   def get_tquad(
     self,
