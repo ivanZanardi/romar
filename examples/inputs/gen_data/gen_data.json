@@ -34,15 +34,15 @@
   "param_space": {
     "defined": {
       "cases": {
-        "T25000": [1e-2, 2.5e4, 3e2]
+        "T25000": [1e-2, 3e4, 293.6]
       }
     },
     "sampled": {
       "mu": {
         "limits": {
-          "rho": [1e-2, 1e0],
-          "T": [1e4, 3e4],
-          "Te": [3e2, 5e3]
+          "rho": [1e-3, 1e0],
+          "T": [2e4, 5e4],
+          "Te": [293.6, 293.6]
         },
         "nb_samples": 1000,
         "log_vars": ["Te", "rho"],
@@ -52,6 +52,6 @@
     "nb_workers": 20
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test2/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test/data/"
   }
 }

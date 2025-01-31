@@ -26,24 +26,23 @@
   },
   "models": {
     "cobras": {
-      "active": false,
+      "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/cobras_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/rom_mask.txt"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt",
-      "error": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/error/pod_err.p"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/pod_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/rom_mask.txt"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/test/data/",
     "irange": [0,2],
     "nb_workers": 1,
     "eps": 1e-8

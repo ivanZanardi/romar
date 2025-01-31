@@ -31,7 +31,7 @@
   "grids": {
     "t": {
       "start": 1e-12,
-      "stop": 1e-1,
+      "stop": 1e0,
       "num": 51
     },
     "mu": {
@@ -42,7 +42,7 @@
       },
       "T":  {
         "start": 2e4,
-        "stop": 4e4,
+        "stop": 5e4,
         "num": 20
       },
       "Te":  {
@@ -62,18 +62,18 @@
       },
       "read": false,
       "save": true,
-      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/test2/max_mom_2/X.npy",
-      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/test2/max_mom_2/Y.npy"
+      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/X.npy",
+      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/Y.npy"
     },
     "modes": {
       "compute": {
-        "xnot": [0,-2,-1],
+        "xnot": [0,-3,-2,-1],
         "pod": true,
         "niter": 50
       }
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test2/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test/max_mom_2/"
   }
 }

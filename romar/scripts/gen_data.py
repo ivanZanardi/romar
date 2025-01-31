@@ -72,7 +72,7 @@ if (__name__ == '__main__'):
       sol_kwargs=dict(
         t=t,
         mu=mu.values,
-        noise=True,
+        noise=False,
         path=path_to_saving
       ),
       nb_workers=inputs["param_space"]["nb_workers"],
