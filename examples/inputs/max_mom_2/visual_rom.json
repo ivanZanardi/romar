@@ -1,62 +1,62 @@
 {
-  "path_to_lib": "/home/zanardi/Codes/ML/RONEK/ronek/",
+  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
   "env": {
     "backend": "numpy",
     "device": "cpu",
     "device_idx": 0,
     "nb_threads": 4,
-    "epsilon": 1e-10,
+    "epsilon": null,
     "floatx": "float64"
   },
   "system": {
-    "name": "TASystem",
-    "kwargs": {
-      "use_einsum": false,
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_proj": false,
       "use_factorial": true,
-      "use_arrhenius": true
+      "use_tables": false
     }
   },
   "models": {
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "./../../test/max_mom_2/cobras_bases.hdf5"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
     },
     "pod": {
-      "active": false,
+      "active": true,
       "name": "POD",
-      "bases": "./../../test/max_mom_2/pod_bases.hdf5"
-    },
-    "cg": {
-      "active": false,
-      "name": "CG"
-    },
-    "mt": {
-      "active": false,
-      "name": "MT"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
     }
   },
   "paths": {
-    "dtb": "/home/zanardi/Codes/ML/RONEK/ronek/examples/RVC_N3/database/",
-    "saving": "./../../test/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/"
   },
   "data": {
     "cases": [
-      "cold_T12000",
-      "cold_T15000",
-      "cold_T18000"
+      "case_T25000"
     ],
     "teval": {
-      "cold_T12000": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
-      "cold_T15000": [1e-6, 5e-6, 1e-5, 4e-5, 1e-3],
-      "cold_T18000": [5e-7, 1e-6, 4e-6, 1e-5, 5e-4]
+      "case_T25000": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3]
     },
     "tlim": {
-      "cold_T12000": {"m0": [1e-6, 2e-3], "m1": [1e-9, 2e-3]},
-      "cold_T15000": {"m0": [5e-7, 1e-3], "m1": [1e-9, 1e-3]},
-      "cold_T18000": {"m0": [1e-7, 2e-4], "m1": [1e-9, 2e-4]}
+      "case_T25000": {
+        "dist": [1e-10, 1e-1],
+        "temp": [1e-10, 1e-1],
+        "m0": [1e-10, 1e-1],
+        "m1": [1e-10, 1e-1]
+      }
     },
-    "path": "./../../test/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
   },
   "plot": {
     "style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",

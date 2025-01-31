@@ -34,7 +34,7 @@
   "param_space": {
     "defined": {
       "cases": {
-        "T25000": [1e-2, 3e4, 293.6]
+        "T30000": [1e-2, 3e4, 293.6]
       }
     },
     "sampled": {
