@@ -7,6 +7,7 @@ import numpy as np
 import joblib as jl
 import dill as pickle
 
+from romar import env
 from tqdm import tqdm
 from typing import Any, Dict, List, Union
 
@@ -177,6 +178,7 @@ def generate_case_parallel(
   sol_fun: callable,
   irange: List[int],
   sol_kwargs: Dict[str, Any] = {},
+  env_kwargs: Dict[str, Any] = {},
   nb_workers: int = 1,
   desc: str = "Cases",
   verbose: bool = True,
@@ -214,12 +216,17 @@ def generate_case_parallel(
   iterable = tqdm(
     iterable=range(*irange),
     ncols=80,
-    desc=delimiter+desc,
+    desc=delimiter+desc if (desc is not None) else None,
     file=sys.stdout
   )
   if (nb_workers > 1):
+    # Define function
+    def fun(**kwargs):
+      env.set(**env_kwargs)
+      return sol_fun(**kwargs)
+    # Run parallel jobs
     runtime = jl.Parallel(nb_workers)(
-      jl.delayed(sol_fun)(index=i, **sol_kwargs) for i in iterable
+      jl.delayed(fun)(index=i, **sol_kwargs) for i in iterable
     )
   else:
     runtime = [sol_fun(index=i, **sol_kwargs) for i in iterable]

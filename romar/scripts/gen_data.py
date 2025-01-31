@@ -30,7 +30,6 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import numpy as np
-import pandas as pd
 
 from romar import utils
 from romar import systems as sys_mod
@@ -61,63 +60,44 @@ if (__name__ == '__main__'):
   # Sampled cases
   # ---------------
   # Construct design matrix
-  T, mu = [inputs["param_space"]["sampled"][k] for k in ("T", "mu")]
-  if ((T["nb_samples"] > 0) and (mu["nb_samples"] > 0)):
-    # > Sampled temperatures
-    if isinstance(T, dict):
-      T = system.construct_design_mat_temp(**T)
-    else:
-      T = np.sort(np.array(T.reshape(-1)))
-      T = pd.DataFrame(data=T, columns=["T"])
-    nb_samples_temp = len(T)
-    # > Sampled initial conditions parameters
-    mu = system.construct_design_mat_mu(**mu)
-    nb_samples_mu = len(mu)
+  mu_kwargs = inputs["param_space"]["sampled"]["mu"]
+  if (mu_kwargs["nb_samples"] > 0):
+    # Sampled initial conditions parameters
+    mu = system.construct_design_mat_mu(**mu_kwargs)
     # Generate data
-    print("Looping over sampled temperatures:")
-    runtime = 0.0
-    for (i, Ti) in enumerate(T.values.reshape(-1)):
-      print("> T = %.4e K" % Ti)
-      system.update_fom_ops(Ti)
-      runtime += utils.generate_case_parallel(
-        sol_fun=system.compute_fom_sol,
-        irange=[0,nb_samples_mu],
-        sol_kwargs=dict(
-          T=Ti,
-          t=t,
-          mu=mu.values,
-          update=False,
-          path=path_to_saving,
-          shift=nb_samples_mu*i,
-          filename=None
-        ),
-        nb_workers=inputs["param_space"]["nb_workers"]
-      )
+    print("Running sampled cases ...")
+    runtime = utils.generate_case_parallel(
+      sol_fun=system.compute_sol_fom,
+      irange=[0,mu_kwargs["nb_samples"]],
+      sol_kwargs=dict(
+        t=t,
+        mu=mu.values,
+        noise=True,
+        path=path_to_saving
+      ),
+      env_kwargs=inputs["env"],
+      nb_workers=inputs["param_space"]["nb_workers"],
+      desc=None,
+      delimiter="> "
+    )
     # Save parameters
-    for (name, df) in (
-      ("mu", mu),
-      ("T", T)
-    ):
-      df.to_csv(
-        path_to_saving + f"/samples_{name}.csv",
-        float_format="%.8e",
-        index=True
-      )
+    mu.to_csv(
+      path_to_saving + "/samples_mu.csv",
+      float_format="%.8e",
+      index=True
+    )
     # Save runtime
-    runtime /= nb_samples_temp
     with open(path_to_saving + "/runtime.txt", "w") as file:
       file.write("Mean running time: %.8e s" % runtime)
 
   # Defined cases
   # ---------------
-  for (k, param) in inputs["param_space"]["defined"]["cases"].items():
+  for (k, muk) in inputs["param_space"]["defined"]["cases"].items():
     print(f"Running case '{k}' ...")
-    runtime = system.compute_fom_sol(
-      T=float(param["T"]),
+    runtime = system.compute_sol_fom(
       t=t,
-      mu=param["mu"],
-      mu_type=inputs["param_space"]["defined"].get("mu_type", "mass"),
-      update=True,
+      mu=muk,
+      noise=False,
       filename=path_to_saving + f"/case_{k}.p"
     )
     if (runtime is None):

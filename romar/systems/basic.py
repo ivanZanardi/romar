@@ -408,14 +408,14 @@ class Basic(object):
     limits: Dict[str, List[float]],
     nb_samples: int,
     log_vars: Tuple[str] = ("Te", "rho"),
-    vars: Tuple[str] = ("T", "Te", "rho"),
     eps: float = 1e-8
   ) -> Tuple[pd.DataFrame]:
+    VARS = ("rho", "T", "Te")
     # Sample remaining parameters
-    design_space = [np.sort(limits[k]) for k in vars]
+    design_space = [np.sort(limits[k]) for k in VARS]
     design_space = np.array(design_space).T
     # Log-scale
-    ilog = [i for (i, k) in enumerate(vars) if (k in log_vars)]
+    ilog = [i for (i, k) in enumerate(VARS) if (k in log_vars)]
     design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
     # Construct
     ddim = design_space.shape[1]
@@ -425,10 +425,10 @@ class Basic(object):
     mu = dmat * (amax - amin) + amin
     mu[:,ilog] = np.exp(mu[:,ilog]) - eps
     # Convert to dataframe
-    mu = pd.DataFrame(data=mu, columns=vars)
+    mu = pd.DataFrame(data=mu, columns=VARS)
     return mu
 
-  def compute_fom_sol(
+  def compute_sol_fom(
     self,
     t: np.ndarray,
     mu: np.ndarray,
@@ -437,7 +437,7 @@ class Basic(object):
     index: Optional[int] = None,
     shift: int = 0,
     filename: Optional[str] = None
-  ) -> np.ndarray:
+  ) -> Optional[np.ndarray]:
     mui = mu[index] if (index is not None) else mu
     y0, rho = self.get_init_sol(mui, noise)
     y, runtime = self.solve_fom(t, y0, rho)
@@ -470,7 +470,7 @@ class Basic(object):
       if eval_err:
         return {
           "dist": self.compute_err_dist(y_fom, y_rom, eps),
-          "temp": self.compute_err_temp(y_fom, y_rom, eps),
+          "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
           "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
         }
       else:
@@ -495,13 +495,23 @@ class Basic(object):
     self,
     y_true: np.ndarray,
     y_pred: np.ndarray,
+    rho: float,
     eps: float = 1e-8
   ) -> Dict[str, np.ndarray]:
-    return utils.absolute_percentage_error(
-      y_true=y_true[-2:],
-      y_pred=y_pred[-2:],
-      eps=eps
-    )
+    # Extract T
+    T_true = y_true[-2]
+    T_pred = y_pred[-2]
+    # Compute Te
+    self.mix.set_rho(rho)
+    n_true = self.mix.get_n(w=y_true[:-2])
+    n_pred = self.mix.get_n(w=y_pred[:-2])
+    Te_true = self.mix.get_Te(pe=y_true[-1], ne=n_true[-1])
+    Te_pred = self.mix.get_Te(pe=y_pred[-1], ne=n_pred[-1])
+    # Compute error
+    return {
+      "T": utils.absolute_percentage_error(T_true, T_pred, eps=eps),
+      "Te": utils.absolute_percentage_error(Te_true, Te_pred, eps=eps)
+    }
 
   def compute_err_mom(
     self,
