@@ -9,6 +9,9 @@ import joblib as jl
 from tqdm import tqdm
 from typing import Tuple
 
+import tensorflow as tf
+
+
 import abc
 import time
 import numpy as np
@@ -18,6 +21,7 @@ import pandas as pd
 from pyDOE import lhs
 
 
+from .. import env
 from .. import utils
 from .. import backend as bkd
 from .thermochemistry import *
@@ -463,7 +467,7 @@ class Basic(object):
     filename: Optional[str] = None,
     eval_err: bool = False,
     eps: float = 1e-8
-  ) -> Tuple[np.ndarray]:
+  ) -> Tuple[Optional[np.ndarray]]:
     # Load test case
     icase = utils.load_case(path=path, index=index, filename=filename)
     t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
@@ -473,18 +477,31 @@ class Basic(object):
       # Converged
       if eval_err:
         error = {
+          "t": t,
           "dist": self.compute_err_dist(y_fom, y_rom, eps),
           "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
           "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
         }
         return error, runtime
       else:
-        return (t, y_fom, y_rom, rho), runtime
+        sol = {
+          "t": t,
+          "y_fom": y_fom,
+          "y_rom": y_rom,
+          "rho": rho
+        }
+        return sol, runtime
     else:
       return None, None
 
-  
-  def compute_err(self, path, irange, nb_workers=1, eps=1e-8):
+  def compute_err(
+    self,
+    path: str,
+    irange: List[int],
+    nb_workers: int = 1,
+    eps: float = 1e-8
+  ) -> Tuple[Optional[np.ndarray]]:
+    irange = np.sort(irange)
     nb_samples = irange[1]-irange[0]
     iterable = tqdm(
       iterable=range(*irange),
@@ -499,26 +516,39 @@ class Basic(object):
     )
     if (nb_workers > 1):
       sols = jl.Parallel(nb_workers)(
-        jl.delayed(self.compute_sol_rom)(index=i, **kwargs) for i in iterable
+        jl.delayed(
+          env.make_fun_parallel(self.compute_sol_rom)
+        )(index=i, **kwargs) for i in iterable
       )
     else:
       sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
     # Split error values and running times
-    err, runtime = list(zip(*sols))
-    err = [x for x in err if (x is not None)]
+    error, runtime = list(zip(*sols))
+    error = [x for x in error if (x is not None)]
     runtime = [x for x in runtime if (x is not None)]
     converged = len(runtime)/nb_samples
     print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
     if (converged >= 0.8):
       # Stack error values
-      if (inputs["eval_err"] == "mom"):
-        err = np.stack(err, axis=0)
-      else:
-        err = np.vstack(err)
+      _error = error[0]
+      for ierror in error[1:]:
+        _error = tf.nest.map_structure(
+          lambda e1, e2: np.vstack([e1, e2]), _error, ierror
+        )
       # Compute statistics
-      err = compute_err_stats(err)
-      runtime = compute_runtime_stats(runtime)
-      return err, runtime
+      error = tf.nest.map_structure(
+        lambda e: {
+          "mean": np.mean(e, axis=0),
+          "std": np.std(e, axis=0)
+        },
+        _error
+      )
+      error["t"] = error[0]["t"]
+      runtime = {
+        "mean": np.mean(runtime, 0),
+        "std": np.std(runtime, 0)
+      }
+      return error, runtime
     else:
       return None, None
 
@@ -527,15 +557,27 @@ class Basic(object):
     y_true: np.ndarray,
     y_pred: np.ndarray,
     eps: float = 1e-8
-  ) -> Dict[str, np.ndarray]:
-    error = {}
-    for (name, s) in self.mix.species.items():
-      error[name] = utils.absolute_percentage_error(
-        y_true=y_true[s.indices],
-        y_pred=y_pred[s.indices],
-        eps=eps
-      )
-    return error
+  ) -> np.ndarray:
+    return utils.absolute_percentage_error(
+      y_true=y_true[:-2],
+      y_pred=y_pred[:-2],
+      eps=eps
+    )
+
+  # def compute_err_dist(
+  #   self,
+  #   y_true: np.ndarray,
+  #   y_pred: np.ndarray,
+  #   eps: float = 1e-8
+  # ) -> Dict[str, np.ndarray]:
+  #   error = {}
+  #   for (name, s) in self.mix.species.items():
+  #     error[name] = utils.absolute_percentage_error(
+  #       y_true=y_true[s.indices],
+  #       y_pred=y_pred[s.indices],
+  #       eps=eps
+  #     )
+  #   return error
 
   def compute_err_temp(
     self,
@@ -545,8 +587,8 @@ class Basic(object):
     eps: float = 1e-8
   ) -> Dict[str, np.ndarray]:
     # Extract T
-    T_true = y_true[-2]
-    T_pred = y_pred[-2]
+    Th_true = y_true[-2]
+    Th_pred = y_pred[-2]
     # Compute Te
     self.mix.set_rho(rho)
     n_true = self.mix.get_n(w=y_true[:-2])
@@ -555,7 +597,7 @@ class Basic(object):
     Te_pred = self.mix.get_Te(pe=y_pred[-1], ne=n_pred[-1])
     # Compute error
     return {
-      "T": utils.absolute_percentage_error(T_true, T_pred, eps=eps),
+      "Th": utils.absolute_percentage_error(Th_true, Th_pred, eps=eps),
       "Te": utils.absolute_percentage_error(Te_true, Te_pred, eps=eps)
     }
 
@@ -565,7 +607,7 @@ class Basic(object):
     y_pred: np.ndarray,
     rho: float,
     eps: float = 1e-8
-  ) -> Dict[str, np.ndarray]:
+  ) -> Dict[str, Dict[str, np.ndarray]]:
     self.mix.set_rho(rho)
     n_true = self.mix.get_n(w=y_true[:-2])
     n_pred = self.mix.get_n(w=y_pred[:-2])
@@ -584,9 +626,9 @@ class Basic(object):
     species: Species,
     n_true: np.ndarray,
     n_pred: np.ndarray,
-    eps: float = 1e-7
-  ) -> np.ndarray:
-    error = []
+    eps: float = 1e-8
+  ) -> Dict[str, np.ndarray]:
+    error = {}
     for m in range(2):
       m_true = species.compute_mom(n=n_true, m=m)
       m_pred = species.compute_mom(n=n_pred, m=m)
@@ -596,5 +638,5 @@ class Basic(object):
       else:
         m_true /= m0_true
         m_pred /= m0_pred
-      error.append(utils.absolute_percentage_error(m_true, m_pred, eps))
-    return np.vstack(error)
+      error[f"m{m}"] = utils.absolute_percentage_error(m_true, m_pred, eps)
+    return error
