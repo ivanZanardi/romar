@@ -99,10 +99,11 @@ class Basic(object):
     self.set_methods()
 
   def set_methods(self):
+    self.get_init_sol = self.equil.get_init_sol
     self.encode = bkd.make_fun_np(self._encode)
     self.decode = bkd.make_fun_np(self._decode)
     self.set_up = bkd.make_fun_np(self._set_up)
-    self.get_init_sol = self.equil.get_init_sol
+    self.get_prim = bkd.make_fun_np(self._get_prim)
 
   # Properties
   # ===================================
@@ -145,10 +146,6 @@ class Basic(object):
 
   @abc.abstractmethod
   def _fun(self, t, y):
-    pass
-
-  @abc.abstractmethod
-  def get_prim(self, y):
     pass
 
   # Linear Model
@@ -494,8 +491,8 @@ class Basic(object):
         else:
           sol = {
             "t": t,
-            "y_fom": y_fom,
-            "y_rom": y_rom,
+            "FOM": self.postproc_sol(*prim_fom),
+            "ROM": self.postproc_sol(*prim_rom),
             "rho": rho
           }
           return sol, runtime
