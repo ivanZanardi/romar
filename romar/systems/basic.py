@@ -504,23 +504,47 @@ class Basic(object):
     except:
       return None, None
 
-  def postproc_sol(self, y):
-
-
-    # Extract T
-    Th_true = y_true[-2]
-    Th_pred = y_pred[-2]
-    # Compute Te
-    self.mix.set_rho(rho)
-    n_true = self.mix.get_n(w=y_true[:-2])
-    n_pred = self.mix.get_n(w=y_pred[:-2])
-    Te_true = self.mix.get_Te(pe=y_true[-1], ne=n_true[-1])
-    Te_pred = self.mix.get_Te(pe=y_pred[-1], ne=n_pred[-1])
-    # Compute error
+  # Postprocessing
+  # -----------------------------------
+  def postproc_sol(self, n, Th, Te):
     return {
-      "Th": utils.absolute_percentage_error(Th_true, Th_pred, eps=eps),
-      "Te": utils.absolute_percentage_error(Te_true, Te_pred, eps=eps)
+      "mom": self.compute_mom(n),
+      "dist": self.compute_dist(n),
+      "temp": {"Th": Th, "Te": Te}
     }
+
+  def compute_mom(
+    self,
+    n: np.ndarray
+  ) -> Dict[str, Dict[str, np.ndarray]]:
+    moms = {}
+    for (name, s) in self.mix.species.items():
+      moms[name] = self._compute_mom(n=n[s.indices], species=s)
+    return moms
+
+  def _compute_mom(
+    self,
+    n: np.ndarray,
+    species: Species
+  ) -> Dict[str, np.ndarray]:
+    moms = {}
+    for m in range(2):
+      mom = species.compute_mom(n=n, m=m)
+      if (m == 0):
+        mom0 = mom
+      else:
+        mom /= mom0
+      moms[f"m{m}"] = mom
+    return moms
+
+  def compute_dist(
+    self,
+    n: np.ndarray
+  ) -> Dict[str, np.ndarray]:
+    dist = {}
+    for (name, s) in self.mix.species.items():
+      dist[name] = (n[s.indices].T / s.lev["g"]).T
+    return dist
 
   # Error computation
   # -----------------------------------
@@ -612,32 +636,44 @@ class Basic(object):
     n_pred: np.ndarray,
     eps: float = 1e-8
   ) -> Dict[str, Dict[str, np.ndarray]]:
-    error = {}
-    for (name, s) in self.mix.species.items():
-      error[name] = self._compute_err_mom(
-        species=s,
-        n_true=n_true[s.indices],
-        n_pred=n_pred[s.indices],
-        eps=eps
-      )
-    return error
+    return tf.nest.map_structure(
+      lambda m1, m2: utils.absolute_percentage_error(m1, m2, eps),
+      self.compute_mom(n_true),
+      self.compute_mom(n_pred)
+    )
 
-  def _compute_err_mom(
-    self,
-    species: Species,
-    n_true: np.ndarray,
-    n_pred: np.ndarray,
-    eps: float = 1e-8
-  ) -> Dict[str, np.ndarray]:
-    error = {}
-    for m in range(2):
-      m_true = species.compute_mom(n=n_true, m=m)
-      m_pred = species.compute_mom(n=n_pred, m=m)
-      if (m == 0):
-        m0_true = m_true
-        m0_pred = m_pred
-      else:
-        m_true /= m0_true
-        m_pred /= m0_pred
-      error[f"m{m}"] = utils.absolute_percentage_error(m_true, m_pred, eps)
-    return error
+  # def compute_err_mom(
+  #   self,
+  #   n_true: np.ndarray,
+  #   n_pred: np.ndarray,
+  #   eps: float = 1e-8
+  # ) -> Dict[str, Dict[str, np.ndarray]]:
+  #   error = {}
+  #   for (name, s) in self.mix.species.items():
+  #     error[name] = self._compute_err_mom(
+  #       n_true=n_true[s.indices],
+  #       n_pred=n_pred[s.indices],
+  #       species=s,
+  #       eps=eps
+  #     )
+  #   return error
+
+  # def _compute_err_mom(
+  #   self,
+  #   n_true: np.ndarray,
+  #   n_pred: np.ndarray,
+  #   species: Species,
+  #   eps: float = 1e-8
+  # ) -> Dict[str, np.ndarray]:
+  #   error = {}
+  #   for m in range(2):
+  #     m_true = species.compute_mom(n=n_true, m=m)
+  #     m_pred = species.compute_mom(n=n_pred, m=m)
+  #     if (m == 0):
+  #       m0_true = m_true
+  #       m0_pred = m_pred
+  #     else:
+  #       m_true /= m0_true
+  #       m_pred /= m0_pred
+  #     error[f"m{m}"] = utils.absolute_percentage_error(m_true, m_pred, eps)
+  #   return error

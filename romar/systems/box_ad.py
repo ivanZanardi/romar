@@ -34,10 +34,10 @@ class BoxAd(Basic):
     # ROM activated
     y = self._decode(y) if self.use_rom else y
     # Extract primitive variables
-    n, T, Te = self.get_prim(y)
+    n, Th, Te = self._get_prim(y)
     # Compute sources
     # > Conservative variables
-    f_rho, f_et, f_ee = self.sources.call_ad(n, T, Te)
+    f_rho, f_et, f_ee = self.sources.call_ad(n, Th, Te)
     # > Primitive variables
     f = torch.cat([
       self.mix.ov_rho * f_rho,
@@ -48,16 +48,16 @@ class BoxAd(Basic):
     f = self._encode(f) if self.use_rom else f
     return f
 
-  def get_prim(self, y):
+  def _get_prim(self, y):
     # Unpacking
-    w, T, pe = y[:-2], y[-2], y[-1]
+    w, Th, pe = y[:-2], y[-2], y[-1]
     # Get number densities
     n = self.mix.get_n(w)
     # Get electron temperature
     Te = self.mix.get_Te(pe=pe, ne=n[-1])
     # Clip temperatures
-    T, Te = [self.clip_temp(z) for z in (T, Te)]
-    return n, T, Te
+    Th, Te = [self.clip_temp(z) for z in (Th, Te)]
+    return n, Th, Te
 
   def clip_temp(self, T):
     return torch.clip(T, const.TMIN, const.TMAX)

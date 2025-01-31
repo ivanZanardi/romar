@@ -48,6 +48,10 @@ class BoxIso(Basic):
     f = self._encode(f_w) if self.use_rom else f_w
     return f
 
+  def _get_prim(self, y):
+    n = self.mix.get_n(y)
+    return n, self.Th, self.Te
+
   # Solving
   # ===================================
   def _set_up(
@@ -56,14 +60,14 @@ class BoxIso(Basic):
     rho: torch.Tensor
   ) -> torch.Tensor:
     # Unpack the state vector
-    w, T, pe = y0[:-2], y0[-2], y0[-1]
+    w, self.Th, pe = y0[:-2], y0[-2], y0[-1]
     # Set density
     self.mix.set_rho(rho)
     # Compute the electron temperature
     n = self.mix.get_n(w)
-    Te = self.mix.get_Te(pe, ne=n[-1])
+    self.Te = self.mix.get_Te(pe, ne=n[-1])
     # Initialize the sources
-    self.sources.init_iso(T, Te)
+    self.sources.init_iso(self.Th, self.Te)
     # Set the function and Jacobian
     self.set_fun_jac()
     return w
