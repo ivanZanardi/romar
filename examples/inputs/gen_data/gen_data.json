@@ -52,6 +52,6 @@
     "nb_workers": 25
   },
   "paths": {
-    "saving": "./../../test/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
   }
 }
