@@ -45,7 +45,7 @@ if (__name__ == '__main__'):
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(**inputs["system"]["kwargs"])
+  )(**inputs["system"]["init"])
 
   # Data generation
   # -----------------------------------
@@ -60,15 +60,15 @@ if (__name__ == '__main__'):
   # Sampled cases
   # ---------------
   # Construct design matrix
-  mu_kwargs = inputs["param_space"]["sampled"]["mu"]
-  if (mu_kwargs["nb_samples"] > 0):
+  mu_opts = inputs["param_space"]["sampled"]["mu"]
+  if (mu_opts["nb_samples"] > 0):
     # Sampled initial conditions parameters
-    mu = system.construct_design_mat_mu(**mu_kwargs)
+    mu = system.construct_design_mat_mu(**mu_opts)
     # Generate data
     print("Running sampled cases ...")
     runtime = utils.generate_case_parallel(
       sol_fun=system.compute_sol_fom,
-      irange=[0,mu_kwargs["nb_samples"]],
+      irange=[0,mu_opts["nb_samples"]],
       sol_kwargs=dict(
         t=t,
         mu=mu.values,

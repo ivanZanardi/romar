@@ -128,8 +128,7 @@ class CoBRAS(object):
       if (nb_workers > 1):
         # Run parallel jobs
         jl.Parallel(nb_workers)(
-          jl.delayed(self._compute_cov_mats_parallel)(
-            env_opts=env.get(),
+          jl.delayed(env.make_fun_parallel(self._compute_cov_mats))(
             mu=mu[i],
             w_mu=w_mu[i],
             **kwargs
@@ -147,10 +146,6 @@ class CoBRAS(object):
       X = np.vstack(list(kwargs["X"])).T
       Y = np.vstack(list(kwargs["Y"])).T
     return X, Y
-
-  def _compute_cov_mats_parallel(self, env_opts, **kwargs):
-    env.set(**env_opts)
-    return self._compute_cov_mats(**kwargs)
 
   def _compute_cov_mats(
     self,

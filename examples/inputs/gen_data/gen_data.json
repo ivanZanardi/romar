@@ -8,16 +8,9 @@
     "epsilon": null,
     "floatx": "float64"
   },
-  "grids": {
-    "t": {
-      "start": 1e-10,
-      "stop": 1e-1,
-      "num": 500
-    }
-  },
   "system": {
     "name": "BoxAd",
-    "kwargs": {
+    "init": {
       "species": {
         "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
         "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
@@ -31,10 +24,17 @@
       "use_tables": false
     }
   },
+  "grids": {
+    "t": {
+      "start": 1e-10,
+      "stop": 1e-1,
+      "num": 500
+    }
+  },
   "param_space": {
     "defined": {
       "cases": {
-        "T30000": [1e-2, 3e4, 3e2]
+        "T25000": [1e-2, 2.5e4, 3e2]
       }
     },
     "sampled": {
@@ -44,14 +44,14 @@
           "T": [1e4, 3e4],
           "Te": [3e2, 5e3]
         },
-        "nb_samples": 500,
+        "nb_samples": 1000,
         "log_vars": ["Te", "rho"],
         "eps": 1e-8
       }
     },
-    "nb_workers": 25
+    "nb_workers": 20
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test2/data/"
   }
 }

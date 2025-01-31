@@ -32,6 +32,7 @@ env.set(**inputs["env"])
 # =====================================
 import numpy as np
 import joblib as jl
+import dill as pickle
 import matplotlib.pyplot as plt
 plt.style.use(inputs["plot"].get("style", None))
 
@@ -39,7 +40,6 @@ from tqdm import tqdm
 from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
-from romar.roms import CoarseGrainingM0
 from silx.io.dictdump import dicttoh5, h5todict
 
 _VALID_MODELS = ("cobras", "pod")
@@ -69,7 +69,7 @@ if (__name__ == '__main__'):
   # Initialization
   # ---------------
   # Path to saving
-  path_to_saving = inputs["paths"]["saving"]+"/error/"+inputs["eval_err"]
+  path_to_saving = inputs["paths"]["saving"]+"/error/"
   os.makedirs(path_to_saving, exist_ok=True)
   # Time grid
   t = utils.load_case(path=inputs["data"]["path"], index=0, key="t")
@@ -79,12 +79,16 @@ if (__name__ == '__main__'):
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
       model = copy.deepcopy(model)
-      if (name in ("cobras", "pod")):
-        model["bases"] = h5todict(model["bases"])
+      if (name in _VALID_MODELS):
+        model["bases"] = pickle.load(open(model["bases"], "rb"))
         if (model.get("error", None) is not None):
-          model["error"] = h5todict(model["error"])
+          model["error"] = pickle.load(open(model["error"], "rb"))
         else:
           model["error"] = None
+        if ("mask" not in model):
+          raise ValueError(
+            f"Please, provide the path to ROM mask for '{name}' model."
+          )
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
@@ -103,20 +107,19 @@ if (__name__ == '__main__'):
       file=sys.stdout
     )
     kwargs = dict(
-      update=True,
       path=inputs["data"]["path"],
-      filename=None,
-      eval_err=inputs["eval_err"]
+      eval_err=True,
+      eps=1e-8
     )
     nb_workers = inputs["data"]["nb_workers"]
     if (nb_workers > 1):
-      sol = jl.Parallel(inputs["data"]["nb_workers"])(
-        jl.delayed(system.compute_rom_sol)(index=i, **kwargs) for i in iterable
+      sols = jl.Parallel(nb_workers)(
+        jl.delayed(system.compute_sol_rom)(index=i, **kwargs) for i in iterable
       )
     else:
-      sol = [system.compute_rom_sol(index=i, **kwargs) for i in iterable]
+      sols = [system.compute_sol_rom(index=i, **kwargs) for i in iterable]
     # Split error values and running times
-    err, runtime = list(zip(*sol))
+    err, runtime = list(zip(*sols))
     err = [x for x in err if (x is not None)]
     runtime = [x for x in runtime if (x is not None)]
     converged = len(runtime)/nb_samples
@@ -168,9 +171,10 @@ if (__name__ == '__main__'):
       # Loop over dimensions
       for r in range(*inputs["rom_range"]):
         print("> Solving with %i dimensions ..." % r)
-        system.set_basis(
+        system.set_rom(
           phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r]
+          psi=model["bases"]["psi"][:,:r],
+          mask=model["mask"]
         )
         result = compute_err_parallel()
         if (None not in result):

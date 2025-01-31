@@ -1,8 +1,12 @@
 import abc
+import sys
 import time
 import torch
 import numpy as np
 import scipy as sp
+
+import joblib as jl
+from tqdm import tqdm
 from typing import Tuple
 
 import abc
@@ -468,13 +472,55 @@ class Basic(object):
     if (y_rom.shape[1] == len(t)):
       # Converged
       if eval_err:
-        return {
+        error = {
           "dist": self.compute_err_dist(y_fom, y_rom, eps),
           "temp": self.compute_err_temp(y_fom, y_rom, rho, eps),
           "mom": self.compute_err_mom(y_fom, y_rom, rho, eps)
         }
+        return error, runtime
       else:
-        return t, y_fom, y_rom, rho, runtime
+        return (t, y_fom, y_rom, rho), runtime
+    else:
+      return None, None
+
+  
+  def compute_err(self, path, irange, nb_workers=1, eps=1e-8):
+    nb_samples = irange[1]-irange[0]
+    iterable = tqdm(
+      iterable=range(*irange),
+      ncols=80,
+      desc="  Cases",
+      file=sys.stdout
+    )
+    kwargs = dict(
+      path=path,
+      eval_err=True,
+      eps=eps
+    )
+    if (nb_workers > 1):
+      sols = jl.Parallel(nb_workers)(
+        jl.delayed(self.compute_sol_rom)(index=i, **kwargs) for i in iterable
+      )
+    else:
+      sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
+    # Split error values and running times
+    err, runtime = list(zip(*sols))
+    err = [x for x in err if (x is not None)]
+    runtime = [x for x in runtime if (x is not None)]
+    converged = len(runtime)/nb_samples
+    print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
+    if (converged >= 0.8):
+      # Stack error values
+      if (inputs["eval_err"] == "mom"):
+        err = np.stack(err, axis=0)
+      else:
+        err = np.vstack(err)
+      # Compute statistics
+      err = compute_err_stats(err)
+      runtime = compute_runtime_stats(runtime)
+      return err, runtime
+    else:
+      return None, None
 
   def compute_err_dist(
     self,

@@ -26,6 +26,12 @@ def set(
 def get():
   return _ENV_OPTS
 
+def make_fun_parallel(fun):
+  def fun_parallel(*args, **kwargs):
+    set(**_ENV_OPTS)
+    return fun(*args, **kwargs)
+  return fun_parallel
+
 def _set_cpu_threads(nb_threads):
   keys = (
     "OMP_NUM_THREADS",

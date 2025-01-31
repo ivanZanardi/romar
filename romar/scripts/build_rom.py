@@ -1,5 +1,5 @@
 """
-Build balanced truncation-based ROM.
+Build reduced-order model.
 """
 
 import os
@@ -52,10 +52,10 @@ if (__name__ == "__main__"):
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(**inputs["system"]["kwargs"])
+  )(**inputs["system"]["init"])
   system.compute_c_mat(**inputs["system"]["c_mat"])
 
-  # Balanced truncation
+  # Model reduction
   # -----------------------------------
   # Path to saving
   path_to_saving = inputs["paths"]["saving"]
@@ -80,7 +80,7 @@ if (__name__ == "__main__"):
   filename = path_to_saving + "/quad_mu.p"
   pickle.dump(quad_mu, open(filename, "wb"))
 
-  # Model reduction
+  # CoBRAS
   # ---------------
   cobras = roms.CoBRAS(
     system=system,
@@ -90,21 +90,21 @@ if (__name__ == "__main__"):
     saving=True
   )
   # > Compute covariance matrices
-  inp_cov_mats = inputs["cobras"]["cov_mats"]
-  if (not inp_cov_mats.get("read", False)):
+  cov_mats_opts = inputs["cobras"]["cov_mats"]
+  if (not cov_mats_opts.get("read", False)):
     print("Computing covariance matrices ...")
-    X, Y = cobras.compute_cov_mats(**inp_cov_mats["kwargs"])
-    if inp_cov_mats.get("save", False):
+    X, Y = cobras.compute_cov_mats(**cov_mats_opts["compute"])
+    if cov_mats_opts.get("save", False):
       np.save(path_to_saving + "/X.npy", X)
       np.save(path_to_saving + "/Y.npy", Y)
   else:
     print("Reading covariance matrices ...")
-    X = np.load(inp_cov_mats["path_x"])
-    Y = np.load(inp_cov_mats["path_y"])
+    X = np.load(cov_mats_opts["path_x"])
+    Y = np.load(cov_mats_opts["path_y"])
   # > Compute modes
   print("Computing modes ...")
-  inp_modes = inputs["cobras"]["modes"]
-  cobras.compute_modes(X=X, Y=Y, **inp_modes["kwargs"])
+  modes_opts = inputs["cobras"]["modes"]
+  cobras.compute_modes(X=X, Y=Y, **modes_opts["compute"])
 
   # Copy input file
   # ---------------

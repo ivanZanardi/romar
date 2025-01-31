@@ -1,19 +1,31 @@
 {
-  "path_to_lib": "/home/zanardi/Codes/ML/RONEK/ronek/",
+  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
   "env": {
     "backend": "numpy",
     "device": "cpu",
     "device_idx": 0,
     "nb_threads": 4,
-    "epsilon": 1e-10,
+    "epsilon": null,
     "floatx": "float64"
   },
   "system": {
-    "name": "TASystem",
-    "kwargs": {
-      "use_einsum": false,
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_proj": false,
       "use_factorial": true,
-      "use_arrhenius": true
+      "use_tables": false
+    },
+    "c_mat": {
+      "max_mom": 2,
+      "state_specs": false
     }
   },
   "models": {
@@ -29,13 +41,12 @@
     }
   },
   "paths": {
-    "dtb": "/home/zanardi/Codes/ML/RONEK/ronek/examples/RVC_N3/database/",
-    "saving": "./../../test/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/"
   },
   "data": {
     "range": [0,1000],
     "nb_workers": 16,
-    "path": "./../../test/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
   },
   "plot": {
     "style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",

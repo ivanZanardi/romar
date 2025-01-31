@@ -220,13 +220,10 @@ def generate_case_parallel(
   )
   if (nb_workers > 1):
     # Define parallel function
-    env_kwargs = env.get()
-    def sol_fun_parallel(**kwargs):
-      env.set(**env_kwargs)
-      return sol_fun(**kwargs)
+    sol_fun = env.make_fun_parallel(sol_fun)
     # Run parallel jobs
     runtime = jl.Parallel(nb_workers)(
-      jl.delayed(sol_fun_parallel)(index=i, **sol_kwargs) for i in iterable
+      jl.delayed(sol_fun)(index=i, **sol_kwargs) for i in iterable
     )
   else:
     runtime = [sol_fun(index=i, **sol_kwargs) for i in iterable]
