@@ -62,6 +62,7 @@ if (__name__ == "__main__"):
   os.makedirs(path_to_saving, exist_ok=True)
 
   # Quadrature points
+  # ---------------
   # > Initial conditions space (mu)
   x, dist = [], []
   for k in MU_VARS:
@@ -88,7 +89,22 @@ if (__name__ == "__main__"):
     path_to_saving=path_to_saving,
     saving=True
   )
-  cobras(**inputs["cobras"])
+  # > Compute covariance matrices
+  inp_cov_mats = inputs["cobras"]["cov_mats"]
+  if (not inp_cov_mats.get("read", False)):
+    print("Computing covariance matrices ...")
+    X, Y = cobras.compute_cov_mats(**inp_cov_mats["kwargs"])
+    if inp_cov_mats.get("save", False):
+      np.save(path_to_saving + "/X.npy", X)
+      np.save(path_to_saving + "/Y.npy", Y)
+  else:
+    print("Reading covariance matrices ...")
+    X = np.load(inp_cov_mats["path_x"])
+    Y = np.load(inp_cov_mats["path_y"])
+  # > Compute modes
+  print("Computing modes ...")
+  inp_modes = inputs["cobras"]["modes"]
+  cobras.compute_modes(X=X, Y=Y, **inp_modes["kwargs"])
 
   # Copy input file
   # ---------------

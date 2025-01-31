@@ -44,12 +44,12 @@
           "T": [1e4, 3e4],
           "Te": [3e2, 5e3]
         },
-        "nb_samples": 10,
+        "nb_samples": 500,
         "log_vars": ["Te", "rho"],
         "eps": 1e-8
       }
     },
-    "nb_workers": 5
+    "nb_workers": 25
   },
   "paths": {
     "saving": "./../../test/data/"

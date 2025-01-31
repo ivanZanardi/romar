@@ -7,14 +7,13 @@ import joblib as jl
 import dill as pickle
 import multiprocessing
 
+from .. import env
 from .. import ops
 from .. import backend as bkd
 from ..systems import SYS_TYPES
 
 from tqdm import tqdm
-from typing import Dict, List, Optional, Tuple, Union
-
-from romar import env
+from typing import *
 
 
 class CoBRAS(object):
@@ -42,7 +41,7 @@ class CoBRAS(object):
     quad_mu: Dict[str, np.ndarray],
     path_to_saving: str = "./",
     saving: bool = True
-  )-> None:
+  ) -> None:
     """
     Initialize the CoBRAS class with the specified system, quadrature points,
     time grid, and saving configurations.
@@ -76,78 +75,8 @@ class CoBRAS(object):
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
 
-  # Calling
-  # ===================================
-  def __call__(
-    self,
-    X: Optional[np.ndarray] = None,
-    Y: Optional[np.ndarray] = None,
-    xnot: Optional[list] = None,
-    nb_meas: int = 5,
-    noise: bool = False,
-    err_max: float = 25.0,
-    nb_workers: int = 1,
-    modes: bool = True,
-    pod: bool = False
-  ) -> Union[None, Tuple[np.ndarray]]:
-    """
-    Main method for running the CoBRAS algorithm. Depending on the parameters,
-    this method computes balancing modes, POD modes, or returns covariance
-    matrices.
-
-    :param nb_meas: Number of output measurements to use for adjoint
-                    simulations. Defaults to 10.
-    :type nb_meas: int, optional
-    :param xnot: List of state indices to exclude from the reduction procedure.
-                 Defaults to None.
-    :type xnot: Optional[list]
-    :param modes: Flag indicating whether to compute and save balancing modes.
-                  Defaults to True.
-    :type modes: bool
-    :param pod: Flag indicating whether to compute POD modes in addition to
-                balancing modes. This is only used if `modes` is True.
-                Defaults to False.
-    :type pod: bool
-
-    :return: If `modes` is False, returns a tuple containing:
-             - `X` (np.ndarray): State covariance matrix.
-             - `Y` (np.ndarray): Gradient covariance matrix.
-             Otherwise, computes and saves the modes without returning any
-             values.
-    :rtype: Union[None, Tuple[np.ndarray, np.ndarray]]
-    """
-    # Compute covariance matrices
-    if ((X is None) or (Y is None)):
-      X, Y = self.compute_cov_mats(nb_meas, noise, err_max, nb_workers)
-    # Perfom masking
-    mask = self.make_mask(xnot)
-    X, Y = X[mask], Y[mask]
-    # Compute modes
-    if modes:
-      self.compute_modes(X, Y, pod)
-    else:
-      return X, Y
-
-  def make_mask(self, xnot: list) -> np.ndarray:
-    """
-    Generate a mask to exclude specific states from ROM computations.
-
-    :param xnot: List of state indices to exclude.
-    :type xnot: list
-
-    :return: Boolean mask indicating included states.
-    :rtype: np.ndarray
-    """
-    mask = np.ones(self.system.nb_eqs)
-    if (xnot is not None):
-      xnot = np.array(xnot).astype(int).reshape(-1)
-      mask[xnot] = 0
-    mask = mask.astype(bool)
-    np.savetxt(self.path_to_saving+"/rom_mask.txt", mask, fmt='%d')
-    return mask
-
   # Covariance matrices
-  # -----------------------------------
+  # ===================================
   def compute_cov_mats(
     self,
     nb_meas: int = 5,
@@ -263,11 +192,11 @@ class CoBRAS(object):
     # Determine the smallest time scale for resolving system dynamics
     tmin = self.system.compute_timescale(y0, rho)
     # Generate a time quadrature grid and associated weights
-    t, w_t = self.get_tquad(tmin)
+    t, w_t = self._get_tquad(tmin)
     # Solve the nonlinear forward problem to compute the state evolution
     y = self.system.solve_fom(t, y0, rho)[0].T
     # Build an interpolator for the solution
-    sol_interp = self.build_sol_interp(t, y)
+    sol_interp = self._build_sol_interp(t, y)
     # Loop over each initial time for adjoint simulations
     for j in range(len(t)-1):
       # Generate a time grid for the j-th linear model
@@ -283,11 +212,12 @@ class CoBRAS(object):
         tadj = np.geomspace(tmin, tmax, num=nb_meas)
         # Solve the j-th linear adjoint model
         Yij = w_meas * self.solve_lin_adjoint(tadj, y[j], rho).T
-        # Store weighted samples for state and gradient covariance matrices
+        # Store weighted samples for gradient covariance matrix
         Y.append(wij * Yij)
+      # Store weighted samples for state covariance matrix
       X.append(wij * y[j])
 
-  def get_tquad(
+  def _get_tquad(
     self,
     tmin: float,
     deg: int = 2
@@ -312,7 +242,7 @@ class CoBRAS(object):
     )
     return x, np.sqrt(w)
 
-  def build_sol_interp(
+  def _build_sol_interp(
     self,
     t: np.ndarray,
     x: np.ndarray
@@ -361,11 +291,12 @@ class CoBRAS(object):
     return g
 
   # Balanced modes
-  # -----------------------------------
+  # ===================================
   def compute_modes(
     self,
     X: np.ndarray,
     Y: np.ndarray,
+    xnot: list = [],
     pod: bool = False,
     rank: int = 100,
     niter: int = 50
@@ -385,7 +316,13 @@ class CoBRAS(object):
     :param niter: Number of iterations for randomized SVD. Defaults to 30.
     :type niter: int
     """
-    print("Computing CoBRAS modes ...")
+    # Masking
+    # -------------
+    mask = self._make_mask(xnot)
+    X, Y = X[mask], Y[mask]
+    np.savetxt(self.path_to_saving+"/rom_mask.txt", mask, fmt='%d')
+    # CoBRAS
+    # -------------
     # Perform randomized SVD
     X, Y = [bkd.to_torch(z) for z in (X, Y)]
     U, s, V = ops.svd_lowrank(
@@ -403,8 +340,9 @@ class CoBRAS(object):
     data = {"s": s, "phi": phi, "psi": psi}
     filename = self.path_to_saving+"/cobras_bases.p"
     pickle.dump(data, open(filename, "wb"))
+    # POD
+    # -------------
     if pod:
-      print("Computing POD modes ...")
       U, s, _ = torch.svd_lowrank(
         A=X,
         q=min(rank, X.shape[0]),
@@ -414,3 +352,18 @@ class CoBRAS(object):
       data = {"s": s, "phi": phi}
       filename = self.path_to_saving+"/pod_bases.p"
       pickle.dump(data, open(filename, "wb"))
+
+  def _make_mask(self, xnot: list) -> np.ndarray:
+    """
+    Generate a mask to exclude specific states from ROM computations.
+
+    :param xnot: List of state indices to exclude.
+    :type xnot: list
+
+    :return: Boolean mask indicating included states.
+    :rtype: np.ndarray
+    """
+    mask = np.ones(self.system.nb_eqs)
+    xnot = np.array(xnot).astype(int).reshape(-1)
+    mask[xnot] = 0
+    return mask.astype(bool)

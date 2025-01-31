@@ -53,13 +53,25 @@
     }
   },
   "cobras": {
-    "xnot": [0,-3,-2,-1],
-    "nb_meas": 2,
-    "noise": true,
-    "err_max": 25.0,
-    "modes": true,
-    "pod": true,
-    "nb_workers": 4
+    "cov_mats": {
+      "kwargs": {
+        "nb_meas": 2,
+        "noise": true,
+        "err_max": 25.0,
+        "nb_workers": 1
+      },
+      "read": true,
+      "save": true,
+      "path_x": "./../../test/max_mom_2/X.npy",
+      "path_y": "./../../test/max_mom_2/Y.npy"
+    },
+    "modes": {
+      "kwargs": {
+        "xnot": [0,-3,-2,-1],
+        "pod": true,
+        "niter": 50
+      }
+    }
   },
   "paths": {
     "saving": "./../../test/max_mom_2/"

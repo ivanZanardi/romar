@@ -178,7 +178,6 @@ def generate_case_parallel(
   sol_fun: callable,
   irange: List[int],
   sol_kwargs: Dict[str, Any] = {},
-  env_kwargs: Dict[str, Any] = {},
   nb_workers: int = 1,
   desc: str = "Cases",
   verbose: bool = True,
@@ -220,13 +219,14 @@ def generate_case_parallel(
     file=sys.stdout
   )
   if (nb_workers > 1):
-    # Define function
-    def fun(**kwargs):
+    # Define parallel function
+    env_kwargs = env.get()
+    def sol_fun_parallel(**kwargs):
       env.set(**env_kwargs)
       return sol_fun(**kwargs)
     # Run parallel jobs
     runtime = jl.Parallel(nb_workers)(
-      jl.delayed(fun)(index=i, **sol_kwargs) for i in iterable
+      jl.delayed(sol_fun_parallel)(index=i, **sol_kwargs) for i in iterable
     )
   else:
     runtime = [sol_fun(index=i, **sol_kwargs) for i in iterable]

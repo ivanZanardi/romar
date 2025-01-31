@@ -75,7 +75,6 @@ if (__name__ == '__main__'):
         noise=True,
         path=path_to_saving
       ),
-      env_kwargs=inputs["env"],
       nb_workers=inputs["param_space"]["nb_workers"],
       desc=None,
       delimiter="> "
