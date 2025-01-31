@@ -495,8 +495,7 @@ class Basic(object):
           sol = {
             "t": t,
             "FOM": self.postproc_sol(*prim_fom),
-            "ROM": self.postproc_sol(*prim_rom),
-            "rho": rho
+            "ROM": self.postproc_sol(*prim_rom)
           }
           return sol, runtime
       else:

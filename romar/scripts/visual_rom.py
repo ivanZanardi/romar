@@ -84,25 +84,27 @@ if (__name__ == "__main__"):
   # ---------------
   for icase in inputs["data"]["cases"]:
     print(f"Evaluating case '{icase}' ...")
-    # > Load test case
-    filename = inputs["data"]["path"]+f"/case_{icase}.p"
-    data = utils.load_case(filename=filename)
-    T, t, n0, n_fom = [data[k] for k in ("T", "t", "n0", "n")]
     # > Loop over ROM dimensions
-    for r in range(*inputs["rom_range"]):
-      # > Solutions container
-      sols = {"FOM": n_fom[1]}
+    rrange = np.sort(inputs["rom_range"])
+    for r in range(*rrange):
       # > Saving folder
       path_to_saving_i = path_to_saving + f"/case_{icase}/r{r}/"
       os.makedirs(path_to_saving_i, exist_ok=True)
       # > Loop over ROM models
+      sols = {}
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
-        system.update_rom_ops(
+        system.set_rom(
           phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r]
+          psi=model["bases"]["phi"][:,:r],
+          mask=model["mask"]
         )
-        sols[model["name"]] = system.solve_rom(t, n0)[1]
+        isol = system.compute_sol_rom(
+          filename=inputs["data"]["path"]+f"/case_{icase}.p",
+          eval_err=False
+        )
+        isol[model["name"]] = isol.pop("ROM")
+        sols.update(isol)
       # > Postprocessing
       print(f"> Postprocessing with {r} dimensions ...")
       common_kwargs = dict(
