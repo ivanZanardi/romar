@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import tensorflow as tf
 
 
 # Global
@@ -60,10 +61,12 @@ def to_backend(x):
     return to_torch(x) if (_BKD == "torch") else to_numpy(x)
 
 def make_fun_np(fun_torch):
-  def fun_np(*args):
+  def fun_np(*args, **kwargs):
     args = [to_torch(x) for x in args]
-    f = fun_torch(*args)
-    return to_numpy(f)
+    kwargs = {k: to_torch(x) for (k, x) in kwargs.items()}
+    output = tf.nest.flatten(fun_torch(*args, **kwargs))
+    output = [to_numpy(y) for y in output]
+    return output if (len(output) > 1) else output[0]
   return fun_np
 
 # Device

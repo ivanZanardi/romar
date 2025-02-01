@@ -264,6 +264,15 @@ def map_nested_dict(
 def is_nan_inf(x):
   return (np.isnan(x)+np.isinf(x)).astype(bool)
 
+def replace_keys(d: dict, key_map: Dict[str, str]) -> dict:
+  new_d = {}
+  for (k, v) in d.items():
+    if isinstance(v, dict):
+      v = replace_keys(v, key_map)
+    new_key = key_map.get(k, k)
+    new_d[new_key] = v
+  return new_d
+
 # Statistics
 # =====================================
 def absolute_percentage_error(y_true, y_pred, eps=1e-7):

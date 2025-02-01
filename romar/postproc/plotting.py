@@ -8,6 +8,7 @@ from .. import const
 from .. import utils
 
 COLORS = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"]
+LINESTYLES = ('-', '--', '-.', '-', ':')
 
 
 # Plotting
@@ -78,10 +79,14 @@ def plot_evolution(
         _c = COLORS[i]
         _ls = "--" if (ls is None) else ls
         i += 1
-      ax.plot(x, yk, ls=_ls, c=_c, label=k)
+      if isinstance(yk, dict):
+        for j, (l, yl) in enumerate(yk.items()):
+          ax.plot(x, yl, ls=LINESTYLES[j], c=_c, label=l+"-"+k)
+      else:
+        ax.plot(x, yk, ls=_ls, c=_c, label=k)
     ax.legend(loc=legend_loc, fancybox=True, framealpha=0.9)
   else:
-    ax.plot(x, y, "-", c="k")
+    ax.plot(x, y, c="k")
   if (hline is not None):
     ax.text(
       0.99, hline,
@@ -99,13 +104,57 @@ def plot_evolution(
     plt.show()
   plt.close()
 
+def plot_temp_evolution(
+  path,
+  t,
+  y,
+  err,
+  tlim=None,
+  ylim_err=None,
+  err_scale="linear",
+  hline=None
+):
+  os.makedirs(path, exist_ok=True)
+  # Temperatures
+  plot_evolution(
+    x=t,
+    y=y,
+    xlim=tlim,
+    labels=[r"$t$ [s]", "$T$ [K]"],
+    # legend_loc="lower left" if (m == 0) else "lower right",
+    legend_loc="best",
+    scales=["log", "linear"],
+    figname=path + "/temp",
+    save=True,
+    show=False
+  )
+  # Temperatures error
+  plot_evolution(
+    x=t,
+    y=err,
+    xlim=tlim,
+    ylim=ylim_err,
+    hline=hline,
+    labels=[r"$t$ [s]", "$T$ error [\%]"],
+    # legend_loc="lower center",
+    legend_loc="best",
+    scales=["log", err_scale],
+    figname=path + "/temp_err",
+    save=True,
+    show=False
+  )
+
+
+
+    # y=utils.replace_keys(err, labels),
 # Moments
 def plot_mom_evolution(
   path,
   t,
-  n_m,
-  molecule,
-  molecule_label,
+  y,
+  err,
+  species,
+  labels,
   tlim=None,
   ylim_err=None,
   err_scale="linear",
@@ -114,43 +163,27 @@ def plot_mom_evolution(
 ):
   path = path + "/moments/"
   os.makedirs(path, exist_ok=True)
-  # Compute moments
-  # > Check if MT model is present
-  moms_mt = {}
-  keys = list(n_m.keys())
-  for k in keys:
-    if ("MT" in k):
-      moms_mt[k] = n_m.pop(k)
-  # > Order 0
-  moms = [{k: molecule.compute_mom(nk, m=0) for (k, nk) in n_m.items()}]
-  # > Order 1-max_mom
-  for m in range(1,max_mom):
-    moms.append(
-      {k: molecule.compute_mom(nk, m=1)/moms[0][k] for (k, nk) in n_m.items()}
-    )
-  # Include MT model
-  if (len(moms_mt) > 0):
-    for k in moms_mt.keys():
-      for m in range(2):
-        moms[m][k] = moms_mt[k][m]
   # Plot moments
   for m in range(max_mom):
     if (m == 0):
       yscale = "log"
-      label_sol = fr"$n_{molecule_label}$ [m$^{{-3}}$]"
-      label_err = fr"$n_{molecule_label}$ error [\%]"
+      label_sol = "$n$ [m$^{-3}$]"
+      label_err = "$n$ error [\%]"
     else:
       yscale = "linear"
       if (m == 1):
-        label_sol = fr"$e_{molecule_label}$ [eV]"
-        label_err = fr"$e_{molecule_label}$ error [\%]"
+        label_sol = "$e$ [eV]"
+        label_err = "$e$ error [\%]"
       else:
         label_sol = fr"$\gamma_{m}$ [eV$^{m}$]"
         label_err = fr"$\gamma_{m}$ error [\%]"
     # > Moment
+    ym = {
+      k: {labels[s]: y[k]["mom"][s][f"m{m}"]} for s in species for k in y.keys()
+    }
     plot_evolution(
       x=t,
-      y=moms[m],
+      y=ym,
       xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
       labels=[r"$t$ [s]", label_sol],
       # legend_loc="lower left" if (m == 0) else "lower right",
@@ -246,6 +279,7 @@ def plot_err_ci_evolution(
 
 def plot_err_evolution(
   path,
+  t,
   error,
   species,
   labels,
@@ -257,7 +291,6 @@ def plot_err_evolution(
 ):
   os.makedirs(path, exist_ok=True)
   rlist = sorted(list(error.keys()), key=int)
-  t = error[rlist[0]]["t"]
   # Temperatures
   for k in ("Th", "Te"):
     plot_evolution(

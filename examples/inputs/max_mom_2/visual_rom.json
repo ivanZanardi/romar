@@ -26,7 +26,7 @@
   },
   "models": {
     "cobras": {
-      "active": true,
+      "active": false,
       "name": "CoBRAS",
       "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
       "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"

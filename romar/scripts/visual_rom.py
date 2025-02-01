@@ -9,6 +9,8 @@ import json
 import argparse
 import importlib
 
+import tensorflow as tf
+
 # Inputs
 # =====================================
 parser = argparse.ArgumentParser()
@@ -88,10 +90,10 @@ if (__name__ == "__main__"):
     rrange = np.sort(inputs["rom_range"])
     for r in range(*rrange):
       # > Saving folder
-      path_to_saving_i = path_to_saving + f"/case_{icase}/r{r}/"
+      path_to_saving_i = path_to_saving + f"/{icase}/r{r}/"
       os.makedirs(path_to_saving_i, exist_ok=True)
       # > Loop over ROM models
-      sols = {}
+      sols, errs = {}, {}
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
         system.set_rom(
@@ -99,40 +101,49 @@ if (__name__ == "__main__"):
           psi=model["bases"]["phi"][:,:r],
           mask=model["mask"]
         )
-        isol = system.compute_sol_rom(
-          filename=inputs["data"]["path"]+f"/case_{icase}.p",
-          eval_err=False
+        isol, _ = system.compute_sol_rom(
+          filename=inputs["data"]["path"]+f"/{icase}.p",
+          err_only=False
         )
-        isol[model["name"]] = isol.pop("ROM")
-        sols.update(isol)
-      # > Postprocessing
-      print(f"> Postprocessing with {r} dimensions ...")
-      common_kwargs = dict(
-        path=path_to_saving_i,
-        t=t,
-        n_m=sols,
-        molecule=system.mix.species["molecule"]
-      )
-      pp.plot_mom_evolution(
-        max_mom=inputs["plot"].get("max_mom", 2),
-        molecule_label=inputs["plot"]["molecule_label"],
-        ylim_err=inputs["plot"].get("ylim_err", None),
-        err_scale=inputs["plot"].get("err_scale", "linear"),
-        hline=inputs["plot"].get("hline", None),
-        tlim=inputs["data"]["tlim"][icase],
-        **common_kwargs
-      )
-      pp.plot_multi_dist_2d(
-        teval=inputs["data"]["teval"][icase],
-        markersize=inputs["plot"].get("markersize", 1),
-        subscript=inputs["plot"].get("subscript", "i"),
-        **common_kwargs
-      )
-      if inputs["plot"]["animate"]:
-        pp.animate_dist(
-          markersize=inputs["plot"]["markersize"],
-          **common_kwargs
-        )
+        if (isol is not None):
+          isol[model["name"]] = isol.pop("ROM")
+          errs[model["name"]] = isol.pop("err")
+          sols.update(isol)
+        
+      filename = path_to_saving + "/sols.json"
+      with open(filename, "w") as file:
+        json.dump(tf.nest.map_structure(np.shape, sols), file, indent=2)
+      filename = path_to_saving + "/errs.json"
+      with open(filename, "w") as file:
+        json.dump(tf.nest.map_structure(np.shape, errs), file, indent=2)
+      # # > Postprocessing
+      # print(f"> Postprocessing with {r} dimensions ...")
+      # common_kwargs = dict(
+      #   path=path_to_saving_i,
+      #   t=t,
+      #   n_m=sols,
+      #   molecule=system.mix.species["molecule"]
+      # )
+      # pp.plot_mom_evolution(
+      #   max_mom=inputs["plot"].get("max_mom", 2),
+      #   molecule_label=inputs["plot"]["molecule_label"],
+      #   ylim_err=inputs["plot"].get("ylim_err", None),
+      #   err_scale=inputs["plot"].get("err_scale", "linear"),
+      #   hline=inputs["plot"].get("hline", None),
+      #   tlim=inputs["data"]["tlim"][icase],
+      #   **common_kwargs
+      # )
+      # pp.plot_multi_dist_2d(
+      #   teval=inputs["data"]["teval"][icase],
+      #   markersize=inputs["plot"].get("markersize", 1),
+      #   subscript=inputs["plot"].get("subscript", "i"),
+      #   **common_kwargs
+      # )
+      # if inputs["plot"]["animate"]:
+      #   pp.animate_dist(
+      #     markersize=inputs["plot"]["markersize"],
+      #     **common_kwargs
+      #   )
 
   # Copy input file
   # ---------------

@@ -29,6 +29,8 @@ class Species(object):
     # Indexing
     self.indices = []
 
+    self.compute_mom = bkd.make_fun_np(self._compute_mom)
+
   # Properties
   # ===================================
   @property
@@ -65,7 +67,7 @@ class Species(object):
 
   # Moments
   # ===================================
-  def compute_mom(self, n, m=0):
+  def _compute_mom(self, n, m=0):
     e = self.lev["E"] / const.UE
     if (n.shape[-1] != self.nb_comp):
       n = n.T

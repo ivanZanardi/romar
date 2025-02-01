@@ -470,7 +470,6 @@ class Basic(object):
     path: Optional[str] = None,
     index: Optional[int] = None,
     filename: Optional[str] = None,
-    eval_err: bool = False,
     eps: float = 1e-8
   ) -> Tuple[Optional[np.ndarray]]:
     try:
@@ -483,21 +482,17 @@ class Basic(object):
         # Converged
         prim_fom = self.get_prim(y_fom)
         prim_rom = self.get_prim(y_rom)
-        if eval_err:
-          error = {
-            "t": t,
+        data = {
+          "t": t,
+          "FOM": self.postproc_sol(*prim_fom),
+          "ROM": self.postproc_sol(*prim_rom),
+          "err": {
             "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
             "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
             "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
           }
-          return error, runtime
-        else:
-          sol = {
-            "t": t,
-            "FOM": self.postproc_sol(*prim_fom),
-            "ROM": self.postproc_sol(*prim_rom)
-          }
-          return sol, runtime
+        }
+        return data, runtime
       else:
         return None, None
     except:
@@ -542,7 +537,9 @@ class Basic(object):
   ) -> Dict[str, np.ndarray]:
     dist = {}
     for (name, s) in self.mix.species.items():
-      dist[name] = (n[s.indices].T / s.lev["g"]).T
+      gi = bkd.to_numpy(s.lev["g"])
+      ni = n[s.indices]
+      dist[name] = (ni.T/gi).T
     return dist
 
   # Error computation
@@ -562,19 +559,16 @@ class Basic(object):
       desc="  Cases",
       file=sys.stdout
     )
-    kwargs = dict(
-      path=path,
-      eval_err=True,
-      eps=eps
-    )
     if (nb_workers > 1):
       sols = jl.Parallel(nb_workers)(
         jl.delayed(
           env.make_fun_parallel(self.compute_sol_rom)
-        )(index=i, **kwargs) for i in iterable
+        )(index=i, path=path, eps=eps) for i in iterable
       )
     else:
-      sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
+      sols = [
+        self.compute_sol_rom(index=i, path=path, eps=eps) for i in iterable
+      ]
     # Split error values and running times
     error, runtime = list(zip(*sols))
     error = [x for x in error if (x is not None)]
@@ -613,8 +607,8 @@ class Basic(object):
     eps: float = 1e-8
   ) -> np.ndarray:
     return utils.absolute_percentage_error(
-      y_true=self.mix.get_w(n_true),
-      y_pred=self.mix.get_w(n_pred),
+      y_true=bkd.to_numpy(self.mix.get_w(bkd.to_torch(n_true))),
+      y_pred=bkd.to_numpy(self.mix.get_w(bkd.to_torch(n_pred))),
       eps=eps
     )
 

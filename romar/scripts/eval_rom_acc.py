@@ -88,6 +88,7 @@ if (__name__ == "__main__"):
     print("Evaluating accuracy of ROM '%s' ..." % model["name"])
     rrange = np.sort(inputs["rom_range"])
     if (model["error"] is None):
+      t = None
       error, runtime = {}, {}
       # Loop over ROM dimensions
       for r in range(*rrange):
@@ -97,30 +98,33 @@ if (__name__ == "__main__"):
           psi=model["bases"]["phi"][:,:r],
           mask=model["mask"]
         )
-        result = system.compute_err(**inputs["data"])
-        if (None not in result):
+        idata, iruntime = system.compute_err(**inputs["data"])
+        if (idata is not None):
+          if (t is None):
+            t = idata["t"]
           r = str(r)
-          error[r], runtime[r] = result
-          r = str(r)
+          error[r], runtime[r] = idata["err"], iruntime
       # Save error statistics
       print("> Saving statistics ...")
       # > Error
       filename = path_to_saving + f"/{name}_err.p"
-      pickle.dump(error, open(filename, "wb"))
+      pickle.dump({"t": t, "data": error}, open(filename, "wb"))
       # > Runtime
       filename = path_to_saving + f"/{name}_runtime.json"
       with open(filename, "w") as file:
         json.dump(runtime, file, indent=2)
     else:
+      t = model["error"]["t"]
       error = {}
       for r in range(*rrange):
         k = str(r)
-        if (k in model["error"]):
-          error[k] = model["error"][k]
+        if (k in model["error"]["data"]):
+          error[k] = model["error"]["data"][k]
     # Plot error statistics
     print("> Plotting error evolution ...")
     pp.plot_err_evolution(
       path=path_to_saving+f"/{name}/",
+      t=t,
       error=error,
       species=list(system.mix.species.keys()),
       **inputs["plot"]
