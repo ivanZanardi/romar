@@ -109,13 +109,7 @@ if (__name__ == "__main__"):
           isol[model["name"]] = isol.pop("ROM")
           errs[model["name"]] = isol.pop("err")
           sols.update(isol)
-        
-      filename = path_to_saving + "/sols.json"
-      with open(filename, "w") as file:
-        json.dump(tf.nest.map_structure(np.shape, sols), file, indent=2)
-      filename = path_to_saving + "/errs.json"
-      with open(filename, "w") as file:
-        json.dump(tf.nest.map_structure(np.shape, errs), file, indent=2)
+
       # # > Postprocessing
       # print(f"> Postprocessing with {r} dimensions ...")
       # common_kwargs = dict(
