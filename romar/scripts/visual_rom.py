@@ -93,6 +93,7 @@ if (__name__ == "__main__"):
       path_to_saving_i = path_to_saving + f"/{icase}/r{r}/"
       os.makedirs(path_to_saving_i, exist_ok=True)
       # > Loop over ROM models
+      t = None
       sols, errs = {}, {}
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
@@ -106,9 +107,12 @@ if (__name__ == "__main__"):
           err_only=False
         )
         if (isol is not None):
-          isol[model["name"]] = isol.pop("ROM")
+          if (t is None):
+            t = isol.pop("t")
+          if ("FOM" not in sols):
+            sols["FOM"] = isol.pop("FOM")
+          sols[model["name"]] = isol.pop("ROM")
           errs[model["name"]] = isol.pop("err")
-          sols.update(isol)
 
       # # > Postprocessing
       # print(f"> Postprocessing with {r} dimensions ...")
