@@ -144,17 +144,84 @@ def plot_temp_evolution(
     show=False
   )
 
+#     # y=utils.replace_keys(err, labels),
+# # Moments
+# def plot_mom_evolution(
+#   path,
+#   t,
+#   y,
+#   err,
+#   species,
+#   labels,
+#   tlim=None,
+#   ylim_err=None,
+#   err_scale="linear",
+#   hline=None,
+#   max_mom=2
+# ):
+#   path = path + "/moments/"
+#   os.makedirs(path, exist_ok=True)
+#   # Plot moments
+#   for m in range(max_mom):
+#     if (m == 0):
+#       yscale = "log"
+#       label_sol = "$n$ [m$^{-3}$]"
+#       label_err = "$n$ error [\%]"
+#     else:
+#       yscale = "linear"
+#       if (m == 1):
+#         label_sol = "$e$ [eV]"
+#         label_err = "$e$ error [\%]"
+#       else:
+#         label_sol = fr"$\gamma_{m}$ [eV$^{m}$]"
+#         label_err = fr"$\gamma_{m}$ error [\%]"
+#     # > Moment
+#     ym = {
+#       k: {labels[s]: y[k]["mom"][s][f"m{m}"]} for s in species for k in y.keys()
+#     }
+#     plot_evolution(
+#       x=t,
+#       y=ym,
+#       xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
+#       labels=[r"$t$ [s]", label_sol],
+#       # legend_loc="lower left" if (m == 0) else "lower right",
+#       legend_loc="best",
+#       scales=["log", yscale],
+#       figname=path + f"/m{m}",
+#       save=True,
+#       show=False
+#     )
+#     # > Moment error
+#     for (k, momk) in moms[m].items():
+#       if (k.upper() == "FOM"):
+#         mom_fom = momk
+#         break
+#     moms_err = {}
+#     for (k, momk) in moms[m].items():
+#       if (k.upper() != "FOM"):
+#         moms_err[k] = utils.absolute_percentage_error(mom_fom, momk)
+#     plot_evolution(
+#       x=t,
+#       y=moms_err,
+#       xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
+#       ylim=ylim_err,
+#       hline=hline,
+#       labels=[r"$t$ [s]", label_err],
+#       # legend_loc="lower center",
+#       legend_loc="best",
+#       scales=["log", err_scale],
+#       figname=path + f"/m{m}_err",
+#       save=True,
+#       show=False
+#     )
 
-
-    # y=utils.replace_keys(err, labels),
 # Moments
 def plot_mom_evolution(
   path,
   t,
-  y,
-  err,
-  species,
-  labels,
+  n_m,
+  molecule,
+  molecule_label,
   tlim=None,
   ylim_err=None,
   err_scale="linear",
@@ -163,31 +230,47 @@ def plot_mom_evolution(
 ):
   path = path + "/moments/"
   os.makedirs(path, exist_ok=True)
+  # Compute moments
+  # > Check if MT model is present
+  moms_mt = {}
+  keys = list(n_m.keys())
+  for k in keys:
+    if ("MT" in k):
+      moms_mt[k] = n_m.pop(k)
+  # > Order 0
+  moms = [{k: molecule.compute_mom(nk, m=0) for (k, nk) in n_m.items()}]
+  # > Order 1-max_mom
+  for m in range(1,max_mom):
+    moms.append(
+      {k: molecule.compute_mom(nk, m=1)/moms[0][k] for (k, nk) in n_m.items()}
+      # {k: molecule.compute_mom(nk, m=1) for (k, nk) in n_m.items()}
+    )
+  # Include MT model
+  if (len(moms_mt) > 0):
+    for k in moms_mt.keys():
+      for m in range(2):
+        moms[m][k] = moms_mt[k][m]
   # Plot moments
   for m in range(max_mom):
     if (m == 0):
       yscale = "log"
-      label_sol = "$n$ [m$^{-3}$]"
-      label_err = "$n$ error [\%]"
+      label_sol = fr"$n_{molecule_label}$ [m$^{{-3}}$]"
+      label_err = fr"$n_{molecule_label}$ error [\%]"
     else:
       yscale = "linear"
       if (m == 1):
-        label_sol = "$e$ [eV]"
-        label_err = "$e$ error [\%]"
+        label_sol = fr"$e_{molecule_label}$ [eV]"
+        label_err = fr"$e_{molecule_label}$ error [\%]"
       else:
         label_sol = fr"$\gamma_{m}$ [eV$^{m}$]"
         label_err = fr"$\gamma_{m}$ error [\%]"
     # > Moment
-    ym = {
-      k: {labels[s]: y[k]["mom"][s][f"m{m}"]} for s in species for k in y.keys()
-    }
     plot_evolution(
       x=t,
-      y=ym,
+      y=moms[m],
       xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
       labels=[r"$t$ [s]", label_sol],
-      # legend_loc="lower left" if (m == 0) else "lower right",
-      legend_loc="best",
+      legend_loc="lower left" if (m == 0) else "lower right",
       scales=["log", yscale],
       figname=path + f"/m{m}",
       save=True,

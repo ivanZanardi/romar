@@ -4,29 +4,19 @@ import time
 import torch
 import numpy as np
 import scipy as sp
-
 import joblib as jl
-from tqdm import tqdm
-from typing import Tuple
-
+import pandas as pd
 import tensorflow as tf
 
-
-import abc
-import time
-import numpy as np
-import scipy as sp
-import pandas as pd
-
+from tqdm import tqdm
 from pyDOE import lhs
-
+from typing import *
 
 from .. import env
 from .. import utils
 from .. import backend as bkd
 from .thermochemistry import *
 from .thermochemistry.equilibrium import MU_VARS
-from typing import Dict, List, Optional, Tuple
 
 
 class Basic(object):
@@ -260,7 +250,14 @@ class Basic(object):
 
   # ROM Model
   # ===================================
-  def set_rom(self, phi, psi, mask):
+  def set_rom(
+    self,
+    phi: np.ndarray,
+    psi: np.ndarray,
+    mask: Union[str, np.ndarray],
+    xref: Optional[np.ndarray] = None,
+    xscale: Optional[np.ndarray] = None
+  ) -> None:
     # Biorthogonalize
     phi = phi @ sp.linalg.inv(psi.T @ phi)
     # Projector
@@ -268,17 +265,30 @@ class Basic(object):
     # Mask
     if isinstance(mask, str):
       mask = np.loadtxt(mask)
-    # Convert
-    self.phi, self.psi, self.P, self.mask = [
-      bkd.to_torch(z) for z in (phi, psi, P, mask)
-    ]
-    self.mask = self.mask.bool()
+    # Normalization
+    # > Reference value
+    xref = np.zeros(self.nb_eqs) if (xref is None) else xref
+    xref = xref.squeeze()
+    # > Scaling value
+    xscale = np.ones(self.nb_eqs) if (xscale is None) else xscale
+    xscale = xscale.squeeze()
+    ov_xscale = np.diag(1.0/xscale)
+    xscale = np.diag(xscale)
     # Dimension
-    shape = list(self.phi.shape)
-    if self.use_proj:
-      self.rom_dim = shape[0]
-    else:
-      self.rom_dim = shape[1]
+    shape = list(phi.shape)
+    self.rom_dim = shape[0] if self.use_proj else shape[1]
+    # Convert
+    for (k, v) in (
+      ("phi", phi),
+      ("psi", psi),
+      ("P", P),
+      ("mask", mask),
+      ("xref", xref),
+      ("xscale", xscale),
+      ("ov_xscale", ov_xscale)
+    ):
+      setattr(self, k, bkd.to_torch(v))
+    self.mask = self.mask.bool()
 
   # Output
   # ===================================
@@ -385,6 +395,8 @@ class Basic(object):
     return y, runtime
 
   def _encode(self, y):
+    # Normalize
+    y = (y - self.xref) @ self.ov_xscale
     # Split variables
     yhat = y[..., self.mask]
     ynot = y[...,~self.mask]
@@ -403,6 +415,8 @@ class Basic(object):
     y = torch.zeros(shape)
     y[..., self.mask] = yhat
     y[...,~self.mask] = ynot
+    # Denormalize
+    y = y @ self.xscale + self.xref
     return y
 
   def get_tgrid(

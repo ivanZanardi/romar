@@ -7,13 +7,13 @@ import joblib as jl
 import dill as pickle
 import multiprocessing
 
+from tqdm import tqdm
+from typing import *
+
 from .. import env
 from .. import ops
 from .. import backend as bkd
 from ..systems import SYS_TYPES
-
-from tqdm import tqdm
-from typing import *
 
 
 class CoBRAS(object):
@@ -39,6 +39,8 @@ class CoBRAS(object):
     system: SYS_TYPES,
     tgrid: Dict[str, float],
     quad_mu: Dict[str, np.ndarray],
+    xref: Optional[np.ndarray] = None,
+    xscale: Optional[np.ndarray] = None,
     path_to_saving: str = "./",
     saving: bool = True
   ) -> None:
@@ -70,10 +72,27 @@ class CoBRAS(object):
     self.system = system
     self.tgrid = tgrid
     self.quad_mu = quad_mu
+    # Normalization procedure
+    self.set_norm(xref, xscale)
     # Configure saving options
     self.saving = saving
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
+
+  # Normalization
+  # ===================================
+  def set_norm(self, xref, xscale):
+    # Reference value
+    xref = np.zeros(self.system.nb_eqs) if (xref is None) else xref
+    self.xref = xref.squeeze()
+    # Scaling value
+    xscale = np.ones(self.system.nb_eqs) if (xscale is None) else xscale
+    xscale = xscale.squeeze()
+    self.xscale = np.diag(xscale)
+    self.ov_xscale = np.diag(1.0/xscale)
+
+  def normalize(self, x):
+    return self.ov_xscale @ (x - self.xref)
 
   # Covariance matrices
   # ===================================
@@ -210,7 +229,7 @@ class CoBRAS(object):
         # Store weighted samples for gradient covariance matrix
         Y.append(wij * Yij)
       # Store weighted samples for state covariance matrix
-      X.append(wij * y[j])
+      X.append(wij * self.normalize(y[j]))
 
   def _get_tquad(
     self,
@@ -270,6 +289,10 @@ class CoBRAS(object):
     # Compute linear operators
     self.system.compute_lin_fom_ops(y0)
     A, C = [getattr(self.system, k) for k in ("A", "C")]
+    # Normalization procedure
+    A = self.ov_xscale @ A @ self.xscale
+    C = C @ self.xscale
+    # Eigendecomposition
     l, V = sp.linalg.eig(A)
     Vinv = sp.linalg.inv(V)
     # Allocate memory
