@@ -39,4 +39,4 @@ cm3_to_m3 = 1e-6                                   # [cm^3] -> [m^3]
 # -------------------------------------
 TMIN      = 3e2                                    # Minimum temperature [K]
 TMAX      = 1e5                                    # Maximum temperature [K]
-XMIN      = 1e-20                                  # Minimum molar fraction
+XMIN      = 1e-15                                  # Minimum molar fraction
