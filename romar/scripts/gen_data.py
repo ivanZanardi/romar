@@ -64,6 +64,11 @@ if (__name__ == "__main__"):
   if (mu_opts["nb_samples"] > 0):
     # Sampled initial conditions parameters
     mu = system.construct_design_mat_mu(**mu_opts)
+    mu.to_csv(
+      path_to_saving + "/samples_mu.csv",
+      float_format="%.8e",
+      index=True
+    )
     # Generate data
     print("Running sampled cases ...")
     runtime = utils.generate_case_parallel(
@@ -78,12 +83,6 @@ if (__name__ == "__main__"):
       nb_workers=inputs["param_space"]["nb_workers"],
       desc=None,
       delimiter="> "
-    )
-    # Save parameters
-    mu.to_csv(
-      path_to_saving + "/samples_mu.csv",
-      float_format="%.8e",
-      index=True
     )
     # Save runtime
     with open(path_to_saving + "/runtime.txt", "w") as file:

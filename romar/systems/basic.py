@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 
 from tqdm import tqdm
-from pyDOE import lhs
+from pyDOE2 import lhs
 from typing import *
 
 from .. import env
@@ -446,7 +446,7 @@ class Basic(object):
     design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
     # Construct
     ddim = design_space.shape[1]
-    dmat = lhs(ddim, int(nb_samples))
+    dmat = lhs(ddim, samples=int(nb_samples))
     # Rescale
     amin, amax = design_space
     mu = dmat * (amax - amin) + amin
