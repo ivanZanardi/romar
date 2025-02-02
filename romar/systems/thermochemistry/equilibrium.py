@@ -119,7 +119,7 @@ class Equilibrium(object):
         sigma=sigma
       )
       y = self._compose_state_vector(
-        Th=bkd.to_torch(Te).reshape(1),
+        T=bkd.to_torch(Te).reshape(1),
         ze=self.mix.species["em"].x
       )
     # Replace the equilibrium temperature Te with Th for heat bath simulation

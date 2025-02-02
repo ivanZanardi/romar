@@ -39,8 +39,8 @@ class CoBRAS(object):
     system: SYS_TYPES,
     tgrid: Dict[str, float],
     quad_mu: Dict[str, np.ndarray],
-    xref: Optional[np.ndarray] = None,
-    xscale: Optional[np.ndarray] = None,
+    xref: Optional[Union[str, np.ndarray]] = None,
+    xscale: Optional[Union[str, np.ndarray]] = None,
     path_to_saving: str = "./",
     saving: bool = True
   ) -> None:
@@ -83,10 +83,16 @@ class CoBRAS(object):
   # ===================================
   def set_norm(self, xref, xscale):
     # Reference value
-    xref = np.zeros(self.system.nb_eqs) if (xref is None) else xref
+    if (xref is None):
+      xref = np.zeros(self.system.nb_eqs)
+    elif isinstance(xref, str):
+      xref = np.loadtxt(xref)
     self.xref = xref.squeeze()
     # Scaling value
-    xscale = np.ones(self.system.nb_eqs) if (xscale is None) else xscale
+    if (xscale is None):
+      xscale = np.ones(self.system.nb_eqs)
+    elif isinstance(xscale, str):
+      xscale = np.loadtxt(xscale)
     xscale = xscale.squeeze()
     self.xscale = np.diag(xscale)
     self.ov_xscale = np.diag(1.0/xscale)
