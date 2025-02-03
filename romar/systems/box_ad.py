@@ -31,6 +31,7 @@ class BoxAd(Basic):
   # Function/Jacobian
   # ===================================
   def _fun(self, t, y):
+    # print(float(t))
     # ROM activated
     y = self._decode(y) if self.use_rom else y
     # Extract primitive variables

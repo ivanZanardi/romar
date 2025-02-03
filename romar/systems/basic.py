@@ -331,6 +331,7 @@ class Basic(object):
     self,
     max_mom: int = 1,
     state_specs: bool = False,
+    include_em: bool = True,
     include_temp: bool = False
   ) -> None:
     """
@@ -350,10 +351,12 @@ class Basic(object):
     si, ei = 0, 0
     # Loop over species in the defined order
     for k in self.species_order:
+      if ((k == "em") and (not include_em)):
+        continue
       # Get species object
       s = self.mix.species[k]
       # Compute the moment basis for the species and populate C
-      m = max_mom if (s.nb_comp > 1) else 1
+      m = max_mom if (k != "em") else 1
       basis = s.compute_mom_basis(m)
       for b in basis:
         ei += s.nb_comp if state_specs else 1

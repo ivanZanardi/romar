@@ -26,6 +26,7 @@
     "c_mat": {
       "max_mom": 2,
       "state_specs": false,
+      "include_em": false,
       "include_temp": false
     }
   },
@@ -63,8 +64,8 @@
       },
       "read": false,
       "save": true,
-      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/X.npy",
-      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/Y.npy"
+      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/X.npy",
+      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/Y.npy"
     },
     "modes": {
       "compute": {
@@ -75,6 +76,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/"
   }
 }

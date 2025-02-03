@@ -314,6 +314,42 @@ class CoBRAS(object):
     g = np.reshape(g, (shape[1],-1))
     return g
 
+  # Adjoint model
+  # -----------------------------------
+  def solve_adjoint(
+    self,
+    t: np.ndarray,
+    g0: np.ndarray
+  ) -> np.ndarray:
+    return sp.integrate.solve_ivp(
+      fun=self.adjoint_fun,
+      t_span=[t[0],t[-1]],
+      y0=g0,
+      method="BDF",
+      t_eval=t,
+      first_step=1e-14,
+      rtol=1e-6,
+      atol=1e-20,
+      jac=self.adjoint_jac
+    ).y
+
+  def adjoint_fun(
+    self,
+    t: np.ndarray,
+    g: np.ndarray
+  ) -> np.ndarray:
+    print(t)
+    return self.adjoint_jac(t, g) @ g
+
+  def adjoint_jac(
+    self,
+    t: np.ndarray,
+    g: np.ndarray
+  ) -> np.ndarray:
+    x = self.sol_interp(t)
+    j = self.system.jac(t, x)
+    return - j.T
+
   # Balanced modes
   # ===================================
   def compute_modes(
