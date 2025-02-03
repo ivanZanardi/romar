@@ -44,7 +44,6 @@ class BoxAd(Basic):
       self.omega_T(f_rho, f_et, f_ee),
       self.omega_pe(f_ee)
     ])
-    ii = int(torch.argmax(torch.abs(f)))
     # ROM activated
     f = self._encode(f) if self.use_rom else f
     return f
