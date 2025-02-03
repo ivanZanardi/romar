@@ -31,19 +31,19 @@
   "grids": {
     "t": {
       "start": 1e-12,
-      "stop": 1e0,
+      "stop": 1e-1,
       "num": 51
     },
     "mu": {
       "rho": {
-        "start": 5e-3,
-        "stop": 1e0,
-        "num": 5
+        "start": 1e-3,
+        "stop": 1e-2,
+        "num": 6
       },
       "Th":  {
         "start": 2e4,
-        "stop": 5e4,
-        "num": 50
+        "stop": 4e4,
+        "num": 26
       },
       "Te":  {
         "start": 293.6,
@@ -55,15 +55,15 @@
   "cobras": {
     "cov_mats": {
       "compute": {
-        "nb_meas": 3,
+        "nb_meas": 10,
         "noise": true,
         "err_max": 25.0,
         "nb_workers": 20
       },
       "read": false,
       "save": true,
-      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/test_norad/max_mom_2/X.npy",
-      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/test_norad/max_mom_2/Y.npy"
+      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/rad_off_test1/max_mom_2/X.npy",
+      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/rad_off_test1/max_mom_2/Y.npy"
     },
     "modes": {
       "compute": {
@@ -74,6 +74,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test_norad/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_off_test1/max_mom_2/"
   }
 }
