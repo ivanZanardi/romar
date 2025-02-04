@@ -28,21 +28,21 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/cobras_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/cobras_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/rom_mask.txt"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/pod_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/pod_bases.p",
+      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/rom_mask.txt"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/",
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/data/",
     "irange": [0,100],
     "nb_workers": 10,
     "eps": 1e-8
@@ -65,6 +65,6 @@
     },
     "max_mom": 2
   },
-  "rom_range": [5,8],
+  "rom_range": [5,9],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

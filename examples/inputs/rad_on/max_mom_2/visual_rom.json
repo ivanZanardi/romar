@@ -26,46 +26,62 @@
   },
   "models": {
     "cobras": {
-      "active": false,
+      "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/cobras_bases.p"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/pod_bases.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
   },
   "data": {
     "cases": [
-      "case_T25000"
+      "lrho_lT",
+      "lrho_hT",
+      "hrho_lT",
+      "hrho_hT",
+      "mrho_mT"
     ],
     "teval": {
-      "case_T25000": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3]
+      "lrho_lT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
+      "lrho_hT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
+      "hrho_lT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
+      "hrho_hT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
+      "mrho_mT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3]
     },
-    "tlim": {
-      "case_T25000": {
-        "dist": [1e-10, 1e-1],
-        "temp": [1e-10, 1e-1],
-        "m0": [1e-10, 1e-1],
-        "m1": [1e-10, 1e-1]
-      }
-    },
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/data/"
   },
   "plot": {
-    "style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",
-    "animate": false,
-    "markersize": 1,
-    "subscript": "i",
+    "labels": {
+      "Th": "T_h",
+      "Te": "T_e",
+      "Ar": "\\text{Ar}",
+      "Arp": "\\text{Ar$^+$}",
+      "em": "\\text{e$^-$}"
+    },
+    "tlim": {
+      "lrho_lT": null,
+      "lrho_hT": null,
+      "hrho_lT": null,
+      "hrho_hT": null,
+      "mrho_mT": null
+    },
+    "ylim_err": null,
     "err_scale": "log",
-    "molecule_label": "\\text{N$_2$}",
-    "hline": 1.0
+    "hline": {
+      "temp": 1.0,
+      "mom": 1.0,
+      "dist": 10.0
+    },
+    "max_mom": 2,
+    "animate": false,
+    "markersize": 1
   },
-  "rom_range": [10,11]
+  "rom_range": [5,9],
+  "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

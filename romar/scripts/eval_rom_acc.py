@@ -72,10 +72,6 @@ if (__name__ == "__main__"):
           model["error"] = pickle.load(open(model["error"], "rb"))
         else:
           model["error"] = None
-        if ("mask" not in model):
-          raise ValueError(
-            f"Please, provide the path to ROM mask for '{name}' model."
-          )
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."

@@ -265,12 +265,13 @@ class Basic(object):
     # Mask
     if isinstance(mask, str):
       mask = np.loadtxt(mask)
+    mask = mask.astype(bool)
     # Normalization
     # > Reference value
-    xref = np.zeros(self.nb_eqs) if (xref is None) else xref
+    xref = np.zeros(self.nb_eqs)[mask] if (xref is None) else xref
     xref = xref.squeeze()
     # > Scaling value
-    xscale = np.ones(self.nb_eqs) if (xscale is None) else xscale
+    xscale = np.ones(self.nb_eqs)[mask] if (xscale is None) else xscale
     xscale = xscale.squeeze()
     ov_xscale = np.diag(1.0/xscale)
     xscale = np.diag(xscale)
@@ -440,11 +441,11 @@ class Basic(object):
     return y, runtime
 
   def _encode(self, y):
-    # Normalize
-    y = (y - self.xref) @ self.ov_xscale
     # Split variables
     yhat = y[..., self.mask]
     ynot = y[...,~self.mask]
+    # Normalize
+    yhat = (yhat - self.xref) @ self.ov_xscale
     # Encode
     z = yhat @ self.P.T if self.use_proj else yhat @ self.psi
     # Concatenate
@@ -455,13 +456,13 @@ class Basic(object):
     z, ynot = z[...,:self.rom_dim], z[...,self.rom_dim:]
     # Decode
     yhat = z @ self.P.T if self.use_proj else z @ self.phi.T
+    # Denormalize
+    yhat = yhat @ self.xscale + self.xref
     # Fill decoded tensor
     shape = list(z.shape)[:-1]+[self.nb_eqs]
     y = torch.zeros(shape)
     y[..., self.mask] = yhat
     y[...,~self.mask] = ynot
-    # Denormalize
-    y = y @ self.xscale + self.xref
     return y
 
   def get_tgrid(

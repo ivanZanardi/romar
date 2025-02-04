@@ -81,7 +81,11 @@ class CoBRAS(object):
 
   # Normalization
   # ===================================
-  def set_norm(self, xref, xscale):
+  def set_norm(
+    self,
+    xref: Optional[Union[str, np.ndarray]] = None,
+    xscale: Optional[Union[str, np.ndarray]] = None
+  ) -> None:
     # Reference value
     if (xref is None):
       xref = np.zeros(self.system.nb_eqs)
@@ -97,7 +101,7 @@ class CoBRAS(object):
     self.xscale = np.diag(xscale)
     self.ov_xscale = np.diag(1.0/xscale)
 
-  def normalize(self, x):
+  def normalize(self, x: np.ndarray) -> np.ndarray:
     return self.ov_xscale @ (x - self.xref)
 
   # Covariance matrices
@@ -181,7 +185,7 @@ class CoBRAS(object):
     nb_meas: int = 5,
     noise: bool = False,
     err_max: float = 25.0
-  ) -> Tuple[np.ndarray]:
+  ) -> None:
     """
     Compute state and gradient covariance matrices based on quadrature
     points and system dynamics.
@@ -319,7 +323,8 @@ class CoBRAS(object):
   def solve_adjoint(
     self,
     t: np.ndarray,
-    g0: np.ndarray
+    g0: np.ndarray,
+    fint: sp.interpolate.interp1d
   ) -> np.ndarray:
     return sp.integrate.solve_ivp(
       fun=self.adjoint_fun,
@@ -327,6 +332,7 @@ class CoBRAS(object):
       y0=g0,
       method="BDF",
       t_eval=t,
+      args=(fint,),
       first_step=1e-14,
       rtol=1e-6,
       atol=1e-20,
@@ -336,18 +342,18 @@ class CoBRAS(object):
   def adjoint_fun(
     self,
     t: np.ndarray,
-    g: np.ndarray
+    g: np.ndarray,
+    fint: sp.interpolate.interp1d
   ) -> np.ndarray:
-    print(t)
-    return self.adjoint_jac(t, g) @ g
+    return self.adjoint_jac(t, g, fint) @ g
 
   def adjoint_jac(
     self,
     t: np.ndarray,
-    g: np.ndarray
+    g: np.ndarray,
+    fint: sp.interpolate.interp1d
   ) -> np.ndarray:
-    x = self.sol_interp(t)
-    j = self.system.jac(t, x)
+    j = self.system.jac(t, fint(t))
     return - j.T
 
   # Balanced modes
@@ -358,6 +364,7 @@ class CoBRAS(object):
     Y: np.ndarray,
     xnot: list = [],
     pod: bool = False,
+    pod_norm: bool = False,
     rank: int = 100,
     niter: int = 50
   ) -> None:
@@ -380,7 +387,6 @@ class CoBRAS(object):
     # -------------
     mask = self._make_mask(xnot)
     X, Y = X[mask], Y[mask]
-    np.savetxt(self.path_to_saving+"/rom_mask.txt", mask, fmt='%d')
     # CoBRAS
     # -------------
     # Perform randomized SVD
@@ -396,20 +402,42 @@ class CoBRAS(object):
     phi = X @ V @ sqrt_s
     psi = Y @ U @ sqrt_s
     # Save balancing modes
-    s, phi, psi = [bkd.to_numpy(z) for z in (s, phi, psi)]
-    data = {"s": s, "phi": phi, "psi": psi}
+    data = {}
+    for (k, v) in (
+      ("s", s),
+      ("phi", phi),
+      ("psi", psi),
+      ("mask", mask),
+      ("xref", self.xref[mask]),
+      ("xscale", np.diag(self.xscale)[mask])
+    ):
+      data[k] = bkd.to_numpy(v)
     filename = self.path_to_saving+"/cobras_bases.p"
     pickle.dump(data, open(filename, "wb"))
     # POD
     # -------------
     if pod:
+      # Normalize
+      xref = torch.mean(X, dim=-1) if pod_norm else torch.zeros(X.shape[0])
+      xscale = torch.std(X, dim=-1) if pod_norm else torch.ones(X.shape[0])
+      X = ((X.T-xref)/xscale).T
+      # Compute modes
       U, s, _ = torch.svd_lowrank(
         A=X,
         q=min(rank, X.shape[0]),
         niter=niter
       )
-      s, phi = [bkd.to_numpy(z) for z in (s, U)]
-      data = {"s": s, "phi": phi, "psi": phi}
+      # Save modes
+      data = {}
+      for (k, v) in (
+        ("s", s),
+        ("phi", U),
+        ("psi", U),
+        ("mask", mask),
+        ("xref", xref),
+        ("xscale", xscale)
+      ):
+        data[k] = bkd.to_numpy(v)
       filename = self.path_to_saving+"/pod_bases.p"
       pickle.dump(data, open(filename, "wb"))
 
