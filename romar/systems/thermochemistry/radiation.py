@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import dill as pickle
 
 from ... import const
@@ -23,9 +24,9 @@ class Radiation(object):
     # Radiation enabled
     self.active = active
     # Constant
-    self.fac_emis_ff = (32.0*torch.pi/3.0) \
-      * torch.sqrt(2.0*torch.pi*const.UKB/(3.0*const.UME)) * const.UE**6 \
-      / ((4.0*torch.pi*const.UEPS0*const.UC0)**3 * const.UH*const.UME)
+    self.fac_emis_ff = float((32.0*np.pi/3.0) \
+      * np.sqrt(2.0*np.pi*const.UKB/(3.0*const.UME)) * const.UE**6 \
+      / ((4.0*np.pi*const.UEPS0*const.UC0)**3 * const.UH*const.UME))
 
   def _init_processes(self, processes):
     # Load processes
@@ -91,6 +92,6 @@ class Radiation(object):
   # -----------------------------------
   def _compute_FF_rate(self, Te):
     """Bremsstrahlung emission (FF)"""
-    return self.fac_emis_ff * torch.sqrt(Te) \
+    return self.fac_emis_ff * np.sqrt(Te) \
       * self.processes["FF"]["Z_sq_eff"] \
       * self.processes["FF"]["g_bar"]
