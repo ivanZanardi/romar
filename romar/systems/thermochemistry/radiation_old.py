@@ -1,9 +1,10 @@
 import torch
+import numpy as np
 import dill as pickle
 
-from ... import const
 from ... import utils
 from ... import backend as bkd
+from pyharm import PolyHarmInterpolator
 
 
 class Radiation(object):
@@ -22,10 +23,6 @@ class Radiation(object):
     self._init_processes(processes)
     # Radiation enabled
     self.active = active
-    # Constant
-    self.fac_emis_ff = (32.0*torch.pi/3.0) \
-      * torch.sqrt(2.0*torch.pi*const.UKB/(3.0*const.UME)) * const.UE**6 \
-      / ((4.0*torch.pi*const.UEPS0*const.UC0)**3 * const.UH*const.UME)
 
   def _init_processes(self, processes):
     # Load processes
@@ -34,10 +31,34 @@ class Radiation(object):
       self.processes = pickle.load(open(self.processes, "rb"))
     # Convert processes
     self.processes = utils.map_nested_dict(self.processes, bkd.to_torch)
+    # # Photo-ionization and radiative recombination (BF-prime)
+    # self._init_BFp_rates()
     # Initialize rates container
     self.rates = {}
     if ("BB" in self.processes):
       self.rates["BB"] = self._compute_BB_rates()
+
+  # def _init_BFp_rates(self):
+  #   if (("BFp" in self.processes) and self.use_tables):
+  #     # Input/Output tensors
+  #     x = self.processes["T"].squeeze()
+  #     y = self.processes["BFp"]["values"]
+  #     # Tensor shapes
+  #     xshape = np.array(x.shape)
+  #     yshape = np.array(y.shape)
+  #     # Permute output tensor
+  #     i = np.where(yshape == xshape[0])[0][0]
+  #     dims = [i] + [j for j in range(len(yshape)) if (j != i)]
+  #     y = torch.permute(y, dims=dims)
+  #     # Interpolate
+  #     self.processes["BFp"]["shape"] = np.array(y.shape).tolist()[1:]
+  #     self.processes["BFp"]["interp"] = PolyHarmInterpolator(
+  #       c=x.reshape(1,xshape[0],-1),
+  #       f=y.reshape(1,xshape[0],-1),
+  #       order=1,
+  #       smoothing=0.0,
+  #       dtype=bkd.floatx(bkd="torch")
+  #     )
 
   # Rates
   # ===================================
@@ -45,11 +66,11 @@ class Radiation(object):
     # Compute radiation rates
     # > Zeroth order moment
     if ("BF" in self.processes):
-      self.rates["BF"] = self._compute_BF_rates(Te, identifier="BF")
+      self.rates["BF"] = self._compute_BF_rates(Te)
     # > First order moment
     if (not isothermal):
-      if ("BFp" in self.processes):
-        self.rates["BFp"] = self._compute_BF_rates(Te, identifier="BFp")
+      if (("BFp" in self.processes) and self.use_tables):
+        self.rates["BFp"] = self._compute_BFp_rates(Te)
       if ("FF" in self.processes):
         self.rates["FF"] = self._compute_FF_rate(Te)
     # Squeeze tensors
@@ -89,8 +110,26 @@ class Radiation(object):
 
   # First order moment
   # -----------------------------------
+  def _compute_BFp_rates(self, Te, identifier="BFp"):
+    """
+    Photo-ionization and radiative recombination (BF-prime)
+    """
+    process = self.processes[identifier]
+    k = process["interp"](Te.reshape(1,1,1)).reshape(process["shape"])
+    l = process["lambda"]
+    return {"fwd": (1.0-l)*k, "bwd": (l*k).T}
+
+  # def _compute_BFp_rates(self, Te, identifier="BFp"):
+  #   """
+  #   Photo-ionization and radiative recombination (BF-prime)
+  #   """
+  #   process = self.processes[identifier]
+  #   k = process["interp"](Te.reshape(1,1,1)).reshape(process["shape"])
+  #   l = process["lambda"]
+  #   return {"fwd": (1.0-l)*k, "bwd": (l*k).T}
+
   def _compute_FF_rate(self, Te):
     """Bremsstrahlung emission (FF)"""
-    return self.fac_emis_ff * torch.sqrt(Te) \
+    return 1.42e-40 * torch.sqrt(Te) \
       * self.processes["FF"]["Z_sq_eff"] \
       * self.processes["FF"]["g_bar"]

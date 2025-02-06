@@ -96,8 +96,6 @@ class Sources(object):
       if (k in self.rad.rates):
         rates = self.rad.rates[k]
         ops[k] = self._compose_ops_ion(rates)
-        if (k == "BF"):
-          ops[k+"_e"] = self._compose_ops_ion(rates, apply_energy=True)
     return ops
 
   def _compose_ops_exc(self, rates, apply_energy=False):
@@ -160,7 +158,7 @@ class Sources(object):
 
   def omega_energy_t(self, omegas):
     f = torch.zeros(1)
-    for k in ("rad_bb", "rad_bf"):
+    for k in ("rad_bb",): # "rad_bf"):
       f += omegas[k]
     return f
 
@@ -213,9 +211,8 @@ class Sources(object):
 
   def _omega_rad_bf(self, rad_ops):
     nn, ni, ne = [self.mix.species[k].n for k in ("Ar", "Arp", "em")]
-    identifier = "BFp" if self.rad.use_tables else "BF_e"
-    return torch.sum(rad_ops[identifier]["fwd"] * nn) \
-         - torch.sum(rad_ops[identifier]["bwd"] * ni * ne)
+    return torch.sum(rad_ops["BFp"]["fwd"] * nn) \
+         - torch.sum(rad_ops["BFp"]["bwd"] * ni * ne)
 
   def _omega_rad_ff(self):
     ni, ne = [self.mix.species[k].n for k in ("Arp", "em")]
