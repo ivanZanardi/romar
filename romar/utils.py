@@ -254,7 +254,7 @@ def map_nested_dict(
   :rtype: Any
   """
   if isinstance(obj, collections.Mapping):
-    return {k: map_nested_dict(v, fun) for (k, v) in obj.items()}
+    return {k: map_nested_dict(fun, v) for (k, v) in obj.items()}
   else:
     if isinstance(obj, (list, tuple)):
       return [fun(x) for x in obj]
