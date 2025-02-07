@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import dill as pickle
+import tensorflow as tf
 
 from ... import const
 from ... import utils
@@ -34,7 +35,10 @@ class Radiation(object):
     if (not isinstance(self.processes, dict)):
       self.processes = pickle.load(open(self.processes, "rb"))
     # Convert processes
-    self.processes = utils.map_nested_dict(self.processes, bkd.to_torch)
+    self.processes = tf.nest.map_structure(bkd.to_torch, self.processes)
+    self.processes = tf.nest.map_structure(
+      lambda x: x.squeeze() if torch.is_tensor(x) else x, self.processes
+    )
     # Initialize rates container
     self.rates = {}
     if ("BB" in self.processes):
@@ -92,6 +96,6 @@ class Radiation(object):
   # -----------------------------------
   def _compute_FF_rate(self, Te):
     """Bremsstrahlung emission (FF)"""
-    return self.fac_emis_ff * np.sqrt(Te) \
+    return self.fac_emis_ff * torch.sqrt(Te) \
       * self.processes["FF"]["Z_sq_eff"] \
       * self.processes["FF"]["g_bar"]
