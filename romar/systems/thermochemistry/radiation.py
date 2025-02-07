@@ -35,8 +35,8 @@ class Radiation(object):
     if (not isinstance(self.processes, dict)):
       self.processes = pickle.load(open(self.processes, "rb"))
     # Convert processes
-    self.processes = tf.nest.map_structure(bkd.to_torch, self.processes)
-    self.processes = tf.nest.map_structure(
+    self.processes = utils.map_nested_dict(bkd.to_torch, self.processes)
+    self.processes = utils.map_nested_dict(
       lambda x: x.squeeze() if torch.is_tensor(x) else x, self.processes
     )
     # Initialize rates container
@@ -58,7 +58,7 @@ class Radiation(object):
       if ("FF" in self.processes):
         self.rates["FF"] = self._compute_FF_rate(Te)
     # Squeeze tensors
-    self.rates = utils.map_nested_dict(self.rates, torch.squeeze)
+    self.rates = utils.map_nested_dict(torch.squeeze, self.rates)
 
   # Forward and backward rates
   # -----------------------------------

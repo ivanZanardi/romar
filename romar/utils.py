@@ -236,8 +236,8 @@ def generate_case_parallel(
 # Operations
 # =====================================
 def map_nested_dict(
-  obj: Any,
-  fun: callable
+  fun: callable,
+  obj: Any
 ) -> Any:
   """
   Recursively apply a function to all values in a nested dictionary.
@@ -245,10 +245,10 @@ def map_nested_dict(
   This function traverses a nested dictionary and applies the given
   function to each value. It supports dictionaries, lists, and tuples.
 
-  :param obj: The nested dictionary or other container to map.
-  :type obj: dict or list or tuple or Any
   :param fun: The function to apply to each value.
   :type fun: Callable[[Any], Any]
+  :param obj: The nested dictionary or other container to map.
+  :type obj: dict or list or tuple or Any
 
   :return: A new nested structure with the function applied to all values.
   :rtype: Any

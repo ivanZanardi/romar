@@ -34,7 +34,7 @@ class Kinetics(object):
     if (not isinstance(self.processes, dict)):
       self.processes = pickle.load(open(self.processes, "rb"))
     # Convert processes
-    self.processes = utils.map_nested_dict(self.processes, bkd.to_torch)
+    self.processes = utils.map_nested_dict(bkd.to_torch, self.processes)
     # Get process parameters
     for (name, process) in self.processes.items():
       if (name not in ("T", "EN", "EI")):
@@ -74,7 +74,7 @@ class Kinetics(object):
       self.rates["EN"] = self._compute_en_rate(Te, ve)
       self.rates["EI"] = self._compute_ei_rate(Th, Te, ve)
     # Squeeze tensors
-    self.rates = utils.map_nested_dict(self.rates, torch.squeeze)
+    self.rates = utils.map_nested_dict(torch.squeeze, self.rates)
 
   def _compute_ve(self, Te):
     """Electron mean thermal velocity"""
