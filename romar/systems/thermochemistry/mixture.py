@@ -11,7 +11,7 @@ class Mixture(object):
   def __init__(
     self,
     species,
-    species_order=(),
+    species_order,
     use_factorial=True
   ):
     self.species_order = tuple(species_order)

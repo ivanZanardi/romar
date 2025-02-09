@@ -29,6 +29,8 @@ class BoxIso(Basic):
     )
     self.fixed_ne = fixed_ne
     self.nb_eqs = self.nb_comp
+    self.Th = 3e2
+    self.Te = 3e2
 
   # Function/Jacobian
   # ===================================
@@ -65,7 +67,8 @@ class BoxIso(Basic):
     self.mix.set_rho(rho)
     # Compute the electron temperature
     n = self.mix.get_n(w)
-    self.Te = self.mix.get_Te(pe, ne=n[-1])
+    ei = self.mix.species["em"].indices
+    self.Te = self.mix.get_Te(pe, ne=n[ei])
     # Initialize the sources
     self.sources.init_iso(self.Th, self.Te)
     # Set the function and Jacobian

@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import dill as pickle
-import tensorflow as tf
 
 from ... import const
 from ... import utils

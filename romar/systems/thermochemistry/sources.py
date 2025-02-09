@@ -115,17 +115,18 @@ class Sources(object):
   # Masses
   # ===================================
   def omega_mass(self, kin_ops, rad_ops):
+    f_n = {}
     # Production terms
     omega_exc = self.omega_exc(kin_ops, rad_ops)
     omega_ion = self.omega_ion(kin_ops, rad_ops)
-    # Argon nd
-    f_nn = omega_exc - torch.sum(omega_ion, dim=1)
-    # Argon ion nd
-    f_ni = torch.sum(omega_ion, dim=0)
     # Electron nd
-    f_ne = torch.sum(omega_ion).reshape(1)
+    f_n["em"] = torch.sum(omega_ion).reshape(1)
+    # Argon nd
+    f_n["Ar"] = omega_exc - torch.sum(omega_ion, dim=1)
+    # Argon ion nd
+    f_n["Arp"] = torch.sum(omega_ion, dim=0)
     # Concatenate
-    f_n = torch.cat([f_nn, f_ni, f_ne])
+    f_n = torch.cat([f_n[k] for k in self.mix.species_order])
     # Convert
     return self.mix.get_rho(f_n)
 

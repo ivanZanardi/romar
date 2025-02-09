@@ -31,12 +31,13 @@ class Basic(object):
     use_rad=False,
     use_proj=False,
     use_factorial=True,
-    use_tables=False
+    use_tables=False,
+    species_order=("em", "Ar", "Arp")
   ):
     # Thermochemistry
     # -------------
     # Mixture
-    self.species_order = ("Ar", "Arp", "em")
+    self.species_order = tuple(species_order)
     self.mix = Mixture(
       species,
       species_order=self.species_order,
@@ -78,7 +79,6 @@ class Basic(object):
     self.P = None
     # Output
     # -------------
-    self.output_lin = True
     self.C = None
     # Solving
     # -------------
@@ -293,41 +293,6 @@ class Basic(object):
 
   # Output
   # ===================================
-  # def compute_c_mat(
-  #   self,
-  #   max_mom: int = 1,
-  #   state_specs: bool = False,
-  #   include_temp: bool = False
-  # ) -> None:
-  #   """
-  #   Compute the observation matrix for a linear output model.
-
-  #   This function constructs the `C` matrix that maps the state vector to
-  #   the output vector. It includes species contributions and their moments,
-  #   up to a specified maximum moment order.
-
-  #   :param max_mom: The maximum number of moments to include for each species.
-  #   :type max_mom: int
-  #   """
-  #   max_mom = max(int(max_mom), 1)
-  #   # Compose C matrix for a linear output
-  #   self.C = np.zeros((self.nb_comp*max_mom, self.nb_eqs))
-  #   # Variables to track row indices in C
-  #   si, ei = 0, 0
-  #   # Loop over species in the defined order
-  #   for k in self.species_order:
-  #     if (k != "em"):
-  #       # Get species object
-  #       s = self.mix.species[k]
-  #       # Compute the moment basis for the species and populate C
-  #       basis = s.compute_mom_basis(max_mom if (s.nb_comp > 1) else 1)
-  #       for b in basis:
-  #         ei += s.nb_comp if state_specs else 1
-  #         self.C[np.arange(si,ei),s.indices] = b
-  #         si = ei
-  #   # Remove not used rows from the C matrix
-  #   self.C = self.C[:ei]
-
   def compute_c_mat(
     self,
     max_mom: int = 1,
