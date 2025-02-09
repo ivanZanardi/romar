@@ -1,3 +1,4 @@
+import os
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -108,23 +109,29 @@ def animate(
 def animate_dist(
   path,
   t,
-  n_m,
-  molecule,
+  y,
+  species,
   markersize=6
 ):
-  for (k, nk) in n_m.items():
-    if (nk.shape[-1] != molecule.nb_comp):
-      nk = nk.T
-    n_m[k] = nk / molecule.lev["g"]
-  animate(
-    t=t,
-    x=molecule.lev['e'] / const.eV_to_J,
-    y=n_m,
-    markersize=markersize,
-    frames=100,
-    fps=10,
-    filename=path + "/dist.mp4",
-    dpi=600,
-    save=True,
-    show=False
-  )
+  for s in species.keys():
+    if (species[s].nb_comp > 1):
+      # Path to saving
+      kpath = path + f"/dist/{k}/"
+      os.makedirs(kpath, exist_ok=True)
+      # Number densities
+      n = {k: yk["dist"][s] for (k, yk) in y.items()}
+      for (k, nk) in n.items():
+        if (nk.shape[0] != len(t)):
+          n[k] = nk.T
+      animate(
+        t=t,
+        x=species[s].lev["E"]/const.eV_to_J,
+        y=n,
+        markersize=markersize,
+        frames=100,
+        fps=10,
+        filename=kpath + "/video.mp4",
+        dpi=600,
+        save=True,
+        show=False
+      )

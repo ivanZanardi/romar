@@ -109,7 +109,7 @@ if (__name__ == "__main__"):
 
       # > Postprocessing
       print(f"> Postprocessing with {r} dimensions ...")
-      plot_kwargs = dict(
+      plot_evol_kwargs = dict(
         path=path_to_saving_i,
         t=t,
         y=sols,
@@ -120,25 +120,27 @@ if (__name__ == "__main__"):
         ylim_err=inputs["plot"].get("ylim_err", None)
       )
       pp.plot_temp_evolution(
-        **plot_kwargs
+        **plot_evol_kwargs
       )
       pp.plot_mom_evolution(
-        **plot_kwargs,
-        species=system.mix.species_order,
+        **plot_evol_kwargs,
+        species=system.mix.species,
         labels=inputs["plot"]["labels"],
         max_mom=inputs["plot"].get("max_mom", 2)
       )
-      # pp.plot_multi_dist_2d(
-      #   teval=inputs["data"]["teval"][icase],
-      #   markersize=inputs["plot"].get("markersize", 1),
-      #   subscript=inputs["plot"].get("subscript", "i"),
-      #   **common_kwargs
-      # )
-      # if inputs["plot"]["animate"]:
-      #   pp.animate_dist(
-      #     markersize=inputs["plot"]["markersize"],
-      #     **common_kwargs
-      #   )
+      plot_dist_kwargs = dict(
+        path=path_to_saving_i,
+        t=t,
+        y=sols,
+        species=system.mix.species,
+        markersize=inputs["plot"].get("markersize", 1)
+      )
+      pp.plot_multi_dist_2d(
+        **plot_dist_kwargs,
+        teval=inputs["plot"]["teval"][icase]
+      )
+      if inputs["plot"]["animate"]:
+        pp.animate_dist(**plot_dist_kwargs)
 
   # Copy input file
   # ---------------

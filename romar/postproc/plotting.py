@@ -161,7 +161,7 @@ def plot_mom_evolution(
   os.makedirs(path, exist_ok=True)
   # Plot moments
   for m in range(max_mom):
-    for s in species:
+    for s in species.keys():
       if (m == 0):
         yscale = "log"
         label_sol = f"$n_{labels[s]}$ [m$^{{-3}}$]"
@@ -293,7 +293,7 @@ def plot_err_evolution(
       show=False
     )
   # Moments
-  for s in species:
+  for s in species.keys():
     for m in range(max_mom):
       if (m == 0):
         label = fr"$n_{labels[s]}$ error [\%]"
@@ -344,7 +344,6 @@ def plot_dist_2d(
   x,
   y,
   t=None,
-  subscript="i",
   scales=["linear", "log"],
   labels=None,
   markersize=6,
@@ -357,8 +356,8 @@ def plot_dist_2d(
   ax = fig.add_subplot()
   if (labels is None):
     labels = [
-      fr"$\epsilon_{subscript}$ [eV]",
-      fr"$n_{subscript}/g_{subscript}$ [m$^{{-3}}$]"
+      "$\epsilon_i$ [eV]",
+      "$n_i/g_i$ [m$^{-3}$]"
     ]
   # x axis
   ax.set_xlabel(labels[0])
@@ -379,12 +378,10 @@ def plot_dist_2d(
       if (k.upper() == "FOM"):
         c = "k"
         ymin = yk.min()
-      elif ("MT" in k.upper()):
-        continue
       else:
         c = COLORS[i]
         i += 1
-      yk[yk<ymin*0.1] = 0.0
+      yk[yk<ymin*1e-1] = 0.0
       ax.plot(x, yk, c=c, markersize=markersize, **style)
       lines.append(plt.plot([], [], c=c, **style)[0])
     ax.legend(lines, list(y.keys()), fancybox=True, framealpha=0.9)
@@ -407,36 +404,33 @@ def plot_dist_2d(
 
 def plot_multi_dist_2d(
   path,
-  teval,
   t,
-  n_m,
-  molecule,
-  subscript="i",
-  markersize=6,
-  shift_diss_en=False
+  y,
+  teval,
+  species,
+  markersize=6
 ):
-  path = path + "/dist/"
-  os.makedirs(path, exist_ok=True)
-  # Interpolate at "teval" points
-  n_m_eval = {}
-  for (k, nk) in n_m.items():
-    if (nk.shape[-1] != molecule.nb_comp):
-      nk = nk.T
-    nk = sp.interpolate.interp1d(t, nk, kind="cubic", axis=0)(teval)
-    n_m_eval[k] = nk / molecule.lev["g"]
-  if shift_diss_en:
-    x = (molecule.lev["e"] - molecule.e_d) / const.eV_to_J
-  else:
-    x = molecule.lev["e"] / const.eV_to_J
-  for i in range(len(teval)):
-    plot_dist_2d(
-      x=x,
-      y={k: nk[i] for (k, nk) in n_m_eval.items()},
-      t=float(teval[i]),
-      subscript=subscript,
-      scales=["linear", "log"],
-      markersize=markersize,
-      figname=path + f"/t{i+1}",
-      save=True,
-      show=False
-    )
+  for s in species.keys():
+    if (species[s].nb_comp > 1):
+      # Path to saving
+      kpath = path + f"/dist/{k}/"
+      os.makedirs(kpath, exist_ok=True)
+      # Number densities
+      n = {k: yk["dist"][s] for (k, yk) in y.items()}
+      # Interpolate at "teval" points
+      n_eval = {}
+      for (k, nk) in n.items():
+        if (nk.shape[0] != len(t)):
+          nk = nk.T
+        n_eval[k] = sp.interpolate.interp1d(t, nk, kind="cubic", axis=0)(teval)
+      for i in range(len(teval)):
+        plot_dist_2d(
+          x=species[s].lev["E"]/const.eV_to_J,
+          y={k: nk[i] for (k, nk) in n_eval.items()},
+          t=float(teval[i]),
+          scales=["linear", "log"],
+          markersize=markersize,
+          figname=kpath + f"/t{i+1}",
+          save=True,
+          show=False
+        )
