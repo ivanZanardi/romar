@@ -47,7 +47,7 @@
       "hrho_hT",
       "mrho_mT"
     ],
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/"
   },
   "plot": {
     "labels": {
@@ -65,11 +65,11 @@
       "mrho_mT": null
     },
     "teval": {
-      "lrho_lT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
-      "lrho_hT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
-      "hrho_lT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
-      "hrho_hT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3],
-      "mrho_mT": [1e-6, 1e-5, 5e-5, 1e-4, 1e-3]
+      "lrho_lT": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
+      "lrho_hT": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
+      "hrho_lT": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
+      "hrho_hT": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
+      "mrho_mT": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]
     },
     "ylim_err": null,
     "err_scale": "log",
@@ -79,9 +79,8 @@
       "dist": 10.0
     },
     "max_mom": 2,
-    "animate": false,
-    "markersize": 1,
-    "animate": false
+    "animate": true,
+    "markersize": 1
   },
   "rom_range": [5,9],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"

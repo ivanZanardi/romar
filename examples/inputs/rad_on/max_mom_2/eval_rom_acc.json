@@ -28,24 +28,22 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/cobras_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/cobras_bases.p"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/pod_bases.p",
-      "mask": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/rom_mask.txt"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/pod_bases.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/data/",
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/",
     "irange": [0,100],
     "nb_workers": 10,
-    "eps": 1e-8
+    "eps": 1e-12
   },
   "plot": {
     "labels": {

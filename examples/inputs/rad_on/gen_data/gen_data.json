@@ -26,8 +26,8 @@
   },
   "grids": {
     "t": {
-      "start": 1e-10,
-      "stop": 1e-3,
+      "start": 1e-9,
+      "stop": 1e-2,
       "num": 500
     }
   },
@@ -56,6 +56,6 @@
     "nb_workers": 10
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/"
   }
 }
