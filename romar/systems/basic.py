@@ -364,7 +364,7 @@ class Basic(object):
       fun=self.fun_lin if linear else self.fun,
       t_span=[0.0,t[-1]],
       y0=np.zeros_like(y0) if linear else y0,
-      method="LSODA",
+      method="BDF",
       t_eval=t,
       first_step=1e-14,
       rtol=1e-6,
