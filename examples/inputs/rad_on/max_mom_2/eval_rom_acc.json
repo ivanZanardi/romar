@@ -42,7 +42,7 @@
   "data": {
     "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/",
     "irange": [0,100],
-    "nb_workers": 1,
+    "nb_workers": 10,
     "eps": 1e-10
   },
   "plot": {

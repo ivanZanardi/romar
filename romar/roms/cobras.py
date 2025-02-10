@@ -70,8 +70,10 @@ class CoBRAS(object):
     """
     # Store attributes
     self.system = system
-    self.tgrid = tgrid
     self.quad_mu = quad_mu
+    # > Time grid
+    self.tgrid = tgrid
+    self.tmin = self.tgrid["start"]
     # Normalization procedure
     self.set_norm(xref, xscale)
     # Configure saving options
@@ -111,7 +113,8 @@ class CoBRAS(object):
     nb_meas: int = 5,
     noise: bool = False,
     err_max: float = 25.0,
-    nb_workers: int = 1
+    nb_workers: int = 1,
+    fix_tmin: bool = False
   ) -> Tuple[np.ndarray]:
     """
     Compute state and gradient covariance matrices based on quadrature
@@ -152,7 +155,8 @@ class CoBRAS(object):
         Y=manager.list(),
         nb_meas=nb_meas,
         noise=noise,
-        err_max=err_max
+        err_max=err_max,
+        fix_tmin=fix_tmin
       )
       if (nb_workers > 1):
         # Run parallel jobs
@@ -184,7 +188,8 @@ class CoBRAS(object):
     w_mu: float,
     nb_meas: int = 5,
     noise: bool = False,
-    err_max: float = 25.0
+    err_max: float = 25.0,
+    fix_tmin: bool = False
   ) -> None:
     """
     Compute state and gradient covariance matrices based on quadrature
@@ -215,6 +220,8 @@ class CoBRAS(object):
     y0, rho = self.system.equil.get_init_sol(mu, noise=noise, sigma=1e-1)
     # Determine the smallest time scale for resolving system dynamics
     tmin = self.system.compute_timescale(y0, rho)
+    if fix_tmin:
+      tmin = max(tmin, self.tmin)
     # Generate a time quadrature grid and associated weights
     t, w_t = self._get_tquad(tmin)
     # Solve the nonlinear forward problem to compute the state evolution
@@ -408,8 +415,8 @@ class CoBRAS(object):
       ("phi", phi),
       ("psi", psi),
       ("mask", mask),
-      ("xref", self.xref[mask]),
-      ("xscale", np.diag(self.xscale)[mask])
+      # ("xref", self.xref[mask]),
+      # ("xscale", np.diag(self.xscale)[mask])
     ):
       data[k] = bkd.to_numpy(v)
     filename = self.path_to_saving+"/cobras_bases.p"
@@ -417,10 +424,10 @@ class CoBRAS(object):
     # POD
     # -------------
     if pod:
-      # Normalize
-      xref = torch.mean(X, dim=-1) if pod_norm else torch.zeros(X.shape[0])
-      xscale = torch.std(X, dim=-1) if pod_norm else torch.ones(X.shape[0])
-      X = ((X.T-xref)/xscale).T
+      # # Normalize
+      # xref = torch.mean(X, dim=-1) if pod_norm else torch.zeros(X.shape[0])
+      # xscale = torch.std(X, dim=-1) if pod_norm else torch.ones(X.shape[0])
+      # X = ((X.T-xref)/xscale).T
       # Compute modes
       U, s, _ = torch.svd_lowrank(
         A=X,
@@ -434,8 +441,8 @@ class CoBRAS(object):
         ("phi", U),
         ("psi", U),
         ("mask", mask),
-        ("xref", xref),
-        ("xscale", xscale)
+        # ("xref", xref),
+        # ("xscale", xscale)
       ):
         data[k] = bkd.to_numpy(v)
       filename = self.path_to_saving+"/pod_bases.p"

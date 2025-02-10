@@ -607,7 +607,7 @@ class Basic(object):
     runtime = [x for x in runtime if (x is not None)]
     converged = len(runtime)/nb_samples
     print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
-    if (converged >= 0.8):
+    if (converged >= 0.5):
       # Stack error values
       t = error[0]["t"]
       _error = error[0]

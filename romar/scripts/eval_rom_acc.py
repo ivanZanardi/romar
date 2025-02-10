@@ -9,8 +9,6 @@ import json
 import argparse
 import importlib
 
-import tensorflow as tf
-
 # Inputs
 # =====================================
 parser = argparse.ArgumentParser()

@@ -79,7 +79,7 @@
       "dist": 10.0
     },
     "max_mom": 2,
-    "animate": true,
+    "animate": false,
     "markersize": 6
   },
   "rom_range": [5,9],
