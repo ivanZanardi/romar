@@ -1,9 +1,10 @@
 import torch
 
-from .basic import Basic
+from .box_iso import BoxIso
+from .box_ad_norm import denormalize_state, normalize_source
 
 
-class BoxIso(Basic):
+class BoxIsoNorm(BoxIso):
 
   # Initialization
   # ===================================
@@ -18,19 +19,17 @@ class BoxIso(Basic):
     use_tables=True,
     fixed_ne=False
   ):
-    super(BoxIso, self).__init__(
+    super(BoxIsoNorm, self).__init__(
       species=species,
       kin_dtb=kin_dtb,
       rad_dtb=rad_dtb,
       use_rad=use_rad,
       use_proj=use_proj,
       use_factorial=use_factorial,
-      use_tables=use_tables
+      use_tables=use_tables,
+      fixed_ne=fixed_ne
     )
-    self.fixed_ne = fixed_ne
-    self.nb_eqs = self.nb_comp
-    self.Th = 3e2
-    self.Te = 3e2
+    self.wn_no_gs = None
 
   # Function/Jacobian
   # ===================================
@@ -44,10 +43,16 @@ class BoxIso(Basic):
     f_w = self.mix.ov_rho * f_rho
     if self.fixed_ne:
       f_w[-1] = 0.0
+    # Normalize neutral Argon states (not ground state)
+    normalize_source(self, n, f_w)
     return f_w
 
   def _get_prim(self, y, clip=False):
-    n = self.mix.get_n(y)
+    # De-normalize neutral Argon states (not ground state)
+    w = denormalize_state(self, y)
+    # Get number densities
+    n = self.mix.get_n(w)
+    # Get temperatures
     Th = torch.full(n[0].shape, self.Th)
     Te = torch.full(n[0].shape, self.Te)
     return n, Th, Te
@@ -76,4 +81,6 @@ class BoxIso(Basic):
     self.sources.init_iso(self.Th, self.Te)
     # Set the function and Jacobian
     self.set_fun_jac()
+    # Normalize neutral Argon states (not ground state)
+    w[si[1:]] /= torch.sum(w[si[1:]])
     return w

@@ -30,25 +30,20 @@ class BoxAd(Basic):
 
   # Function/Jacobian
   # ===================================
-  def _fun(self, t, y):
-    # ROM activated
-    y = self._decode(y) if self.use_rom else y
+  def _fun_fom(self, t, y):
     # Extract primitive variables
     n, Th, Te = self._get_prim(y)
     # Compute sources
     # > Conservative variables
     f_rho, f_et, f_ee = self.sources.call_ad(n, Th, Te)
     # > Primitive variables
-    f = torch.cat([
+    return torch.cat([
       self.mix.ov_rho * f_rho,
       self.omega_T(f_rho, f_et, f_ee),
       self.omega_pe(f_ee)
     ])
-    # ROM activated
-    f = self._encode(f) if self.use_rom else f
-    return f
 
-  def _get_prim(self, y):
+  def _get_prim(self, y, clip=True):
     # Unpacking
     w, Th, pe = y[:-2], y[-2], y[-1]
     # Get number densities
@@ -57,7 +52,8 @@ class BoxAd(Basic):
     ne = n[self.mix.species["em"].indices].squeeze()
     Te = self.mix.get_Te(pe, ne)
     # Clip temperatures
-    Th, Te = [self.clip_temp(z) for z in (Th, Te)]
+    if clip:
+      Th, Te = [self.clip_temp(z) for z in (Th, Te)]
     return n, Th, Te
 
   def clip_temp(self, T):

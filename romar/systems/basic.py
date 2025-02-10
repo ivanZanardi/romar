@@ -134,12 +134,18 @@ class Basic(object):
       j[j_not] = j_fd[j_not]
     return j
 
-  @abc.abstractmethod
   def _fun(self, t, y):
+    y = self._decode(y) if self.use_rom else y
+    f = self._fun_fom(t, y)
+    f = self._encode(f) if self.use_rom else f
+    return f
+
+  @abc.abstractmethod
+  def _fun_fom(self, t, y):
     pass
 
   @abc.abstractmethod
-  def _get_prim(self, y):
+  def _get_prim(self, y, clip=True):
     pass
 
   # Linear Model
@@ -358,11 +364,11 @@ class Basic(object):
       fun=self.fun_lin if linear else self.fun,
       t_span=[0.0,t[-1]],
       y0=np.zeros_like(y0) if linear else y0,
-      method="BDF",
+      method="LSODA",
       t_eval=t,
       first_step=1e-14,
       rtol=1e-6,
-      atol=1e-20,
+      atol=1e-15,
       jac=self.jac_lin if linear else self.jac,
     ).y
     # Linear model
@@ -505,8 +511,8 @@ class Basic(object):
       y_rom, runtime = self.solve_rom(t, y0, rho)
       if (y_rom.shape[1] == len(t)):
         # Converged
-        prim_fom = self.get_prim(y_fom)
-        prim_rom = self.get_prim(y_rom)
+        prim_fom = self.get_prim(y_fom, clip=False)
+        prim_rom = self.get_prim(y_rom, clip=False)
         data = {
           "t": t,
           "FOM": self.postproc_sol(*prim_fom),
