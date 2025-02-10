@@ -92,7 +92,7 @@ if (__name__ == "__main__"):
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
           psi=model["bases"]["phi"][:,:r],
-          mask=model["mask"]
+          mask=model["bases"]["mask"]
         )
         idata, iruntime = system.compute_err(**inputs["data"])
         if (idata is not None):

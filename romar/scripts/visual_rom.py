@@ -94,7 +94,7 @@ if (__name__ == "__main__"):
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
           psi=model["bases"]["psi"][:,:r],
-          mask="/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/rom_mask.txt" #model["bases"]["mask"]
+          mask=model["bases"]["mask"]
         )
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p"
