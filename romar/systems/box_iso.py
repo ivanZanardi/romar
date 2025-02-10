@@ -65,8 +65,9 @@ class BoxIso(Basic):
     w, self.Th, pe = y0[:-2], y0[-2], y0[-1]
     # Set density
     self.mix.set_rho(rho)
-    # Compute the electron temperature
+    # Get number densities
     n = self.mix.get_n(w)
+    # Get electron temperature
     ne = n[self.mix.species["em"].indices].squeeze()
     self.Te = self.mix.get_Te(pe, ne)
     # Initialize the sources

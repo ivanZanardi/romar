@@ -55,7 +55,7 @@ class BoxAd(Basic):
     n = self.mix.get_n(w)
     # Get electron temperature
     ne = n[self.mix.species["em"].indices].squeeze()
-    self.Te = self.mix.get_Te(pe, ne)
+    Te = self.mix.get_Te(pe, ne)
     # Clip temperatures
     Th, Te = [self.clip_temp(z) for z in (Th, Te)]
     return n, Th, Te
