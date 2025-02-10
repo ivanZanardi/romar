@@ -80,7 +80,7 @@
     },
     "max_mom": 2,
     "animate": true,
-    "markersize": 1
+    "markersize": 6
   },
   "rom_range": [5,9],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"

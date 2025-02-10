@@ -596,6 +596,7 @@ class Basic(object):
       ]
     # Split error values and running times
     error, runtime = list(zip(*sols))
+    not_converged  = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]
     error = [x for x in error if (x is not None)]
     runtime = [x for x in runtime if (x is not None)]
     converged = len(runtime)/nb_samples
@@ -621,9 +622,9 @@ class Basic(object):
         "mean": float(np.mean(runtime, 0)),
         "std": float(np.std(runtime, 0))
       }
-      return error, runtime
+      return error, runtime, not_converged
     else:
-      return None, None
+      return None, None, not_converged
 
   def compute_err_dist(
     self,
@@ -659,39 +660,3 @@ class Basic(object):
       self.compute_mom(n_true),
       self.compute_mom(n_pred)
     )
-
-  # def compute_err_mom(
-  #   self,
-  #   n_true: np.ndarray,
-  #   n_pred: np.ndarray,
-  #   eps: float = 1e-8
-  # ) -> Dict[str, Dict[str, np.ndarray]]:
-  #   error = {}
-  #   for (name, s) in self.mix.species.items():
-  #     error[name] = self._compute_err_mom(
-  #       n_true=n_true[s.indices],
-  #       n_pred=n_pred[s.indices],
-  #       species=s,
-  #       eps=eps
-  #     )
-  #   return error
-
-  # def _compute_err_mom(
-  #   self,
-  #   n_true: np.ndarray,
-  #   n_pred: np.ndarray,
-  #   species: Species,
-  #   eps: float = 1e-8
-  # ) -> Dict[str, np.ndarray]:
-  #   error = {}
-  #   for m in range(2):
-  #     m_true = species.compute_mom(n=n_true, m=m)
-  #     m_pred = species.compute_mom(n=n_pred, m=m)
-  #     if (m == 0):
-  #       m0_true = m_true
-  #       m0_pred = m_pred
-  #     else:
-  #       m_true /= m0_true
-  #       m_pred /= m0_pred
-  #     error[f"m{m}"] = utils.absolute_percentage_error(m_true, m_pred, eps)
-  #   return error

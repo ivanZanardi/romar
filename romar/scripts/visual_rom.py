@@ -94,14 +94,14 @@ if (__name__ == "__main__"):
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
           psi=model["bases"]["psi"][:,:r],
-          mask=model["bases"]["mask"]
+          mask=model["bases"]["mask"].squeeze()
         )
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p"
         )
         if (isol is not None):
           if (t is None):
-            t = isol.pop("t")
+            t = isol.pop("t").squeeze()
           if ("FOM" not in sols):
             sols["FOM"] = isol.pop("FOM")
           sols[model["name"]] = isol.pop("ROM")

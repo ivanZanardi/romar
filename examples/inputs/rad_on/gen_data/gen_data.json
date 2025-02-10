@@ -27,7 +27,7 @@
   "grids": {
     "t": {
       "start": 1e-9,
-      "stop": 1e-2,
+      "stop": 1e-3,
       "num": 500
     }
   },

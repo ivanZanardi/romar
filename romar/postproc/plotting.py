@@ -80,7 +80,7 @@ def plot_evolution(
         i += 1
       if isinstance(yk, dict):
         ax.plot([], [], c=_c, label=k)
-        for j, yl in enumerate(yk.values()):
+        for (j, yl) in enumerate(yk.values()):
           ax.plot(x, yl, ls=LINESTYLES[j], c=_c)
       else:
         ax.plot(x, yk, ls=_ls, c=_c, label=k)
@@ -413,24 +413,29 @@ def plot_multi_dist_2d(
   for s in species.keys():
     if (species[s].nb_comp > 1):
       # Path to saving
-      kpath = path + f"/dist/{k}/"
-      os.makedirs(kpath, exist_ok=True)
+      spath = path + f"/dist/{s}/"
+      os.makedirs(spath, exist_ok=True)
       # Number densities
       n = {k: yk["dist"][s] for (k, yk) in y.items()}
       # Interpolate at "teval" points
       n_eval = {}
       for (k, nk) in n.items():
         if (nk.shape[0] != len(t)):
+          if (s == "Ar"):
+            nk = nk[1:]
           nk = nk.T
         n_eval[k] = sp.interpolate.interp1d(t, nk, kind="cubic", axis=0)(teval)
+      x = species[s].lev["E"]/const.eV_to_J
+      if (s == "Ar"):
+        x = x[1:]
       for i in range(len(teval)):
         plot_dist_2d(
-          x=species[s].lev["E"]/const.eV_to_J,
+          x=x,
           y={k: nk[i] for (k, nk) in n_eval.items()},
           t=float(teval[i]),
           scales=["linear", "log"],
           markersize=markersize,
-          figname=kpath + f"/t{i+1}",
+          figname=spath + f"/t{i+1}",
           save=True,
           show=False
         )

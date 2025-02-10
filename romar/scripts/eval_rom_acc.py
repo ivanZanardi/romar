@@ -9,6 +9,8 @@ import json
 import argparse
 import importlib
 
+import tensorflow as tf
+
 # Inputs
 # =====================================
 parser = argparse.ArgumentParser()
@@ -85,21 +87,21 @@ if (__name__ == "__main__"):
     rrange = np.sort(inputs["rom_range"])
     if (model["error"] is None):
       t = None
-      error, runtime = {}, {}
+      error, runtime, not_conv = {}, {}, {}
       # Loop over ROM dimensions
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
           psi=model["bases"]["phi"][:,:r],
-          mask=model["bases"]["mask"]
+          mask=model["bases"]["mask"].squeeze()
         )
-        idata, iruntime = system.compute_err(**inputs["data"])
+        idata, iruntime, inot_conv = system.compute_err(**inputs["data"])
         if (idata is not None):
           if (t is None):
             t = idata["t"]
           r = str(r)
-          error[r], runtime[r] = idata["err"], iruntime
+          error[r], runtime[r], not_conv[r] = idata["err"], iruntime, inot_conv
       # Save error statistics
       print("> Saving statistics ...")
       # > Error
@@ -109,6 +111,10 @@ if (__name__ == "__main__"):
       filename = path_to_saving + f"/{name}_runtime.json"
       with open(filename, "w") as file:
         json.dump(runtime, file, indent=2)
+      # > Not converged
+      filename = path_to_saving + f"/{name}_not_conv.json"
+      with open(filename, "w") as file:
+        json.dump(not_conv, file, indent=2)
     else:
       t = model["error"]["t"]
       error = {}
@@ -122,7 +128,7 @@ if (__name__ == "__main__"):
       path=path_to_saving+f"/{name}/",
       t=t,
       error=error,
-      species=list(system.mix.species.keys()),
+      species=system.mix.species,
       **inputs["plot"]
     )
 
