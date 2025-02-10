@@ -61,12 +61,12 @@
         "noise": true,
         "err_max": 25.0,
         "nb_workers": 10,
-        "fix_tmin": false
+        "fix_tmin": true
       },
       "read": false,
       "save": true,
-      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/X.npy",
-      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/Y.npy"
+      "path_x": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/X.npy",
+      "path_y": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/Y.npy"
     },
     "modes": {
       "compute": {
@@ -78,6 +78,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test2/max_mom_2/"
   }
 }
