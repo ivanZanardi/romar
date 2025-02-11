@@ -91,15 +91,15 @@ if (__name__ == "__main__"):
         print("> Solving with %i dimensions ..." % r)
         system.set_rom(
           phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["phi"][:,:r],
+          psi=model["bases"]["psi"][:,:r],
           mask=model["bases"]["mask"].squeeze()
         )
-        idata, iruntime, inot_conv = system.compute_err(**inputs["data"])
+        idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
         if (idata is not None):
           if (t is None):
             t = idata["t"]
           r = str(r)
-          error[r], runtime[r], not_conv[r] = idata["err"], iruntime, inot_conv
+          error[r], runtime[r] = idata["err"], iruntime
       # Save error statistics
       print("> Saving statistics ...")
       # > Error

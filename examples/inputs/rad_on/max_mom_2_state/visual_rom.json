@@ -41,11 +41,7 @@
   },
   "data": {
     "cases": [
-      "lrho_lT",
-      "lrho_hT",
-      "hrho_lT",
-      "hrho_hT",
-      "mrho_mT"
+      "0000"
     ],
     "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/"
   },
@@ -82,6 +78,6 @@
     "animate": true,
     "markersize": 6
   },
-  "rom_range": [5,13],
+  "rom_range": [12,16],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

@@ -1,5 +1,7 @@
 __all__ = [
-  "CoBRAS"
+  "CoBRAS",
+  "PCA"
 ]
 
 from .cobras import CoBRAS
+from .pca import PCA

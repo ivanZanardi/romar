@@ -63,6 +63,6 @@
     },
     "max_mom": 2
   },
-  "rom_range": [5,13],
+  "rom_range": [6,13],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }
