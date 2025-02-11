@@ -31,7 +31,7 @@
       "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/cobras_bases.p"
     },
     "pod": {
-      "active": true,
+      "active": false,
       "name": "POD",
       "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/pod_bases.p"
     }
@@ -43,7 +43,7 @@
     "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/",
     "irange": [0,100],
     "nb_workers": 10,
-    "eps": 1e-10
+    "eps": 1e-8
   },
   "plot": {
     "labels": {
