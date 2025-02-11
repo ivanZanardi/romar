@@ -137,7 +137,7 @@ def load_case(
 
 def load_case_parallel(
   path: str,
-  range: List[int],
+  irange: List[int],
   key: Union[str, None] = None,
   nb_workers: int = 1
 ) -> List[Any]:
@@ -160,9 +160,9 @@ def load_case_parallel(
   :return: A list of loaded cases.
   :rtype: List[Any]
   """
-  range = np.sort(range)
+  irange = np.sort(irange)
   iterable = tqdm(
-    iterable=range(*range),
+    iterable=range(*irange),
     ncols=80,
     desc="Cases",
     file=sys.stdout
