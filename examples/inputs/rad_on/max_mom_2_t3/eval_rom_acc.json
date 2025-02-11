@@ -28,16 +28,16 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/cobras_bases.p"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/cobras_bases.p"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/pod_bases.p"
+      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/pod_bases.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test3/max_mom_2/"
   },
   "data": {
     "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/",

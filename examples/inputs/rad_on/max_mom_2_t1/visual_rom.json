@@ -31,7 +31,7 @@
       "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/cobras_bases.p"
     },
     "pod": {
-      "active": true,
+      "active": false,
       "name": "POD",
       "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/pod_bases.p"
     }
@@ -79,7 +79,7 @@
       "dist": 10.0
     },
     "max_mom": 2,
-    "animate": false,
+    "animate": true,
     "markersize": 6
   },
   "rom_range": [5,9],

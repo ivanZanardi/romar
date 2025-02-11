@@ -32,7 +32,7 @@
   },
   "grids": {
     "t": {
-      "start": 1e-10,
+      "start": 1e-11,
       "stop": 1e-2,
       "num": 51
     },
