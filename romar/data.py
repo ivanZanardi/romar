@@ -5,7 +5,7 @@ from .basic import Basic
 from typing import Dict, List, Optional, Union
 
 
-class PCA(Basic):
+class Data(Basic):
 
   """
   Principal Component Analysis (PCA) with support for feature scaling,
@@ -141,7 +141,7 @@ class PCA(Basic):
         raise ValueError(f"'xref' and 'xscale' must match ({nb_feat},) as " \
                          f"shape. Received {xref.shape} and {xscale.shape}.")
     self._set_scaling(nb_feat, xref, xscale, active)
-    return self._apply_scaling(X.T).T
+    return self._apply_scaling(X)
 
   # Component rotation
   # ===================================

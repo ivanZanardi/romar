@@ -1,10 +1,7 @@
-import os
 import sys
-import torch
 import numpy as np
 import scipy as sp
 import joblib as jl
-import dill as pickle
 import multiprocessing
 
 from tqdm import tqdm
@@ -12,24 +9,23 @@ from typing import *
 
 from .. import env
 from .. import ops
-from .. import backend as bkd
 from ..systems import SYS_TYPES
+from .basic import Basic
 
 
-class CoBRAS(object):
+class CoBRAS(Basic):
 
   """
-  CoBRAS: Model Reduction for Nonlinear Systems by Balanced Truncation of State
-  and Gradient Covariance.
+  CoBRAS: Model Reduction for Nonlinear Systems by Balanced Truncation of
+  State and Gradient Covariance.
 
-  This module implements the CoBRAS method, a model reduction technique
-  designed for nonlinear systems by leveraging the balanced truncation of
-  covariance matrices for states and gradients. The approach is particularly
-  useful for reducing the computational complexity of high-dimensional
-  nonlinear systems while preserving key dynamics.
+  This class implements the CoBRAS method, a model reduction technique
+  designed for nonlinear systems using balanced truncation of covariance
+  matrices for states and gradients. It reduces computational complexity
+  while preserving essential system dynamics.
 
-  For further details, refer to the publication:
-  https://doi.org/10.1137/22M1513228
+  Reference:
+  - https://doi.org/10.1137/22M1513228
   """
 
   # Initialization
@@ -41,72 +37,58 @@ class CoBRAS(object):
     quad_mu: Dict[str, np.ndarray],
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
-    path_to_saving: str = "./",
-    saving: bool = True
+    scale: bool = False,
+    path_to_saving: str = "./"
   ) -> None:
     """
     Initialize the CoBRAS class with the specified system, quadrature points,
     time grid, and saving configurations.
 
-    :param system: Instance of the system to be reduced. Can be either a
-                   `BoxAd` or `BoxIso` system representing a nonlinear system.
-    :type system: BoxAd
-    :param tgrid: Dictionary specifying the time grid. Must include keys:
+    :param system: Instance of the system to be reduced.
+    :type system: SYS_TYPES
+    :param tgrid: Dictionary specifying the time grid with required keys:
                   - "start": Start time of the simulation.
                   - "stop": End time of the simulation.
-                  - "num": Number of time points in the grid.
+                  - "num": Number of time points.
     :type tgrid: Dict[str, float]
-    :param quad_mu: Dictionary containing quadrature points and weights
-                    for initial conditions. Must include:
+    :param quad_mu: Dictionary containing quadrature points and weights for
+                    initial conditions. Must include:
                     - "x": A 1D numpy array of quadrature points.
                     - "w": A 1D numpy array of corresponding weights.
     :type quad_mu: Dict[str, np.ndarray]
+    :param xref: Mean reference values for scaling (array or file path).
+    :type xref: Union[str, np.ndarray], optional
+    :param xscale: Scaling factors (array or file path).
+    :type xscale: Union[str, np.ndarray], optional
+    :param scale: Whether to apply scaling (default: True).
+    :type scale: bool, optional
     :param path_to_saving: Directory path where the computed data and modes
                            will be saved. Defaults to "./".
     :type path_to_saving: str, optional
     :param saving: Flag indicating whether to enable saving of results.
                    Defaults to True.
     :type saving: bool, optional
+
+    :raises ValueError: If `tgrid` does not contain the required keys.
     """
-    # Store attributes
-    self.system = system
-    self.quad_mu = quad_mu
-    # > Time grid
+    super(CoBRAS, self).__init__(
+      scaling=None,
+      path_to_saving=path_to_saving
+    )
+    # Validate required `tgrid` keys
+    required_keys = {"start", "stop", "num"}
+    if (not required_keys.issubset(tgrid.keys())):
+      raise ValueError(f"tgrid must contain keys: {required_keys}. " \
+                       "Received: {tgrid.keys()}")
     self.tgrid = tgrid
     self.tmin = self.tgrid["start"]
-    # Normalization procedure
-    self.set_norm(xref, xscale)
-    # Configure saving options
-    self.saving = saving
-    self.path_to_saving = path_to_saving
-    os.makedirs(self.path_to_saving, exist_ok=True)
+    # Store system and quadrature attributes
+    self.system = system
+    self.quad_mu = quad_mu
+    # Set scaling if system equations are defined
+    self._set_scaling(self.system.nb_eqs, xref, xscale, active=scale)
 
-  # Normalization
-  # ===================================
-  def set_norm(
-    self,
-    xref: Optional[Union[str, np.ndarray]] = None,
-    xscale: Optional[Union[str, np.ndarray]] = None
-  ) -> None:
-    # Reference value
-    if (xref is None):
-      xref = np.zeros(self.system.nb_eqs)
-    elif isinstance(xref, str):
-      xref = np.loadtxt(xref)
-    self.xref = xref.squeeze()
-    # Scaling value
-    if (xscale is None):
-      xscale = np.ones(self.system.nb_eqs)
-    elif isinstance(xscale, str):
-      xscale = np.loadtxt(xscale)
-    xscale = xscale.squeeze()
-    self.xscale = np.diag(xscale)
-    self.ov_xscale = np.diag(1.0/xscale)
-
-  def normalize(self, x: np.ndarray) -> np.ndarray:
-    return self.ov_xscale @ (x - self.xref)
-
-  # Covariance matrices
+  # Compute covariance matrices
   # ===================================
   def compute_cov_mats(
     self,
@@ -120,24 +102,31 @@ class CoBRAS(object):
     Compute state and gradient covariance matrices based on quadrature
     points and system dynamics.
 
-    :param nb_meas: Number of output measurements to use for adjoint
-                    simulations. Defaults to 10.
+    This method computes covariance matrices using quadrature points
+    and system dynamics, with optional parallel execution.
+
+    :param nb_meas: Number of output measurements for adjoint simulations.
+                    Defaults to 5.
     :type nb_meas: int
-    :param use_eig: Whether to use eigenvalue-based analysis to determine
-                    the maximum time (`tmax`) up to which the linear model
-                    is valid. If True, eigenvalues are used to calculate
-                    maximum valid timescales.
-    :type use_eig: bool
-    :param err_max: Maximum percentage error (in %) allowed between linear and
-                    nonlinear models for determining the maximum time (`tmax`)
-                    up to which the linear model is valid.
-                    Defaults to 30.0.
-    :type err_max: float
+    :param noise: Whether to add noise to the initial conditions.
+    :type noise: bool, optional
+    :param err_max: Maximum allowable percentage error (%) between linear
+                    and nonlinear models for determining `tmax`.
+                    Defaults to 25.0.
+    :type err_max: float, optional
+    :param nb_workers: Number of parallel workers for computation.
+                       Defaults to 1 (sequential execution).
+    :type nb_workers: int, optional
+    :param fix_tmin: If True, ensures that `tmin` is set based on a fixed
+                     global timescale instead of being dynamically computed.
+    :type fix_tmin: bool, optional
 
     :return: Tuple containing:
-             - `X` (np.ndarray): State covariance matrix.
-             - `Y` (np.ndarray): Gradient covariance matrix.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+            - `X` (np.ndarray): State covariance matrix.
+            - `Y` (np.ndarray): Gradient covariance matrix.
+            - `wx` (np.ndarray): Weights for state covariance matrix.
+            - `wy` (np.ndarray): Weights for gradient covariance matrix.
+    :rtype: Tuple[np.ndarray]
     """
     # Unpack initial conditions quadrature points and weights
     mu, w_mu = self.quad_mu["x"], self.quad_mu["w"]
@@ -153,6 +142,8 @@ class CoBRAS(object):
       kwargs = dict(
         X=manager.list(),
         Y=manager.list(),
+        wx=manager.list(),
+        wy=manager.list(),
         nb_meas=nb_meas,
         noise=noise,
         err_max=err_max,
@@ -175,15 +166,19 @@ class CoBRAS(object):
             w_mu=w_mu[i],
             **kwargs
           )
-      # Stack covariance matrices
+      # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
       Y = np.vstack(list(kwargs["Y"])).T
-    return X, Y
+      wx = np.concatenate(list(kwargs["wx"])).reshape(-1)
+      wy = np.concatenate(list(kwargs["wy"])).reshape(-1)
+    return X, Y, wx, wy
 
   def _compute_cov_mats(
     self,
     X: List[np.ndarray],
     Y: List[np.ndarray],
+    wx: List[np.ndarray],
+    wy: List[np.ndarray],
     mu: np.ndarray,
     w_mu: float,
     nb_meas: int = 5,
@@ -195,24 +190,30 @@ class CoBRAS(object):
     Compute state and gradient covariance matrices based on quadrature
     points and system dynamics.
 
-    :param nb_meas: Number of output measurements to use for adjoint
-                    simulations. Defaults to 10.
-    :type nb_meas: int
-    :param use_eig: Whether to use eigenvalue-based analysis to determine
-                    the maximum time (`tmax`) up to which the linear model
-                    is valid. If True, eigenvalues are used to calculate
-                    maximum valid timescales.
-    :type use_eig: bool
-    :param err_max: Maximum percentage error (in %) allowed between linear and
-                    nonlinear models for determining the maximum time (`tmax`)
-                    up to which the linear model is valid.
-                    Defaults to 30.0.
-    :type err_max: float
+    :param X: List to store state covariance matrix contributions.
+    :type X: List[np.ndarray]
+    :param Y: List to store gradient covariance matrix contributions.
+    :type Y: List[np.ndarray]
+    :param wx: List to store weights corresponding to `X` matrix.
+    :type wx: List[np.ndarray]
+    :param wy: List to store weights corresponding to `y` matrix.
+    :type wy: List[np.ndarray]
+    :param mu: Initial condition quadrature point.
+    :type mu: np.ndarray
+    :param w_mu: Weight associated with the quadrature point `mu`.
+    :type w_mu: float
+    :param nb_meas: Number of output measurements for adjoint simulations.
+    :type nb_meas: int, optional
+    :param noise: Whether to include noise in the initial conditions.
+    :type noise: bool, optional
+    :param err_max: Maximum error percentage for linear model validity.
+    :type err_max: float, optional
+    :param fix_tmin: Whether to use a fixed `tmin` based on the global time
+                     scale.
+    :type fix_tmin: bool, optional
 
-    :return: Tuple containing:
-             - `X` (np.ndarray): State covariance matrix.
-             - `Y` (np.ndarray): Gradient covariance matrix.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    :return: None (Results are stored in `X`, `Y`, `wx`, and `wy` lists).
+    :rtype: None
     """
     # Scaling factor for output measurements
     w_meas = 1.0 / np.sqrt(nb_meas)
@@ -242,11 +243,13 @@ class CoBRAS(object):
         # Generate a time grid for the j-th linear adjoint simulation
         tadj = np.geomspace(tmin, tmax, num=nb_meas)
         # Solve the j-th linear adjoint model
-        Yij = w_meas * self.solve_lin_adjoint(tadj, y[j], rho).T
-        # Store weighted samples for gradient covariance matrix
-        Y.append(wij * Yij)
-      # Store weighted samples for state covariance matrix
-      X.append(wij * self.normalize(y[j]))
+        Yij = w_meas * self._solve_adjoint_lin(tadj, y[j], rho).T
+        # Store weights and samples for gradient covariance matrix
+        wy.append(np.repeat(wij, len(Yij)))
+        Y.append(Yij)
+      # Store weights and samples for state covariance matrix
+      wx.append(np.repeat(wij, 1))
+      X.append(self._apply_scaling(y[j]))
 
   def _get_tquad(
     self,
@@ -261,8 +264,10 @@ class CoBRAS(object):
     :param deg: Degree of the quadrature rule. Defaults to 2.
     :type deg: int
 
-    :return: Time quadrature points and corresponding weights.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    :return: Tuple containing:
+             - Time quadrature points (1D numpy array).
+             - Corresponding weights (1D numpy array).
+    :rtype: Tuple[np.ndarray]
     """
     self.tgrid["start"] = tmin
     x, w = ops.get_quad_1d(
@@ -278,26 +283,36 @@ class CoBRAS(object):
     t: np.ndarray,
     x: np.ndarray
   ) -> sp.interpolate.interp1d:
+    """
+    Build a cubic interpolation function for the given solution.
+
+    :param t: Time points.
+    :type t: np.ndarray
+    :param x: State trajectory or solution matrix.
+    :type x: np.ndarray
+
+    :return: Interpolation function.
+    :rtype: sp.interpolate.interp1d
+    """
     axis = 0 if (x.shape[0] == len(t)) else 1
     return sp.interpolate.interp1d(t, x, kind="cubic", axis=axis)
 
-  # Linear adjoint model
-  # -----------------------------------
-  def solve_lin_adjoint(
+  def _solve_adjoint_lin(
     self,
     t: np.ndarray,
     y0: np.ndarray,
     rho: float
   ) -> np.ndarray:
     """
-    Solve the linear adjoint system for given time grid and initial condition.
+    Solve the adjoint system of the linerized forward model for given time
+    grid and initial conditions.
 
     :param t: Array of time points for simulation.
     :type t: np.ndarray
-    :param y0: Initial state for the linear adjoint simulation.
+    :param y0: Initial state for the adjoint simulation.
     :type y0: np.ndarray
 
-    :return: Solution of the linear adjoint system.
+    :return: Solution of the adjoint system.
     :rtype: np.ndarray
     """
     # Setting up
@@ -306,7 +321,7 @@ class CoBRAS(object):
     # Compute linear operators
     self.system.compute_lin_fom_ops(y0)
     A, C = [getattr(self.system, k) for k in ("A", "C")]
-    # Normalization procedure
+    # Scaling procedure
     A = self.ov_xscale @ A @ self.xscale
     C = C @ self.xscale
     # Eigendecomposition
@@ -325,140 +340,65 @@ class CoBRAS(object):
     g = np.reshape(g, (shape[1],-1))
     return g
 
-  # Adjoint model
-  # -----------------------------------
-  def solve_adjoint(
-    self,
-    t: np.ndarray,
-    g0: np.ndarray,
-    fint: sp.interpolate.interp1d
-  ) -> np.ndarray:
-    return sp.integrate.solve_ivp(
-      fun=self.adjoint_fun,
-      t_span=[t[0],t[-1]],
-      y0=g0,
-      method="BDF",
-      t_eval=t,
-      args=(fint,),
-      first_step=1e-14,
-      rtol=1e-6,
-      atol=1e-20,
-      jac=self.adjoint_jac
-    ).y
-
-  def adjoint_fun(
-    self,
-    t: np.ndarray,
-    g: np.ndarray,
-    fint: sp.interpolate.interp1d
-  ) -> np.ndarray:
-    return self.adjoint_jac(t, g, fint) @ g
-
-  def adjoint_jac(
-    self,
-    t: np.ndarray,
-    g: np.ndarray,
-    fint: sp.interpolate.interp1d
-  ) -> np.ndarray:
-    j = self.system.jac(t, fint(t))
-    return - j.T
-
-  # Balanced modes
+  # Compute balanced modes
   # ===================================
   def compute_modes(
     self,
     X: np.ndarray,
     Y: np.ndarray,
-    xnot: list = [],
-    pod: bool = False,
-    pod_norm: bool = False,
+    wx: np.ndarray,
+    wy: np.ndarray,
+    xnot: Optional[List[int]] = None,
     rank: int = 100,
+    randomized: bool = True,
     niter: int = 50
-  ) -> None:
+  ) -> Dict[str, np.ndarray]:
     """
-    Compute balancing (and POD) modes based on input covariance matrices.
+    Compute balancing modes based on input covariance matrices.
 
     :param X: State covariance matrix.
     :type X: np.ndarray
     :param Y: Gradient covariance matrix.
     :type Y: np.ndarray
-    :param pod: Flag to compute POD modes instead of balancing modes.
-                Defaults to False.
-    :type pod: bool
-    :param rank: Maximum rank for the reduced model. Defaults to 100.
+    :param wx: Weights for state covariance matrix.
+    :type wx: np.ndarray
+    :param wy: Weights for gradient covariance matrix.
+    :type wy: np.ndarray
+    :param xnot: List of feature indices to exclude.
+    :type xnot: List[int], optional
+    :param rank: Maximum rank for the reduced model.
     :type rank: int
-    :param niter: Number of iterations for randomized SVD. Defaults to 30.
+    :param randomized: Whether to use randomized SVD.
+    :type randomized: bool
+    :param niter: Number of iterations for randomized SVD.
     :type niter: int
+
+    :return: Dictionary containing computed PCA components.
+    :rtype: Dict[str, np.ndarray]
     """
-    # Masking
-    # -------------
-    mask = self._make_mask(xnot)
+    # Mask data
+    mask = self._make_mask(X.shape[0], xnot)
     X, Y = X[mask], Y[mask]
-    # CoBRAS
-    # -------------
-    # Perform randomized SVD
-    X, Y = [bkd.to_torch(z) for z in (X, Y)]
-    U, s, V = ops.svd_lowrank(
-      X=X,
-      Y=Y,
-      q=min(rank, X.shape[0]),
-      niter=niter
-    )
+    # Weight matrices
+    X, Y = X*wx, Y*wy
+    # Balance covariance matrices
+    rank = min(rank, X.shape[0])
+    if randomized:
+      U, s, Vh = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
+    else:
+      U, s, Vh = np.linalg.svd(Y.T@X)
     # Compute balancing transformation
-    sqrt_s = torch.diag(torch.sqrt(1.0/s))
-    phi = X @ V @ sqrt_s
+    sqrt_s = np.diag(np.sqrt(1.0/s))
+    phi = X @ Vh @ sqrt_s
     psi = Y @ U @ sqrt_s
-    # Save balancing modes
-    data = {}
-    for (k, v) in (
-      ("s", s),
-      ("phi", phi),
-      ("psi", psi),
-      ("mask", mask),
-      # ("xref", self.xref[mask]),
-      # ("xscale", np.diag(self.xscale)[mask])
-    ):
-      data[k] = bkd.to_numpy(v)
-    filename = self.path_to_saving+"/cobras_bases.p"
-    pickle.dump(data, open(filename, "wb"))
-    # POD
-    # -------------
-    if pod:
-      # # Normalize
-      # xref = torch.mean(X, dim=-1) if pod_norm else torch.zeros(X.shape[0])
-      # xscale = torch.std(X, dim=-1) if pod_norm else torch.ones(X.shape[0])
-      # X = ((X.T-xref)/xscale).T
-      # Compute modes
-      U, s, _ = torch.svd_lowrank(
-        A=X,
-        q=min(rank, X.shape[0]),
-        niter=niter
-      )
-      # Save modes
-      data = {}
-      for (k, v) in (
-        ("s", s),
-        ("phi", U),
-        ("psi", U),
-        ("mask", mask),
-        # ("xref", xref),
-        # ("xscale", xscale)
-      ):
-        data[k] = bkd.to_numpy(v)
-      filename = self.path_to_saving+"/pod_bases.p"
-      pickle.dump(data, open(filename, "wb"))
-
-  def _make_mask(self, xnot: list) -> np.ndarray:
-    """
-    Generate a mask to exclude specific states from ROM computations.
-
-    :param xnot: List of state indices to exclude.
-    :type xnot: list
-
-    :return: Boolean mask indicating included states.
-    :rtype: np.ndarray
-    """
-    mask = np.ones(self.system.nb_eqs)
-    xnot = np.array(xnot).astype(int).reshape(-1)
-    mask[xnot] = 0
-    return mask.astype(bool)
+    # Save results
+    data = {
+      "s": s,
+      "phi": phi,
+      "psi": psi,
+      "mask": mask,
+      "xref": self.xref,
+      "xscale": np.diag(self.xscale)
+    }
+    self._save(data)
+    return data

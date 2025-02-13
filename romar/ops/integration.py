@@ -11,63 +11,56 @@ def get_quad_nd(
   joint: bool = True
 ) -> Tuple[np.ndarray]:
   """
-  Compute n-dimensional quadrature points and weights over a domain
-  defined by multiple axes. Supports Gauss-Legendre quadrature or
-  trapezoidal integration, with optional scaling based on a probability
-  distribution.
+  Compute n-dimensional quadrature points and weights.
 
-  :param x: A tuple of 1D arrays, each defining the interval for quadrature
-            along a different dimension.
+  This function constructs quadrature points and weights for multiple
+  dimensions using either Gauss-Legendre quadrature or trapezoidal integration.
+  The results can be returned as a Cartesian grid of points or as separate 1D
+  arrays.
+
+  :param x: A tuple of 1D arrays, each defining an interval along one
+            dimension.
   :type x: Tuple[np.ndarray]
-  :param dist: Distribution type for scaling weights. Defaults to "uniform".
-               Options include:
-               - "uniform" (default)
-               - "loguniform"
+  :param dist: Type of distribution used for scaling weights. Options:
+         - "uniform" (default)
+         - "loguniform"
   :type dist: Union[Tuple[str], str], optional
-  :param quad: Quadrature type to use for each dimension.
-               Defaults to "gl" (Gauss-Legendre). Options include:
-               - "gl" (Gauss-Legendre)
-               - "trapz" (Trapezoidal)
+  :param quad: Quadrature method for each dimension. Options:
+         - "gl" (Gauss-Legendre, default)
+         - "trapz" (Trapezoidal)
   :type quad: Union[Tuple[str], str], optional
-  :param deg: Degree of the Gauss-Legendre quadrature.
-              Only relevant if `quad` is 'gl'. Defaults to 3.
+  :param deg: Degree of Gauss-Legendre quadrature (only used if `quad="gl"`).
+              Default is 3.
   :type deg: int, optional
-  :param joint: If True, returns a joint grid of points (default: True).
-                If False, returns individual 1D arrays of quadrature points
-                and weights for each dimension.
+  :param joint: If True, returns a full grid of points; otherwise, returns
+                individual 1D arrays.
   :type joint: bool, optional
 
   :return: A tuple containing:
-            - `x`: Quadrature points (size N x D, where N is the number of
-                   points and D is the number of dimensions).
-            - `w`: Quadrature weights (size N, one weight per point).
+           - `x`: Quadrature points (shape: N x D if `joint=True`, otherwise
+                  individual 1D arrays).
+           - `w`: Quadrature weights (shape: N).
   :rtype: Tuple[np.ndarray]
 
   :notes:
-    - If `joint=True`, the function creates a full grid of points using the
-      Cartesian product of all 1D quadrature points. The weights are computed
-      as the product of the individual 1D weights.
-    - If `joint=False`, quadrature points and weights are returned as
-      separate 1D arrays.
+    - If `joint=True`, the function computes a Cartesian product of quadrature
+      points across dimensions.
+    - If `joint=False`, it returns separate quadrature points and weights for
+      each dimension.
   """
-  # Number of dimensions
   nb_dim = len(x)
-  # Check inputs
-  if isinstance(dist, str):
-    dist = tuple([dist]*nb_dim)
-  if isinstance(quad, str):
-    quad = tuple([quad]*nb_dim)
-  # Get 1D quadrature points and weights for each dimension
+  # Convert string inputs to tuples for consistency
+  dist = (dist,) * nb_dim if isinstance(dist, str) else dist
+  quad = (quad,) * nb_dim if isinstance(quad, str) else quad
+  # Compute 1D quadrature for each dimension
   xw = [get_quad_1d(x[i], quad[i], deg, dist[i]) for i in range(nb_dim)]
-  x, w = list(zip(*xw))
+  x, w = zip(*xw)
   if joint:
-    # Create 2D grid of points using meshgrid and reshape them into (N, D)
-    x = [z.reshape(-1) for z in np.meshgrid(*x)]
-    x = np.vstack(x).T
-    # Compute 2D quadrature weights by the product of the 1D weights
-    w = [z.reshape(-1) for z in np.meshgrid(*w)]
-    w = np.prod(w, axis=0)
+    # Generate Cartesian grid and reshape
+    x = np.vstack([z.ravel() for z in np.meshgrid(*x)]).T
+    w = np.prod([z.ravel() for z in np.meshgrid(*w)], axis=0)
   return x, w
+
 
 def get_quad_1d(
   x: np.ndarray,
@@ -78,34 +71,35 @@ def get_quad_1d(
   """
   Compute 1D quadrature points and weights over a given interval.
 
-  :param x: Array of points defining the interval for quadrature.
+  :param x: Array of interval-defining points.
   :type x: np.ndarray
-  :param quad: Quadrature type. Options:
+  :param quad: Quadrature method. Options:
                - "gl" (Gauss-Legendre, default)
                - "trapz" (Trapezoidal)
   :type quad: str
-  :param deg: Degree of the Gauss-Legendre quadrature
-              (only used if `quad="gl"`). Default is 3.
+  :param deg: Degree of Gauss-Legendre quadrature (only relevant for
+              `quad="gl"`). Default is 3.
   :type deg: int
-  :param dist: Probability distribution for scaling weights. Options:
-              - "uniform" (default)
-              - "loguniform"
+  :param dist: Scaling distribution for weights. Options:
+               - "uniform" (default)
+               - "loguniform"
   :type dist: str
 
-  :return: Tuple of quadrature points and corresponding weights.
-  :rtype: Tuple[np.ndarray, np.ndarray]
+  :return: Quadrature points and corresponding weights.
+  :rtype: Tuple[np.ndarray]
   """
   if (len(x) == 1):
     return x, np.ones(1)
+  x = np.sort(x)
+  a, b = np.amin(x), np.amax(x)
+  if (quad == "gl"):
+    x, w = _get_quad_gl_1d(x, deg)
   else:
-    x = np.sort(x)
-    a, b = np.amin(x), np.amax(x)
-    if (quad == "gl"):
-      x, w = _get_quad_gl_1d(x, deg)
-    else:
-      x, w = _get_quad_trapz_1d(x)
-    f = _compute_dist(x, a, b, dist)
-    return x, w*f
+    x, w = _get_quad_trapz_1d(x)
+  # Apply probability distribution scaling
+  f = _compute_dist(x, a, b, dist)
+  return x, w * f
+
 
 def _get_quad_gl_1d(
   x: np.ndarray,
@@ -114,49 +108,46 @@ def _get_quad_gl_1d(
   """
   Compute 1D Gauss-Legendre quadrature points and weights over an interval.
 
-  :param x: Array of interval points.
+  :param x: Interval points.
   :type x: np.ndarray
-  :param deg: Degree of Gauss-Legendre quadrature
-              (number of points per subinterval). Default is 3.
+  :param deg: Degree of quadrature (number of points per subinterval).
+              Default is 3.
   :type deg: int
 
-  :return: Tuple containing quadrature points and weights.
-  :rtype: Tuple[np.ndarray, np.ndarray]
+  :return: Quadrature points and corresponding weights.
+  :rtype: Tuple[np.ndarray]
   """
-  # Compute Gauss-Legendre quadrature points
-  # and weights for reference interval [-1, 1]
+  # Get Gauss-Legendre nodes and weights for [-1,1]
   xlg, wlg = np.polynomial.legendre.leggauss(deg)
   _x, _w = [], []
-  # Loop over each interval in x
   for i in range(len(x) - 1):
-    # Scaling and shifting from the reference
-    # interval to the current interval
     a = 0.5 * (x[i+1] - x[i])
     b = 0.5 * (x[i+1] + x[i])
     _x.append(a * xlg + b)
     _w.append(a * wlg)
-  # Concatenate all points and weights
   x = np.concatenate(_x).squeeze()
   w = np.concatenate(_w).squeeze()
   return x, w
+
 
 def _get_quad_trapz_1d(
   x: np.ndarray
 ) -> Tuple[np.ndarray]:
   """
-  Compute 1D quadrature weights using the trapezoidal rule.
+  Compute 1D quadrature points and weights using the trapezoidal rule.
 
-  :param x: Array of interval points.
+  :param x: Interval points.
   :type x: np.ndarray
 
-  :return: Tuple containing quadrature points and weights.
-  :rtype: Tuple[np.ndarray, np.ndarray]
+  :return: Quadrature points and corresponding weights.
+  :rtype: Tuple[np.ndarray]
   """
   w = np.zeros_like(x)
   w[0] = 0.5 * (x[1] - x[0])
   w[-1] = 0.5 * (x[-1] - x[-2])
   w[1:-1] = 0.5 * (x[2:] - x[:-2])
   return x, w
+
 
 def _compute_dist(
   x: np.ndarray,
@@ -165,24 +156,28 @@ def _compute_dist(
   model: str = "uniform"
 ) -> np.ndarray:
   """
-  Compute the probability distribution over a set of points based on the
-  specified distribution model.
+  Compute probability distribution weights for quadrature points.
 
-  :param x: Array of points defining the intervals along the x-axis.
+  :param x: Quadrature points.
   :type x: np.ndarray
-  :param model: The type of distribution to compute. Options are 'uniform' or
-                'loguniform'. Default is 'uniform'.
+  :param a: Lower bound of the interval.
+  :type a: float
+  :param b: Upper bound of the interval.
+  :type b: float
+  :param model: Distribution model to apply. Options:
+          - "uniform" (default)
+          - "loguniform"
   :type model: str
 
-  :raises ValueError: If the specified model is not recognized.
+  :raises ValueError: If an unsupported distribution model is specified.
 
-  :return: Computed distribution values.
+  :return: Scaling factors for quadrature weights.
   :rtype: np.ndarray
   """
   if (model == "uniform"):
-    return np.full(x.shape, 1/(b-a))
+    return np.full_like(x, 1 / (b - a))
   elif (model == "loguniform"):
     dx = np.log(b) - np.log(a)
-    return 1/(x*dx)
+    return 1 / (x * dx)
   else:
-    raise ValueError(f"Distribution model not recognized: '{model}'")
+    raise ValueError(f"Unsupported distribution model: '{model}'")

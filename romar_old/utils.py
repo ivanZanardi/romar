@@ -101,8 +101,7 @@ def save_case(
   """
   if (filename is None):
     filename = path + f"/case_{str(index).zfill(4)}.p"
-  with open(filename, "wb") as f:
-    pickle.dump(data, f)
+  pickle.dump(data, open(filename, "wb"))
 
 def load_case(
   path: Union[str, None] = None,
@@ -130,8 +129,7 @@ def load_case(
   if (filename is None):
     filename = path + f"/case_{str(index).zfill(4)}.p"
   if os.path.exists(filename):
-    with open(filename, "rb") as f:
-      data = pickle.load(f)
+    data = pickle.load(open(filename, "rb"))
     if (key is None):
       return data
     else:

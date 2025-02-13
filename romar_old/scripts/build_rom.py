@@ -2,8 +2,10 @@
 Build reduced-order model.
 """
 
+import os
 import sys
 import json
+import time
 import argparse
 import importlib
 
@@ -28,9 +30,6 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
-import os
-import copy
-import time
 import numpy as np
 import dill as pickle
 
@@ -83,48 +82,29 @@ if (__name__ == "__main__"):
 
   # CoBRAS
   # ---------------
-  # Model
-  print("CoBRAS model")
-  cobras_opts = copy.deepcopy(inputs["cobras"].get("init", {}))
-  cobras_opts.update(dict(
+  cobras = roms.CoBRAS(
     system=system,
     tgrid=inputs["grids"]["t"],
     quad_mu=quad_mu,
-    path_to_saving=path_to_saving
-  ))
-  cobras = roms.CoBRAS(**cobras_opts)
-  # Covariance matrices
+    path_to_saving=path_to_saving,
+    saving=True
+  )
+  # > Compute covariance matrices
   cov_mats_opts = inputs["cobras"]["cov_mats"]
   if (not cov_mats_opts.get("read", False)):
-    print("> Computing covariance matrices ...")
-    cov_mats = cobras.compute_cov_mats(**cov_mats_opts["compute"])
+    print("Computing covariance matrices ...")
+    X, Y = cobras.compute_cov_mats(**cov_mats_opts["compute"])
     if cov_mats_opts.get("save", False):
-      filename = os.path.join(path_to_saving, "cov_mats.p")
-      with open(filename, "wb") as f:
-        pickle.dump(cov_mats, f)
+      np.save(path_to_saving + "/X.npy", X)
+      np.save(path_to_saving + "/Y.npy", Y)
   else:
-    print("> Reading covariance matrices ...")
-    with open(cov_mats_opts["filename"], "rb") as f:
-      cov_mats = pickle.load(f)
-  X, Y, wx, wy = cov_mats
-  # Modes
-  print("> Computing modes ...")
+    print("Reading covariance matrices ...")
+    X = np.load(cov_mats_opts["path_x"])
+    Y = np.load(cov_mats_opts["path_y"])
+  # > Compute modes
+  print("Computing modes ...")
   modes_opts = inputs["cobras"]["modes"]
-  cobras.compute_modes(X, Y, wx, wy, **modes_opts)
-
-  # PCA
-  # ---------------
-  # Model
-  print("PCA model")
-  pca_opts = copy.deepcopy(inputs["pca"].get("init", {}))
-  pca_opts.update(dict(
-    path_to_saving=path_to_saving
-  ))
-  pca = roms.PCA(**pca_opts)
-  # Modes
-  print("> Computing modes ...")
-  modes_opts = inputs["pca"]["modes"]
-  pca.compute_modes(X, **modes_opts)
+  cobras.compute_modes(X=X, Y=Y, **modes_opts["compute"])
 
   # Copy input file
   # ---------------
