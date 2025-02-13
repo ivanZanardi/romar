@@ -50,15 +50,15 @@ def get_quad_nd(
   """
   nb_dim = len(x)
   # Convert string inputs to tuples for consistency
-  dist = (dist,) * nb_dim if isinstance(dist, str) else dist
-  quad = (quad,) * nb_dim if isinstance(quad, str) else quad
+  dist = tuple([dist]*nb_dim) if isinstance(dist, str) else dist
+  quad = tuple([quad]*nb_dim) if isinstance(quad, str) else quad
   # Compute 1D quadrature for each dimension
   xw = [get_quad_1d(x[i], quad[i], deg, dist[i]) for i in range(nb_dim)]
-  x, w = zip(*xw)
+  x, w = list(zip(*xw))
   if joint:
     # Generate Cartesian grid and reshape
-    x = np.vstack([z.ravel() for z in np.meshgrid(*x)]).T
-    w = np.prod([z.ravel() for z in np.meshgrid(*w)], axis=0)
+    x = np.vstack([z.reshape(-1) for z in np.meshgrid(*x)]).T
+    w = np.prod([z.reshape(-1) for z in np.meshgrid(*w)], axis=0)
   return x, w
 
 def get_quad_1d(
@@ -97,7 +97,7 @@ def get_quad_1d(
     x, w = _get_quad_trapz_1d(x)
   # Apply probability distribution scaling
   f = _compute_dist(x, a, b, dist)
-  return x, w * f
+  return x, w*f
 
 def _get_quad_gl_1d(
   x: np.ndarray,
@@ -118,13 +118,16 @@ def _get_quad_gl_1d(
   # Get Gauss-Legendre nodes and weights for [-1,1]
   xlg, wlg = np.polynomial.legendre.leggauss(deg)
   _x, _w = [], []
+  # Loop over each interval in x
   for i in range(len(x) - 1):
+    # Scaling and shifting from the reference interval to the current interval
     a = 0.5 * (x[i+1] - x[i])
     b = 0.5 * (x[i+1] + x[i])
     _x.append(a * xlg + b)
     _w.append(a * wlg)
-  x = np.concatenate(_x).squeeze()
-  w = np.concatenate(_w).squeeze()
+  # Concatenate all points and weights
+  x = np.concatenate(_x).reshape(-1)
+  w = np.concatenate(_w).reshape(-1)
   return x, w
 
 def _get_quad_trapz_1d(
@@ -171,9 +174,9 @@ def _compute_dist(
   :rtype: np.ndarray
   """
   if (model == "uniform"):
-    return np.full_like(x, 1 / (b - a))
+    return np.full_like(x, 1.0/(b-a))
   elif (model == "loguniform"):
     dx = np.log(b) - np.log(a)
-    return 1 / (x * dx)
+    return 1.0/(x*dx)
   else:
     raise ValueError(f"Unsupported distribution model: '{model}'")

@@ -109,7 +109,7 @@ if (__name__ == "__main__"):
   # Modes
   print("> Computing modes ...")
   modes_opts = inputs["cobras"]["modes"]
-  cobras.compute_modes(X, Y, wx, wy, **modes_opts)
+  cobras.compute_modes(X=X, Y=Y, wx=wx, wy=wy, **modes_opts)
 
   # PCA
   # ---------------
@@ -123,6 +123,6 @@ if (__name__ == "__main__"):
   # Modes
   print("> Computing modes ...")
   modes_opts = inputs["pca"]["modes"]
-  pca.compute_modes(X, **modes_opts)
+  pca.compute_modes(X=X, **modes_opts)
 
   print("Done!")

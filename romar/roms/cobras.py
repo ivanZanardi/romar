@@ -1,4 +1,5 @@
 import sys
+import torch
 import numpy as np
 import scipy as sp
 import joblib as jl
@@ -9,6 +10,7 @@ from typing import *
 
 from .. import env
 from .. import ops
+from .. import utils
 from .. import backend as bkd
 from ..systems import SYS_TYPES
 from .basic import Basic
@@ -317,8 +319,8 @@ class CoBRAS(Basic):
     self.system.compute_lin_fom_ops(y0)
     A, C = [getattr(self.system, k) for k in ("A", "C")]
     # Scaling procedure
-    A = self.ov_xscale @ A @ self.xscale
-    C = C @ self.xscale
+    A = self.ov_xscale_mat @ A @ self.xscale_mat
+    C = C @ self.xscale_mat
     # Eigendecomposition
     l, V = sp.linalg.eig(A)
     Vinv = sp.linalg.inv(V)
@@ -375,14 +377,11 @@ class CoBRAS(Basic):
     X *= wx
     Y *= wy
     # Balance covariance matrices
-    U, s, Vh = map(bkd.to_numpy, ops.svd_lowrank_xy(
-      X=bkd.to_torch(X),
-      Y=bkd.to_torch(Y),
-      q=min(rank, X.shape[0]),
-      niter=niter
-    ))
+    rank = min(rank, X.shape[0])
+    X, Y = map(bkd.to_torch, (X, Y))
+    U, s, Vh = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
     # Compute balancing transformation
-    sqrt_s = np.diag(np.sqrt(1.0/s))
+    sqrt_s = torch.diag(torch.sqrt(1.0/s))
     phi = X @ Vh @ sqrt_s
     psi = Y @ U @ sqrt_s
     # Save results
@@ -392,7 +391,8 @@ class CoBRAS(Basic):
       "psi": psi,
       "mask": mask,
       "xref": self.xref,
-      "xscale": np.diag(self.xscale)
+      "xscale": self.xscale
     }
+    data = utils.map_nested_dict(bkd.to_numpy, data)
     self._save(data)
     return data

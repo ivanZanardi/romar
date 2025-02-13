@@ -60,8 +60,8 @@ class Basic(abc.ABC):
     :rtype: np.ndarray
     """
     mask = np.ones(nb_feat, dtype=bool)
-    xnot = np.asarray(xnot, dtype=int).reshape(-1)
     if (xnot is not None):
+      xnot = np.asarray(xnot, dtype=int).reshape(-1)
       mask[xnot] = False
     return mask
 
@@ -100,12 +100,13 @@ class Basic(abc.ABC):
       xs.fill(1.0)
     # Ensure valid scaling factors
     if np.any(xs == 0.0):
-      raise ValueError("Scaling factors must be nonzero to avoid " \
-                       "division errors.")
+      raise ValueError("Scaling factors must be nonzero " \
+                       "to avoid division errors.")
     # Store parameters
     self.xref = xr
-    self.xscale = np.diag(xs)
-    self.ov_xscale = np.diag(1.0/xs)
+    self.xscale = xs
+    self.xscale_mat = np.diag(xs)
+    self.ov_xscale_mat = np.diag(1.0/xs)
 
   def _init_scaling_param(
     self,
@@ -136,9 +137,9 @@ class Basic(abc.ABC):
       except Exception as e:
         raise ValueError(f"Error loading file '{x}': {e}")
     x = np.asarray(x).reshape(-1)
-    if (x.shape[0] != nb_feat):
-      raise ValueError(f"Expected input of shape ({nb_feat},), " \
-                       f"but got {x.shape}.")
+    if (len(x) != nb_feat):
+      raise ValueError(f"Expected input vector of length {nb_feat}, " \
+                       f"but got {len(x)}.")
     return x
 
   def _apply_scaling(
@@ -156,10 +157,10 @@ class Basic(abc.ABC):
 
     :raises ValueError: If input dimensions do not match scaling dimensions.
     """
-    if (x.shape[-1] != self.xref.shape[-1]):
+    if (x.shape[-1] != len(self.xref)):
       raise ValueError("Input data dimensions do not " \
                        "match the scaling dimensions.")
-    return (x - self.xref) @ self.ov_xscale
+    return (x - self.xref) @ self.ov_xscale_mat
 
   # Saving Data
   # ===================================

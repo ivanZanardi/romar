@@ -31,9 +31,9 @@ def svd_lowrank_xy(
   """
   if (not torch.jit.is_scripting()):
     tensor_ops = (X, Y)
-    if not set(map(type, tensor_ops)).issubset(
-      (torch.Tensor, type(None))
-    ) and has_torch_function(tensor_ops):
+    tensor_types = set(map(type, tensor_ops))
+    tensor_valid = tensor_types.issubset((torch.Tensor, type(None)))
+    if ((not tensor_valid) and has_torch_function(tensor_ops)):
       return handle_torch_function(
         svd_lowrank_xy, tensor_ops, X, Y, q=q, niter=niter
       )
@@ -68,8 +68,10 @@ def _svd_lowrank(
   B = (Q.T @ Y.T) @ X
   # Perform SVD on the reduced matrix
   U, s, Vh = torch.linalg.svd(B, full_matrices=False)
-  V = Vh.mH  # Hermitian transpose (conjugate transpose)
-  U = Q.matmul(U)  # Project back to the original space
+  # Hermitian transpose (conjugate transpose)
+  V = Vh.mH
+  # Project back to the original space
+  U = Q.matmul(U)
   return U, s, V
 
 def _get_approximate_basis(
@@ -94,7 +96,8 @@ def _get_approximate_basis(
   # Generate a random test matrix
   R = torch.randn(X.shape[-1], q, dtype=X.dtype, device=X.device)
   P = Y.T @ (X @ R)
-  Q = torch.linalg.qr(P).Q  # Orthonormalize P
+  # Orthonormalize P
+  Q = torch.linalg.qr(P).Q
   for _ in range(niter):
     P = X.T @ (Y @ Q)
     Q = torch.linalg.qr(P).Q
