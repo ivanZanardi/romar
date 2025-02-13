@@ -40,12 +40,12 @@
       "rho": {
         "start": 1e-3,
         "stop": 1e-1,
-        "num": 2
+        "num": 6
       },
       "Th": {
         "start": 2e4,
         "stop": 5e4,
-        "num": 3
+        "num": 26
       },
       "Te": {
         "start": 293.6,
@@ -74,7 +74,6 @@
     },
     "modes": {
       "xnot": [0,1,-2,-1],
-      "randomized": true,
       "niter": 50
     }
   },
@@ -88,7 +87,6 @@
       "xscale": null,
       "scale": true,
       "xnot": [0,1,-2,-1],
-      "randomized": false,
       "niter": 50
     }
   },
