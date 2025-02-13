@@ -1,7 +1,8 @@
+import torch
 import numpy as np
 
-from .. import ops
 from .basic import Basic
+from .. import backend as bkd
 from typing import Dict, List, Optional, Tuple, Union
 
 _SCALINGS = {"std", "pareto", None}
@@ -60,7 +61,6 @@ class PCA(Basic):
     xscale: Optional[Union[str, np.ndarray]] = None,
     xnot: Optional[List[int]] = None,
     rank: int = 100,
-    randomized: bool = False,
     niter: int = 50
   ) -> Dict[str, np.ndarray]:
     """
@@ -76,11 +76,9 @@ class PCA(Basic):
     :type xscale: Union[str, np.ndarray], optional
     :param xnot: List of feature indices to exclude from PCA.
     :type xnot: List[int], optional
-    :param rank: Number of principal components to retain.
+    :param rank: Maximum rank for randomized SVD.
     :type rank: int
-    :param randomized: Whether to use randomized SVD.
-    :type randomized: bool
-    :param niter: Number of power iterations for randomized SVD.
+    :param niter: Number of iterations for randomized SVD.
     :type niter: int
 
     :return: Dictionary containing computed PCA components.
@@ -92,12 +90,11 @@ class PCA(Basic):
     mask = self._make_mask(X.shape[0], xnot)
     X = X[mask]
     # Compute SVD
-    rank = min(X.shape[0], rank)
-    if randomized:
-      phi, s, _ = ops.svd_lowrank_x(A=X, q=rank, niter=niter)
-    else:
-      phi, s, _ = np.linalg.svd(X)
-    phi = phi[:,:rank]
+    phi, s, _ = map(bkd.to_numpy, torch.svd_lowrank(
+      A=bkd.to_torch(X),
+      q=min(rank, X.shape[0]),
+      niter=niter
+    ))
     # Apply rotation
     phi = self._rotate(phi)
     # Save results

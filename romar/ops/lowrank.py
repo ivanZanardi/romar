@@ -1,11 +1,10 @@
 import torch
 
-from .. import backend as bkd
 from typing import Tuple
 from torch.overrides import handle_torch_function, has_torch_function
 
 
-def _svd_lowrank_xy(
+def svd_lowrank_xy(
   X: torch.Tensor,
   Y: torch.Tensor,
   q: int = 6,
@@ -36,7 +35,7 @@ def _svd_lowrank_xy(
       (torch.Tensor, type(None))
     ) and has_torch_function(tensor_ops):
       return handle_torch_function(
-        _svd_lowrank_xy, tensor_ops, X, Y, q=q, niter=niter
+        svd_lowrank_xy, tensor_ops, X, Y, q=q, niter=niter
       )
   return _svd_lowrank(X, Y, q=q, niter=niter)
 
@@ -102,7 +101,3 @@ def _get_approximate_basis(
     P = Y.T @ (X @ Q)
     Q = torch.linalg.qr(P).Q
   return Q
-
-svd_lowrank_x = bkd.make_fun_np(torch.svd_lowrank)
-
-svd_lowrank_xy = bkd.make_fun_np(_svd_lowrank_xy)

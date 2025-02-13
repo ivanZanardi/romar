@@ -42,7 +42,7 @@ def to_numpy(x):
   if (x is not None):
     if (torch.is_tensor(x)):
       return x.numpy(force=True)
-    elif isinstance(x, (list, tuple)):
+    elif isinstance(x, (int, float, list, tuple)):
       return np.asarray(x, dtype=floatx("numpy"))
     else:
       return x

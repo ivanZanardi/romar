@@ -28,7 +28,7 @@ class Species(object):
     self.use_factorial = bool(use_factorial)
     # Indexing
     self.indices = []
-
+    # Methods
     self.compute_mom = bkd.make_fun_np(self._compute_mom)
 
   # Properties

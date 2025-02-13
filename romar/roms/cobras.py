@@ -9,6 +9,7 @@ from typing import *
 
 from .. import env
 from .. import ops
+from .. import backend as bkd
 from ..systems import SYS_TYPES
 from .basic import Basic
 
@@ -344,7 +345,6 @@ class CoBRAS(Basic):
     wy: np.ndarray,
     xnot: Optional[List[int]] = None,
     rank: int = 100,
-    randomized: bool = True,
     niter: int = 50
   ) -> Dict[str, np.ndarray]:
     """
@@ -360,10 +360,8 @@ class CoBRAS(Basic):
     :type wy: np.ndarray
     :param xnot: List of feature indices to exclude.
     :type xnot: List[int], optional
-    :param rank: Maximum rank for the reduced model.
+    :param rank: Maximum rank for randomized SVD.
     :type rank: int
-    :param randomized: Whether to use randomized SVD.
-    :type randomized: bool
     :param niter: Number of iterations for randomized SVD.
     :type niter: int
 
@@ -377,11 +375,12 @@ class CoBRAS(Basic):
     X *= wx
     Y *= wy
     # Balance covariance matrices
-    rank = min(rank, X.shape[0])
-    if randomized:
-      U, s, Vh = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
-    else:
-      U, s, Vh = np.linalg.svd(Y.T@X)
+    U, s, Vh = map(bkd.to_numpy, ops.svd_lowrank_xy(
+      X=bkd.to_torch(X),
+      Y=bkd.to_torch(Y),
+      q=min(rank, X.shape[0]),
+      niter=niter
+    ))
     # Compute balancing transformation
     sqrt_s = np.diag(np.sqrt(1.0/s))
     phi = X @ Vh @ sqrt_s
