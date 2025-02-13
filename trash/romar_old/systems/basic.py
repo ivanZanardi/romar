@@ -42,7 +42,7 @@ class BasicSystem(object):
     # ROM
     # -------------
     self.rom_ops = None
-    # Bases
+    # Basis
     self.phi = None
     self.psi = None
     self.runtime = 0.0

@@ -68,7 +68,7 @@
         "nb_workers": 10,
         "fix_tmin": false
       },
-      "read": true,
+      "read": false,
       "save": true,
       "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1_test/max_mom_2/cov_mats.p"
     },

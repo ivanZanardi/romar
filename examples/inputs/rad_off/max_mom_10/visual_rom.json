@@ -20,12 +20,12 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "./../../test/max_mom_10/cobras_bases.hdf5"
+      "basis": "./../../test/max_mom_10/cobras_basis.hdf5"
     },
     "pod": {
       "active": false,
       "name": "POD",
-      "bases": "./../../test/max_mom_10/pod_bases.hdf5"
+      "basis": "./../../test/max_mom_10/pod_basis.hdf5"
     },
     "cg": {
       "active": false,

@@ -3,43 +3,29 @@ import abc
 import numpy as np
 import dill as pickle
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 
 class Basic(abc.ABC):
 
   """
   Base class for model reduction.
-
-  Provides methods for data scaling, feature masking, and an abstract
-  reduction method to be implemented by subclasses.
   """
 
   # Initialization
   # ===================================
   def __init__(
     self,
-    scaling: Optional[str] = None,
     path_to_saving: str = "./"
   ) -> None:
     """
     Initialize the base class.
 
-    :param scaling: Scaling method for normalization.
-                    Options: "std", "pareto", or None.
-    :type scaling: str, optional
     :param path_to_saving: Directory path to save computed results.
     :type path_to_saving: str
-
-    :raises ValueError: If the specified scaling method is invalid.
     """
     # Class name
     self.name = self.__class__.__name__.lower()
-    # Scaling method validation
-    self.scaling = scaling
-    if (self.scaling not in {"std", "pareto", None}):
-      raise ValueError(f"Invalid scaling method: '{self.scaling}'. "
-                       "Must be 'std', 'pareto', or None.")
     # Saving options
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
@@ -81,33 +67,6 @@ class Basic(abc.ABC):
 
   # Data scaling
   # ===================================
-  def _compute_scaling(
-    self,
-    X: np.ndarray
-  ) -> Tuple[np.ndarray]:
-    """
-    Compute scaling parameters based on the selected method.
-
-    :param X: Data matrix of shape (nb_features, nb_samples).
-    :type X: np.ndarray
-
-    :return: Tuple containing:
-             - Mean reference of shape (nb_features,).
-             - Scaling factor of shape (nb_features,).
-    :rtype: Tuple[np.ndarray]
-    """
-    nb_feat = X.shape[0]
-    xref = np.mean(X, axis=-1)
-    std = np.std(X, axis=-1)
-    if (self.scaling == "std"):
-      xscale = std
-    elif (self.scaling == "pareto"):
-      xscale = np.sqrt(std)
-    else:
-      xref = np.zeros(nb_feat)
-      xscale = np.ones(nb_feat)
-    return xref, xscale
-
   def _set_scaling(
     self,
     nb_feat: int,
@@ -219,7 +178,7 @@ class Basic(abc.ABC):
 
     :raises OSError: If there is an issue saving the file.
     """
-    filename = os.path.join(self.path_to_saving, f"{self.name}_bases.p")
+    filename = os.path.join(self.path_to_saving, f"{self.name}_basis.p")
     try:
       with open(filename, "wb") as f:
         pickle.dump(data, f)

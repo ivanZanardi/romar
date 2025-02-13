@@ -28,12 +28,12 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/cobras_bases.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/cobras_basis.p"
     },
     "pod": {
       "active": false,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/pod_bases.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_5/pod_basis.p"
     }
   },
   "paths": {

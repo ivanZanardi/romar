@@ -55,7 +55,7 @@ class ArgonCR(object):
     self.jac = None
     # ROM
     # -------------
-    # Bases
+    # Basis
     self.phi = None
     self.psi = None
     # Projector

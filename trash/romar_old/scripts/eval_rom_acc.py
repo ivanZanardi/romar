@@ -80,7 +80,7 @@ if (__name__ == '__main__'):
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in ("cobras", "pod")):
-        model["bases"] = h5todict(model["bases"])
+        model["basis"] = h5todict(model["basis"])
         if (model.get("error", None) is not None):
           model["error"] = h5todict(model["error"])
         else:
@@ -169,8 +169,8 @@ if (__name__ == '__main__'):
       for r in range(*inputs["rom_range"]):
         print("> Solving with %i dimensions ..." % r)
         system.set_basis(
-          phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r]
+          phi=model["basis"]["phi"][:,:r],
+          psi=model["basis"]["psi"][:,:r]
         )
         result = compute_err_parallel()
         if (None not in result):

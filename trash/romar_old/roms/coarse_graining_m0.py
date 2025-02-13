@@ -39,11 +39,11 @@ class CoarseGrainingM0(object):
     nb_bins=1
   ):
     self.set_probmat(mapping, nb_bins)
-    # Trial bases
+    # Trial basis
     self.phi = self.P * self.molecule.q.reshape(-1,1)
     Q = self.P.T @ self.molecule.q
     self.phi /= Q.reshape(1,-1)
-    # Test bases
+    # Test basis
     self.psi = self.P
 
   def set_probmat(

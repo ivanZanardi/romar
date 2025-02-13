@@ -2,9 +2,7 @@
 Visualize ROM vs FOM trajectories.
 """
 
-import os
 import sys
-import copy
 import json
 import argparse
 import importlib
@@ -30,6 +28,8 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
+import os
+import copy
 import numpy as np
 import dill as pickle
 import matplotlib.pyplot as plt
@@ -39,13 +39,22 @@ from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
 
-_VALID_MODELS = ("cobras", "pod")
+_VALID_MODELS = {"cobras", "pca"}
 
 # Main
 # =====================================
 if (__name__ == "__main__"):
 
   print("Initialization ...")
+
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"] + "/visual/"
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
 
   # System
   # -----------------------------------
@@ -58,16 +67,14 @@ if (__name__ == "__main__"):
   # -----------------------------------
   # Initialization
   # ---------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/visual/"
-  os.makedirs(path_to_saving, exist_ok=True)
-  # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
-        model["bases"] = pickle.load(open(model["bases"], "rb"))
+        # Load basis
+        with open(model["basis"], "rb") as f:
+          model["basis"] = pickle.load(f)
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
@@ -90,9 +97,9 @@ if (__name__ == "__main__"):
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
         system.set_rom(
-          phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r],
-          mask=model["bases"]["mask"].squeeze()
+          phi=model["basis"]["phi"][:,:r],
+          psi=model["basis"]["psi"][:,:r],
+          **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p"
@@ -139,11 +146,5 @@ if (__name__ == "__main__"):
       )
       if inputs["plot"]["animate"]:
         pp.animate_dist(**plot_dist_kwargs)
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
 
   print("Done!")

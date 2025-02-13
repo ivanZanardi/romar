@@ -419,7 +419,7 @@ class CoBRAS(object):
       # ("xscale", np.diag(self.xscale)[mask])
     ):
       data[k] = bkd.to_numpy(v)
-    filename = self.path_to_saving+"/cobras_bases.p"
+    filename = self.path_to_saving+"/cobras_basis.p"
     pickle.dump(data, open(filename, "wb"))
     # POD
     # -------------
@@ -445,7 +445,7 @@ class CoBRAS(object):
         # ("xscale", xscale)
       ):
         data[k] = bkd.to_numpy(v)
-      filename = self.path_to_saving+"/pod_bases.p"
+      filename = self.path_to_saving+"/pod_basis.p"
       pickle.dump(data, open(filename, "wb"))
 
   def _make_mask(self, xnot: list) -> np.ndarray:

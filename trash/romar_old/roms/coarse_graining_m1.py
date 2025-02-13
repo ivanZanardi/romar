@@ -39,7 +39,7 @@ class CoarseGrainingM1(CoarseGrainingM0):
     nb_bins=1
   ):
     self.set_probmat(mapping, nb_bins)
-    # Test bases
+    # Test basis
     e = self.molecule.lev["e"].reshape(-1,1)
     self.psi = np.hstack([self.P, self.P*e])
 

@@ -2,9 +2,7 @@
 Evaluate accuracy of ROM model.
 """
 
-import os
 import sys
-import copy
 import json
 import argparse
 import importlib
@@ -30,6 +28,8 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
+import os
+import copy
 import numpy as np
 import dill as pickle
 import matplotlib.pyplot as plt
@@ -39,13 +39,22 @@ from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
 
-_VALID_MODELS = ("cobras", "pod")
+_VALID_MODELS = {"cobras", "pca"}
 
 # Main
 # =====================================
 if (__name__ == "__main__"):
 
   print("Initialization ...")
+
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"] + "/error/"
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
 
   # System
   # -----------------------------------
@@ -58,18 +67,18 @@ if (__name__ == "__main__"):
   # -----------------------------------
   # Initialization
   # ---------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/error/"
-  os.makedirs(path_to_saving, exist_ok=True)
-  # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
-        model["bases"] = pickle.load(open(model["bases"], "rb"))
+        # Load basis
+        with open(model["basis"], "rb") as f:
+          model["basis"] = pickle.load(f)
+        # Load error
         if (model.get("error", None) is not None):
-          model["error"] = pickle.load(open(model["error"], "rb"))
+          with open(model["error"], "rb") as f:
+            model["error"] = pickle.load(f)
         else:
           model["error"] = None
       else:
@@ -90,29 +99,29 @@ if (__name__ == "__main__"):
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
         system.set_rom(
-          phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r],
-          mask=model["bases"]["mask"].squeeze()
+          phi=model["basis"]["phi"][:,:r],
+          psi=model["basis"]["psi"][:,:r],
+          **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
         idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
         if (idata is not None):
           if (t is None):
             t = idata["t"]
-          r = str(r)
           error[r], runtime[r] = idata["err"], iruntime
       # Save error statistics
       print("> Saving statistics ...")
       # > Error
       filename = path_to_saving + f"/{name}_err.p"
-      pickle.dump({"t": t, "data": error}, open(filename, "wb"))
-      # > Runtime
-      filename = path_to_saving + f"/{name}_runtime.json"
-      with open(filename, "w") as file:
-        json.dump(runtime, file, indent=2)
-      # > Not converged
-      filename = path_to_saving + f"/{name}_not_conv.json"
-      with open(filename, "w") as file:
-        json.dump(not_conv, file, indent=2)
+      with open(filename, "wb") as f:
+        pickle.dump({"t": t, "data": error})
+      # > Runtime and not converged cases
+      for (k, v) in (
+        ("runtime", runtime),
+        ("not_conv", not_conv)
+      ):
+        filename = path_to_saving + f"/{name}_{k}.json"
+        with open(filename, "w") as file:
+          json.dump(v, file, indent=2)
     else:
       t = model["error"]["t"]
       error = {}
@@ -129,11 +138,5 @@ if (__name__ == "__main__"):
       species=system.mix.species,
       **inputs["plot"]
     )
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
 
   print("Done!")

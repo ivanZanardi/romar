@@ -62,7 +62,7 @@ class Basic(object):
     )
     # ROM
     # -------------
-    # Bases
+    # Basis
     self.phi = None
     self.psi = None
     self.use_rom = False

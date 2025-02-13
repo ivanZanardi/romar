@@ -75,7 +75,7 @@ if (__name__ == '__main__'):
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in ("cobras", "pod")):
-        model["bases"] = h5todict(model["bases"])
+        model["basis"] = h5todict(model["basis"])
       elif (name == "cg"):
         model["class"] = roms.CoarseGrainingM1(
           molecule=path_to_dtb+"/species/molecule.json"
@@ -113,8 +113,8 @@ if (__name__ == '__main__'):
           pdata = (model["name"], r)
           print("> Solving ROM '%s' with %i dimensions ..." % pdata)
           system.update_rom_ops(
-            phi=model["bases"]["phi"][:,:r],
-            psi=model["bases"]["psi"][:,:r]
+            phi=model["basis"]["phi"][:,:r],
+            psi=model["basis"]["psi"][:,:r]
           )
           sols[model["name"]] = system.solve_rom(t, n0)[1]
         # elif ((name == "cg") and (2*int(model["nb_bins"]) == r)):

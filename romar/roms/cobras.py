@@ -35,9 +35,9 @@ class CoBRAS(Basic):
     system: SYS_TYPES,
     tgrid: Dict[str, float],
     quad_mu: Dict[str, np.ndarray],
+    scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
-    scale: bool = False,
     path_to_saving: str = "./"
   ) -> None:
     """
@@ -56,33 +56,27 @@ class CoBRAS(Basic):
                     - "x": A 1D numpy array of quadrature points.
                     - "w": A 1D numpy array of corresponding weights.
     :type quad_mu: Dict[str, np.ndarray]
+    :param scale: Whether to apply scaling (default: False).
+    :type scale: bool, optional
     :param xref: Mean reference values for scaling (array or file path).
     :type xref: Union[str, np.ndarray], optional
     :param xscale: Scaling factors (array or file path).
     :type xscale: Union[str, np.ndarray], optional
-    :param scale: Whether to apply scaling (default: True).
-    :type scale: bool, optional
     :param path_to_saving: Directory path where the computed data and modes
                            will be saved. Defaults to "./".
     :type path_to_saving: str, optional
-    :param saving: Flag indicating whether to enable saving of results.
-                   Defaults to True.
-    :type saving: bool, optional
 
     :raises ValueError: If `tgrid` does not contain the required keys.
     """
-    super(CoBRAS, self).__init__(
-      scaling=None,
-      path_to_saving=path_to_saving
-    )
+    super(CoBRAS, self).__init__(path_to_saving)
     # Validate required `tgrid` keys
     required_keys = {"start", "stop", "num"}
     if (not required_keys.issubset(tgrid.keys())):
-      raise ValueError(f"tgrid must contain keys: {required_keys}. " \
-                       "Received: {tgrid.keys()}")
+      raise ValueError(f"'tgrid' must contain keys: {required_keys}. " \
+                       f"Received: {tgrid.keys()}")
     self.tgrid = tgrid
     self.tmin = self.tgrid["start"]
-    # Store system and quadrature attributes
+    # Store system and quadrature points
     self.system = system
     self.quad_mu = quad_mu
     # Set scaling if system equations are defined
@@ -150,7 +144,7 @@ class CoBRAS(Basic):
         fix_tmin=fix_tmin
       )
       if (nb_workers > 1):
-        # Run parallel jobs
+        # Run jobs in parallel
         jl.Parallel(nb_workers)(
           jl.delayed(env.make_fun_parallel(self._compute_cov_mats))(
             mu=mu[i],
@@ -376,11 +370,12 @@ class CoBRAS(Basic):
     :return: Dictionary containing computed PCA components.
     :rtype: Dict[str, np.ndarray]
     """
-    # Mask data
+    # Mask covariance matrices
     mask = self._make_mask(X.shape[0], xnot)
     X, Y = X[mask], Y[mask]
-    # Weight matrices
-    X, Y = X*wx, Y*wy
+    # Weight covariance matrices
+    X *= wx
+    Y *= wy
     # Balance covariance matrices
     rank = min(rank, X.shape[0])
     if randomized:

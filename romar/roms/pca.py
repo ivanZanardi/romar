@@ -2,7 +2,10 @@ import numpy as np
 
 from .. import ops
 from .basic import Basic
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+_SCALINGS = {"std", "pareto", None}
+_ROTATIONS = {"varimax", "quartimax", None}
 
 
 class PCA(Basic):
@@ -35,24 +38,26 @@ class PCA(Basic):
     :raises ValueError: If the specified rotation and scaling method are
                         invalid.
     """
-    super(PCA, self).__init__(
-      scaling=scaling,
-      path_to_saving=path_to_saving
-    )
+    super(PCA, self).__init__(path_to_saving)
+    # Scaling method
+    self.scaling = scaling
+    if (self.scaling not in _SCALINGS):
+      raise ValueError(f"Invalid scaling method: '{self.scaling}'. " \
+                       f"Must be one of {_SCALINGS}.")
     # Rotation method
     self.rotation = rotation
-    if (self.rotation not in {"varimax", "quartimax", None}):
+    if (self.rotation not in _ROTATIONS):
       raise ValueError(f"Invalid rotation method: '{self.rotation}'. " \
-                       "Must be 'varimax', 'quartimax', or None.")
+                       f"Must be one of {_ROTATIONS}.")
 
   # Compute principal components
   # ===================================
   def compute_modes(
     self,
     X: np.ndarray,
+    scale: bool = True,
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
-    scale: bool = True,
     xnot: Optional[List[int]] = None,
     rank: int = 100,
     randomized: bool = False,
@@ -63,12 +68,12 @@ class PCA(Basic):
 
     :param X: Data matrix of shape (nb_features, nb_samples).
     :type X: np.ndarray
+    :param scale: Whether to apply scaling (default: True).
+    :type scale: bool, optional
     :param xref: Mean reference values for scaling (array or file path).
     :type xref: Union[str, np.ndarray], optional
     :param xscale: Scaling factors (array or file path).
     :type xscale: Union[str, np.ndarray], optional
-    :param scale: Whether to apply scaling (default: True).
-    :type scale: bool, optional
     :param xnot: List of feature indices to exclude from PCA.
     :type xnot: List[int], optional
     :param rank: Number of principal components to retain.
@@ -142,6 +147,33 @@ class PCA(Basic):
                          f"shape. Received {xref.shape} and {xscale.shape}.")
     self._set_scaling(nb_feat, xref, xscale, active)
     return self._apply_scaling(X.T).T
+
+  def _compute_scaling(
+    self,
+    X: np.ndarray
+  ) -> Tuple[np.ndarray]:
+    """
+    Compute scaling parameters based on the selected method.
+
+    :param X: Data matrix of shape (nb_features, nb_samples).
+    :type X: np.ndarray
+
+    :return: Tuple containing:
+             - Mean reference of shape (nb_features,).
+             - Scaling factor of shape (nb_features,).
+    :rtype: Tuple[np.ndarray]
+    """
+    nb_feat = X.shape[0]
+    xref = np.mean(X, axis=-1)
+    std = np.std(X, axis=-1)
+    if (self.scaling == "std"):
+      xscale = std
+    elif (self.scaling == "pareto"):
+      xscale = np.sqrt(std)
+    else:
+      xref = np.zeros(nb_feat)
+      xscale = np.ones(nb_feat)
+    return xref, xscale
 
   # Component rotation
   # ===================================

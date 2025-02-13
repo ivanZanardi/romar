@@ -29,8 +29,6 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import os
-import copy
-import time
 import numpy as np
 import dill as pickle
 
@@ -46,21 +44,22 @@ if (__name__ == "__main__"):
 
   print("Initialization ...")
 
-  runtime = time.time()
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"]
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
 
   # System
-  # -----------------------------------
+  # ---------------
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
   system.compute_c_mat(**inputs["system"]["c_mat"])
-
-  # Model reduction
-  # -----------------------------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"]
-  os.makedirs(path_to_saving, exist_ok=True)
 
   # Quadrature points
   # ---------------
@@ -85,7 +84,7 @@ if (__name__ == "__main__"):
   # ---------------
   # Model
   print("CoBRAS model")
-  cobras_opts = copy.deepcopy(inputs["cobras"].get("init", {}))
+  cobras_opts = inputs["cobras"].get("init", {})
   cobras_opts.update(dict(
     system=system,
     tgrid=inputs["grids"]["t"],
@@ -116,7 +115,7 @@ if (__name__ == "__main__"):
   # ---------------
   # Model
   print("PCA model")
-  pca_opts = copy.deepcopy(inputs["pca"].get("init", {}))
+  pca_opts = inputs["pca"].get("init", {})
   pca_opts.update(dict(
     path_to_saving=path_to_saving
   ))
@@ -125,11 +124,5 @@ if (__name__ == "__main__"):
   print("> Computing modes ...")
   modes_opts = inputs["pca"]["modes"]
   pca.compute_modes(X, **modes_opts)
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
 
   print("Done!")

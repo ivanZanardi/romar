@@ -332,7 +332,7 @@ class CoBRAS(object):
     # Save balancing modes
     s, phi, psi = [bkd.to_numpy(z) for z in (s, phi, psi)]
     data = {"s": s, "phi": phi, "psi": psi}
-    filename = self.path_to_saving+"/cobras_bases.p"
+    filename = self.path_to_saving+"/cobras_basis.p"
     pickle.dump(data, open(filename, "wb"))
     if pod:
       print("Computing POD modes ...")
@@ -343,5 +343,5 @@ class CoBRAS(object):
       )
       s, phi = [bkd.to_numpy(z) for z in (s, U)]
       data = {"s": s, "phi": phi}
-      filename = self.path_to_saving+"/pod_bases.p"
+      filename = self.path_to_saving+"/pod_basis.p"
       pickle.dump(data, open(filename, "wb"))

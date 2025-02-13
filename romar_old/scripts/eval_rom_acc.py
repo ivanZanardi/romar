@@ -67,7 +67,7 @@ if (__name__ == "__main__"):
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
-        model["bases"] = pickle.load(open(model["bases"], "rb"))
+        model["basis"] = pickle.load(open(model["basis"], "rb"))
         if (model.get("error", None) is not None):
           model["error"] = pickle.load(open(model["error"], "rb"))
         else:
@@ -90,9 +90,9 @@ if (__name__ == "__main__"):
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
         system.set_rom(
-          phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r],
-          mask=model["bases"]["mask"].squeeze()
+          phi=model["basis"]["phi"][:,:r],
+          psi=model["basis"]["psi"][:,:r],
+          mask=model["basis"]["mask"].squeeze()
         )
         idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
         if (idata is not None):

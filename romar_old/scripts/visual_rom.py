@@ -67,7 +67,7 @@ if (__name__ == "__main__"):
     if model.get("active", False):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
-        model["bases"] = pickle.load(open(model["bases"], "rb"))
+        model["basis"] = pickle.load(open(model["basis"], "rb"))
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
@@ -90,9 +90,9 @@ if (__name__ == "__main__"):
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
         system.set_rom(
-          phi=model["bases"]["phi"][:,:r],
-          psi=model["bases"]["psi"][:,:r],
-          mask=model["bases"]["mask"].squeeze()
+          phi=model["basis"]["phi"][:,:r],
+          psi=model["basis"]["psi"][:,:r],
+          mask=model["basis"]["mask"].squeeze()
         )
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p"

@@ -61,7 +61,6 @@ def get_quad_nd(
     w = np.prod([z.ravel() for z in np.meshgrid(*w)], axis=0)
   return x, w
 
-
 def get_quad_1d(
   x: np.ndarray,
   quad: str = "gl",
@@ -100,7 +99,6 @@ def get_quad_1d(
   f = _compute_dist(x, a, b, dist)
   return x, w * f
 
-
 def _get_quad_gl_1d(
   x: np.ndarray,
   deg: int = 3
@@ -129,7 +127,6 @@ def _get_quad_gl_1d(
   w = np.concatenate(_w).squeeze()
   return x, w
 
-
 def _get_quad_trapz_1d(
   x: np.ndarray
 ) -> Tuple[np.ndarray]:
@@ -147,7 +144,6 @@ def _get_quad_trapz_1d(
   w[-1] = 0.5 * (x[-1] - x[-2])
   w[1:-1] = 0.5 * (x[2:] - x[:-2])
   return x, w
-
 
 def _compute_dist(
   x: np.ndarray,

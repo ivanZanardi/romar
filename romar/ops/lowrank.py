@@ -40,7 +40,6 @@ def _svd_lowrank_xy(
       )
   return _svd_lowrank(X, Y, q=q, niter=niter)
 
-
 def _svd_lowrank(
   X: torch.Tensor,
   Y: torch.Tensor,
@@ -74,7 +73,6 @@ def _svd_lowrank(
   U = Q.matmul(U)  # Project back to the original space
   return U, s, V
 
-
 def _get_approximate_basis(
   X: torch.Tensor,
   Y: torch.Tensor,
@@ -104,7 +102,6 @@ def _get_approximate_basis(
     P = Y.T @ (X @ Q)
     Q = torch.linalg.qr(P).Q
   return Q
-
 
 svd_lowrank_x = bkd.make_fun_np(torch.svd_lowrank)
 

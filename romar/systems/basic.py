@@ -70,13 +70,13 @@ class Basic(object):
     )
     # ROM
     # -------------
-    # Bases
+    # Basis
     self.phi = None
     self.psi = None
     self.use_rom = False
     # Projector
     self.use_proj = bool(use_proj)
-    self.P = None
+    self.proj = None
     # Output
     # -------------
     self.C = None
@@ -260,41 +260,49 @@ class Basic(object):
     self,
     phi: np.ndarray,
     psi: np.ndarray,
-    mask: Union[str, np.ndarray],
+    mask: np.ndarray,
     xref: Optional[np.ndarray] = None,
     xscale: Optional[np.ndarray] = None
   ) -> None:
-    # Biorthogonalize
+    """
+    Configure the Reduced-Order Model (ROM) by setting basis functions,
+    projection operators, and scaling transformations.
+
+    :param phi: Trial basis matrix for ROM.
+    :type phi: np.ndarray
+    :param psi: Test basis matrix for ROM.
+    :type psi: np.ndarray
+    :param mask: Boolean mask indicating which states are compressed.
+    :type mask: np.ndarray
+    :param xref: Reference values for state scaling. Defaults to zero.
+    :type xref: Optional[np.ndarray], optional
+    :param xscale: Scaling factors for state variables. Defaults to identity.
+    :type xscale: Optional[np.ndarray], optional
+    """
+    # Biorthogonalize basis
     phi = phi @ sp.linalg.inv(psi.T @ phi)
-    # Projector
-    P = phi @ psi.T
-    # Mask
-    if isinstance(mask, str):
-      mask = np.loadtxt(mask)
-    mask = mask.astype(bool)
-    # Normalization
-    # > Reference value
-    xref = np.zeros(self.nb_eqs)[mask] if (xref is None) else xref
-    xref = xref.squeeze()
-    # > Scaling value
-    xscale = np.ones(self.nb_eqs)[mask] if (xscale is None) else xscale
-    xscale = xscale.squeeze()
-    ov_xscale = np.diag(1.0/xscale)
-    xscale = np.diag(xscale)
-    # Dimension
-    shape = list(phi.shape)
-    self.rom_dim = shape[0] if self.use_proj else shape[1]
-    # Convert
+    # Compute projection operator
+    proj = phi @ psi.T
+    # Ensure mask is properly reshaped
+    mask = mask.astype(bool).reshape(-1)
+    # Handle scaling and reference values
+    xr = np.zeros(self.nb_eqs) if (xref is None) else np.asarray(xref)
+    xs = np.ones(self.nb_eqs) if (xscale is None) else np.asarray(xscale)
+    xr, xs = xr[mask], xs[mask]
+    # Determine ROM dimension
+    self.rom_dim = phi.shape[0] if self.use_proj else phi.shape[1]
+    # Convert to torch tensors
     for (k, v) in (
       ("phi", phi),
       ("psi", psi),
-      ("P", P),
+      ("proj", proj),
       ("mask", mask),
-      ("xref", xref),
-      ("xscale", xscale),
-      ("ov_xscale", ov_xscale)
+      ("xref", xr),
+      ("xscale", np.diag(xs)),
+      ("ov_xscale", np.diag(1.0/xs))
     ):
       setattr(self, k, bkd.to_torch(v))
+    # Convert mask to boolean tensor
     self.mask = self.mask.bool()
 
   # Output
@@ -418,7 +426,7 @@ class Basic(object):
     # Normalize
     yhat = (yhat - self.xref) @ self.ov_xscale
     # Encode
-    z = yhat @ self.P.T if self.use_proj else yhat @ self.psi
+    z = yhat @ self.proj.T if self.use_proj else yhat @ self.psi
     # Concatenate
     return torch.cat([z, ynot], dim=-1)
 
@@ -426,7 +434,7 @@ class Basic(object):
     # Split variables
     z, ynot = z[...,:self.rom_dim], z[...,self.rom_dim:]
     # Decode
-    yhat = z @ self.P.T if self.use_proj else z @ self.phi.T
+    yhat = z @ self.proj.T if self.use_proj else z @ self.phi.T
     # Denormalize
     yhat = yhat @ self.xscale + self.xref
     # Fill decoded tensor

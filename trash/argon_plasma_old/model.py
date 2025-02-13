@@ -50,7 +50,7 @@ class Model(object):
     # ROM
     # -------------
     self.use_proj = use_proj
-    # Bases
+    # Basis
     self.phi = None
     self.psi = None
     self.runtime = 0.0

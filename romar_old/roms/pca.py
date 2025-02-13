@@ -56,7 +56,7 @@ class PCA(object):
       ("xscale", xscale)
     ):
       data[k] = v
-    filename = self.path_to_saving + "/pca_bases.p"
+    filename = self.path_to_saving + "/pca_basis.p"
     pickle.dump(data, open(filename, "wb"))
 
   def _make_mask(

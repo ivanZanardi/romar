@@ -28,13 +28,13 @@
     "cobras": {
       "active": false,
       "name": "CoBRAS",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_bases.p",
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/cobras_basis.p",
       "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "bases": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_bases.p",
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/pod_basis.p",
       "mask": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2/rom_mask.txt"
     }
   },
