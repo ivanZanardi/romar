@@ -12,7 +12,6 @@ from .. import env
 from .. import ops
 from .. import utils
 from .. import backend as bkd
-from ..systems import SYS_TYPES
 from .basic import Basic
 
 
@@ -35,7 +34,7 @@ class CoBRAS(Basic):
   # ===================================
   def __init__(
     self,
-    system: SYS_TYPES,
+    system: Any,
     tgrid: Dict[str, float],
     quad_mu: Dict[str, np.ndarray],
     scale: bool = False,
@@ -48,7 +47,7 @@ class CoBRAS(Basic):
     time grid, and saving configurations.
 
     :param system: Instance of the system to be reduced.
-    :type system: SYS_TYPES
+    :type system: Any
     :param tgrid: Dictionary specifying the time grid with required keys:
                   - "start": Start time of the simulation.
                   - "stop": End time of the simulation.

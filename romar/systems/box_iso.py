@@ -28,13 +28,14 @@ class BoxIso(Basic):
       use_tables=use_tables
     )
     self.fixed_ne = fixed_ne
-    self.nb_eqs = self.nb_comp
     self.Th = 3e2
     self.Te = 3e2
+    self.nb_eqs = self.nb_comp
+    self.rom.nb_eqs = self.nb_comp
 
   # Function/Jacobian
   # ===================================
-  def _fun_fom(self, t, y):
+  def _fun_pt(self, t, y):
     # Get number densities
     n = self._get_prim(y)[0]
     # Compute sources

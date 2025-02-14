@@ -31,7 +31,7 @@
       "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1_test/max_mom_2/cobras_basis.p"
     },
     "pca": {
-      "active": true,
+      "active": false,
       "name": "PCA",
       "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1_test/max_mom_2/pca_basis.p"
     }
@@ -79,7 +79,7 @@
       "dist": 10.0
     },
     "max_mom": 2,
-    "animate": true,
+    "animate": false,
     "markersize": 6
   },
   "rom_range": [5,9],

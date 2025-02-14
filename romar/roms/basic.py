@@ -3,6 +3,7 @@ import abc
 import numpy as np
 import dill as pickle
 
+from .utils import build_scaling_param
 from typing import Dict, List, Optional, Union
 
 
@@ -92,8 +93,8 @@ class Basic(abc.ABC):
     :raises ValueError: If `xscale` has zero values or incorrect shape.
     """
     # Initialize scaling parameters
-    xr = self._init_scaling_param(xref, nb_feat, ref_value=0.0)
-    xs = self._init_scaling_param(xscale, nb_feat, ref_value=1.0)
+    xr = build_scaling_param(xref, nb_feat, ref_value=0.0)
+    xs = build_scaling_param(xscale, nb_feat, ref_value=1.0)
     # If scaling is inactive, reset to default
     if (not active):
       xr.fill(0.0)
@@ -107,40 +108,6 @@ class Basic(abc.ABC):
     self.xscale = xs
     self.xscale_mat = np.diag(xs)
     self.ov_xscale_mat = np.diag(1.0/xs)
-
-  def _init_scaling_param(
-    self,
-    x: Optional[Union[str, np.ndarray]] = None,
-    nb_feat: int = 1,
-    ref_value: float = 1.0
-  ) -> np.ndarray:
-    """
-    Initialize a scaling parameter.
-
-    :param x: Input scaling parameter (array, filename, or None).
-    :type x: np.ndarray, optional
-    :param nb_feat: Number of features.
-    :type nb_feat: int
-    :param ref_value: Default value if `x` is None.
-    :type ref_value: float, optional
-
-    :return: Initialized scaling parameter as a NumPy array.
-    :rtype: np.ndarray
-
-    :raises ValueError: If the loaded file does not match expected dimensions.
-    """
-    if (x is None):
-      return np.full(nb_feat, ref_value)
-    if isinstance(x, str):
-      try:
-        x = np.loadtxt(x)
-      except Exception as e:
-        raise ValueError(f"Error loading file '{x}': {e}")
-    x = np.asarray(x).reshape(-1)
-    if (len(x) != nb_feat):
-      raise ValueError(f"Expected input vector of length {nb_feat}, " \
-                       f"but got {len(x)}.")
-    return x
 
   def _apply_scaling(
     self,

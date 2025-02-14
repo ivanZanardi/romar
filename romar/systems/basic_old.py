@@ -14,7 +14,6 @@ from typing import *
 
 from .. import env
 from .. import utils
-from ..roms import ROM
 from .. import backend as bkd
 from .thermochemistry import *
 from .thermochemistry.equilibrium import MU_VARS
@@ -69,61 +68,81 @@ class Basic(object):
     self.equil = Equilibrium(
       mixture=self.mix
     )
-    # Dimensions
-    # -------------
-    self.nb_comp = self.mix.nb_comp
-    self.nb_temp = 2
-    self.nb_eqs = self.nb_temp + self.nb_comp
     # ROM
     # -------------
-    self.rom = ROM(
-      nb_eqs=self.nb_eqs,
-      use_proj=use_proj
-    )
+    # Basis
+    self.phi = None
+    self.psi = None
     self.use_rom = False
+    # Projector
+    self.use_proj = bool(use_proj)
+    self.proj = None
     # Output
     # -------------
     self.C = None
-    # Methods
+    # Solving
     # -------------
+    # Dimensions
+    self.nb_comp = self.mix.nb_comp
+    self.nb_temp = 2
+    self.nb_eqs = self.nb_temp + self.nb_comp
+    self.set_methods()
+
+  def set_methods(self):
     self.get_init_sol = self.equil.get_init_sol
+    self.encode = bkd.make_fun_np(self._encode)
+    self.decode = bkd.make_fun_np(self._decode)
     self.set_up = bkd.make_fun_np(self._set_up)
     self.get_prim = bkd.make_fun_np(self._get_prim)
+
+  # Properties
+  # ===================================
+  # Linear model operators
+  @property
+  def A(self):
+    return self._A
+
+  @A.setter
+  def A(self, value):
+    self._A = value
+
+  @property
+  def b(self):
+    return self._b
+
+  @b.setter
+  def b(self, value):
+    self._b = value
 
   # Function/Jacobian
   # ===================================
   def set_fun_jac(self):
-    self._fun_np = self._fun = bkd.make_fun_np(self._fun_pt)
-    self._jac_np = bkd.make_fun_np(torch.func.jacrev(self._fun_pt, argnums=1))
-
-  def fun(self, t, y):
-    y = self.rom.decode(y) if self.use_rom else y
-    f = self._fun(t, y)
-    f = self.rom.encode(f) if self.use_rom else f
-    return f
-
-  @abc.abstractmethod
-  def _fun_pt(self, t, y):
-    pass
+    self._jac = torch.func.jacrev(self._fun, argnums=1)
+    self.fun_np = self.fun = bkd.make_fun_np(self._fun)
+    self.jac_np = bkd.make_fun_np(self._jac)
 
   def jac(self, t, y):
-    y = self.rom.decode(y) if self.use_rom else y
-    j = self._jac(t, y)
-    j = self.rom.encdec_jac(j) if self.use_rom else j
-    return j
-
-  def _jac(self, t, y):
-    j = self._jac_np(t, y)
+    j = self.jac_np(t, y)
     j_not = utils.is_nan_inf(j)
     if j_not.any():
       # Finite difference Jacobian
       j_fd = sp.optimize.approx_fprime(
         xk=y,
-        f=lambda z: self._fun_np(t, z),
+        f=lambda z: self.fun(t, z),
         epsilon=bkd.epsilon()
       )
       j[j_not] = j_fd[j_not]
     return j
+
+  def _fun(self, t, y):
+    y = self._decode(y) if self.use_rom else y
+    f = self._fun_fom(t, y)
+    f = self._encode(f) if self.use_rom else f
+    return f
+
+  @abc.abstractmethod
+  def _fun_fom(self, t, y):
+    pass
 
   @abc.abstractmethod
   def _get_prim(self, y, clip=True):
@@ -235,6 +254,57 @@ class Basic(object):
     # Return the corresponding time value
     return t[:nt][idx]
 
+  # ROM Model
+  # ===================================
+  def set_rom(
+    self,
+    phi: np.ndarray,
+    psi: np.ndarray,
+    mask: np.ndarray,
+    xref: Optional[np.ndarray] = None,
+    xscale: Optional[np.ndarray] = None
+  ) -> None:
+    """
+    Configure the Reduced-Order Model (ROM) by setting basis functions,
+    projection operators, and scaling transformations.
+
+    :param phi: Trial basis matrix for ROM.
+    :type phi: np.ndarray
+    :param psi: Test basis matrix for ROM.
+    :type psi: np.ndarray
+    :param mask: Boolean mask indicating which states are compressed.
+    :type mask: np.ndarray
+    :param xref: Reference values for state scaling. Defaults to zero.
+    :type xref: Optional[np.ndarray], optional
+    :param xscale: Scaling factors for state variables. Defaults to identity.
+    :type xscale: Optional[np.ndarray], optional
+    """
+    # Biorthogonalize basis
+    phi = phi @ sp.linalg.inv(psi.T @ phi)
+    # Compute projection operator
+    proj = phi @ psi.T
+    # Ensure mask is properly reshaped
+    mask = mask.astype(bool).reshape(-1)
+    # Handle scaling and reference values
+    xr = np.zeros(self.nb_eqs) if (xref is None) else np.asarray(xref)
+    xs = np.ones(self.nb_eqs) if (xscale is None) else np.asarray(xscale)
+    xr, xs = xr[mask], xs[mask]
+    # Determine ROM dimension
+    self.rom_dim = phi.shape[0] if self.use_proj else phi.shape[1]
+    # Convert to torch tensors
+    for (k, v) in (
+      ("phi", phi),
+      ("psi", psi),
+      ("proj", proj),
+      ("mask", mask),
+      ("xref", xr),
+      ("xscale", np.diag(xs)),
+      ("ov_xscale", np.diag(1.0/xs))
+    ):
+      setattr(self, k, bkd.to_torch(v))
+    # Convert mask to boolean tensor
+    self.mask = self.mask.bool()
+
   # Output
   # ===================================
   def compute_c_mat(
@@ -342,12 +412,37 @@ class Basic(object):
     self.use_rom = True
     y0 = self.set_up(y0, rho)
     # Encode initial conditions
-    z0 = self.rom.encode(y0)
+    z0 = self.encode(y0)
     # Solving
     z, runtime = self._solve(t, z0, linear)
     # Decode solution
-    y = self.rom.decode(z.T).T
+    y = self.decode(z.T).T
     return y, runtime
+
+  def _encode(self, y):
+    # Split variables
+    yhat = y[..., self.mask]
+    ynot = y[...,~self.mask]
+    # Normalize
+    yhat = (yhat - self.xref) @ self.ov_xscale
+    # Encode
+    z = yhat @ self.proj.T if self.use_proj else yhat @ self.psi
+    # Concatenate
+    return torch.cat([z, ynot], dim=-1)
+
+  def _decode(self, z):
+    # Split variables
+    z, ynot = z[...,:self.rom_dim], z[...,self.rom_dim:]
+    # Decode
+    yhat = z @ self.proj.T if self.use_proj else z @ self.phi.T
+    # Denormalize
+    yhat = yhat @ self.xscale + self.xref
+    # Fill decoded tensor
+    shape = list(z.shape)[:-1]+[self.nb_eqs]
+    y = torch.zeros(shape)
+    y[..., self.mask] = yhat
+    y[...,~self.mask] = ynot
+    return y
 
   def get_tgrid(
     self,

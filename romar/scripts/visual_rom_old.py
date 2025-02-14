@@ -96,7 +96,7 @@ if (__name__ == "__main__"):
       sols, errs = {}, {}
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
-        system.rom.build(
+        system.set_rom(
           phi=model["basis"]["phi"][:,:r],
           psi=model["basis"]["psi"][:,:r],
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
