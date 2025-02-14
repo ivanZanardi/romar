@@ -28,7 +28,8 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1_test/max_mom_2/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1_test/max_mom_2/cobras_basis.p",
+      "error": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/max_mom_2/error/cobras_err.p"
     },
     "pca": {
       "active": true,

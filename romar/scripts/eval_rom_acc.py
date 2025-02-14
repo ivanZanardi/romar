@@ -113,7 +113,7 @@ if (__name__ == "__main__"):
       # > Error
       filename = path_to_saving + f"/{name}_err.p"
       with open(filename, "wb") as f:
-        pickle.dump({"t": t, "data": error})
+        pickle.dump({"t": t, "data": error}, f)
       # > Runtime and not converged cases
       for (k, v) in (
         ("runtime", runtime),
