@@ -25,7 +25,7 @@ ROMAr is a Python library designed to implement model reduction techniques for c
 }
 ```
 
-- Model reduciton:
+- Model reduction:
 
 ```bibtex
 @article{Otto_2023_CoBRAS,
