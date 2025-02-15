@@ -1,8 +1,10 @@
+import os
 import numpy as np
 
+from .. import backend as bkd
 from typing import Optional, Tuple, Union
 
-SCALINGS = {"std", "pareto", None}
+SCALINGS = {"std", "level", "range", "max", "pareto", "vast", "0to1", "-1to1"}
 
 
 def init_scaling_param(
@@ -53,22 +55,43 @@ def compute_scaling(
             - Scaling factor of shape (nb_features,).
   :rtype: Tuple[np.ndarray]
   """
+  # Scaling method
+  scaling = scaling.lower()
   check_scaling(scaling)
+  # Dimension
   nb_feat = X.shape[0]
+  # Common factors
   xref = np.mean(X, axis=-1)
-  std = np.std(X, axis=-1)
+  xstd = np.std(X, axis=-1)
+  xmin = np.min(X, axis=-1)
+  xmax = np.max(X, axis=-1)
+  # Compute scaling
   if (scaling == "std"):
-    xscale = std
+    xscale = xstd
+  elif (scaling == "level"):
+    xscale = xref
+  elif (scaling == "range"):
+    xscale = xmax - xmin
+  elif (scaling == "max"):
+    xscale = xmax
   elif (scaling == "pareto"):
-    xscale = np.sqrt(std)
+    xscale = np.sqrt(xstd)
+  elif (scaling == "vast"):
+    xscale = xstd * xstd / (xref + bkd.epsilon())
+  elif (scaling == "0to1"):
+    xref = xmin
+    xscale = xmax - xmin
+  elif (scaling == "-1to1"):
+    xref = 0.5*(xmax + xmin)
+    xscale = 0.5*(xmax - xmin)
   else:
     xref = np.zeros(nb_feat)
     xscale = np.ones(nb_feat)
   return {"xref": xref, "xscale": xscale}
 
 def check_scaling(
-  scaling: str
+  scaling: Optional[str] = None
 ) -> None:
-  if (scaling not in SCALINGS):
+  if ((scaling is not None) and (scaling not in SCALINGS)):
     raise ValueError(f"Invalid scaling method: '{scaling}'. " \
                      f"Must be one of {SCALINGS}.")

@@ -416,31 +416,31 @@ class Basic(object):
     filename: Optional[str] = None,
     eps: float = 1e-8
   ) -> Tuple[Optional[np.ndarray]]:
-    try:
-      # Load test case
-      icase = utils.load_case(path=path, index=index, filename=filename)
-      t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
-      # Solve ROM
-      y_rom, runtime = self.solve_rom(t, y0, rho)
-      if (y_rom.shape[1] == len(t)):
-        # Converged
-        prim_fom = self.get_prim(y_fom, clip=False)
-        prim_rom = self.get_prim(y_rom, clip=False)
-        data = {
-          "t": t,
-          "FOM": self.postproc_sol(*prim_fom),
-          "ROM": self.postproc_sol(*prim_rom),
-          "err": {
-            "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
-            "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
-            "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
-          }
+    # try:
+    # Load test case
+    icase = utils.load_case(path=path, index=index, filename=filename)
+    t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
+    # Solve ROM
+    y_rom, runtime = self.solve_rom(t, y0, rho)
+    if (y_rom.shape[1] == len(t)):
+      # Converged
+      prim_fom = self.get_prim(y_fom, clip=False)
+      prim_rom = self.get_prim(y_rom, clip=False)
+      data = {
+        "t": t,
+        "FOM": self.postproc_sol(*prim_fom),
+        "ROM": self.postproc_sol(*prim_rom),
+        "err": {
+          "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
+          "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
+          "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
         }
-        return data, runtime
-      else:
-        return None, None
-    except:
+      }
+      return data, runtime
+    else:
       return None, None
+    # except:
+    #   return None, None
 
   # Postprocessing
   # -----------------------------------

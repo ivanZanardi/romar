@@ -361,7 +361,7 @@ class CoBRAS(Basic):
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
-    mask = self._make_mask(X.shape[0], xnot)
+    mask = self._make_mask(Xw.shape[0], xnot)
     X, Y = Xw[mask], Yw[mask]
     # Balance covariance matrices
     rank = min(rank, X.shape[0])

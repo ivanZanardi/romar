@@ -136,7 +136,8 @@ class PCA(Basic):
     nb_feat = X.shape[0]
     if active:
       if ((xref is None) or (xscale is None)):
-        xref, xscale = [compute_scaling(X)[k] for k in ("xref", "xscale")]
+        data = compute_scaling(self.scaling, X)
+        xref, xscale = [data[k] for k in ("xref", "xscale")]
       if ((xref.shape[0] != nb_feat) or (xscale.shape[0] != nb_feat)):
         raise ValueError(f"'xref' and 'xscale' must match ({nb_feat},) as " \
                          f"shape. Received {xref.shape} and {xscale.shape}.")

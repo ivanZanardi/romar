@@ -73,12 +73,12 @@ if (__name__ == "__main__"):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
         # Load basis
-        with open(model["basis"], "rb") as f:
-          model["basis"] = pickle.load(f)
+        with open(model["basis"], "rb") as file:
+          model["basis"] = pickle.load(file)
         # Load error
         if (model.get("error", None) is not None):
-          with open(model["error"], "rb") as f:
-            model["error"] = pickle.load(f)
+          with open(model["error"], "rb") as file:
+            model["error"] = pickle.load(file)
         else:
           model["error"] = None
       else:
@@ -113,7 +113,7 @@ if (__name__ == "__main__"):
       # > Error
       filename = path_to_saving + f"/{name}_err.p"
       with open(filename, "wb") as f:
-        pickle.dump({"t": t, "data": error}, f)
+        pickle.dump({"t": t, "data": error}, file)
       # > Runtime and not converged cases
       for (k, v) in (
         ("runtime", runtime),

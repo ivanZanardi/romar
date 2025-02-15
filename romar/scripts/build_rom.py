@@ -61,6 +61,17 @@ if (__name__ == "__main__"):
   )(**inputs["system"]["init"])
   system.compute_c_mat(**inputs["system"]["c_mat"])
 
+  # Scaling
+  # ---------------
+  scaling = None
+  scaling_opts = inputs.get("scaling", {})
+  if ("filename" in scaling_opts):
+    scaling = scaling_opts.get("method", None)
+    if (scaling is not None):
+      with open(scaling_opts["filename"], "rb") as file:
+        scalings = pickle.load(file)
+      scaling = scalings[scaling]
+
   # Quadrature points
   # ---------------
   # > Initial conditions space (mu)
@@ -78,7 +89,8 @@ if (__name__ == "__main__"):
   quad_mu = {"x": mu, "w": np.sqrt(w_mu)}
   # > Save quadrature points
   filename = path_to_saving + "/quad_mu.p"
-  pickle.dump(quad_mu, open(filename, "wb"))
+  with open(filename, "wb") as file:
+    pickle.dump(quad_mu, file)
 
   # CoBRAS
   # ---------------
@@ -91,6 +103,8 @@ if (__name__ == "__main__"):
     quad_mu=quad_mu,
     path_to_saving=path_to_saving
   ))
+  if (scaling is not None):
+    cobras_opts.update(scaling)
   cobras = roms.CoBRAS(**cobras_opts)
   # Covariance matrices
   cov_mats_opts = inputs["cobras"]["cov_mats"]
@@ -99,17 +113,17 @@ if (__name__ == "__main__"):
     cov_mats = cobras.compute_cov_mats(**cov_mats_opts["compute"])
     if cov_mats_opts.get("save", False):
       filename = os.path.join(path_to_saving, "cov_mats.p")
-      with open(filename, "wb") as f:
-        pickle.dump(cov_mats, f)
+      with open(filename, "wb") as file:
+        pickle.dump(cov_mats, file)
   else:
     print("> Reading covariance matrices ...")
-    with open(cov_mats_opts["filename"], "rb") as f:
-      cov_mats = pickle.load(f)
-  X, Y, wx, wy = cov_mats
+    with open(cov_mats_opts["filename"], "rb") as file:
+      cov_mats = pickle.load(file)
+  X, Xw, Yw = cov_mats
   # Modes
   print("> Computing modes ...")
   modes_opts = inputs["cobras"]["modes"]
-  cobras.compute_modes(X=X, Y=Y, wx=wx, wy=wy, **modes_opts)
+  cobras.compute_modes(Xw=Xw, Yw=Yw, **modes_opts)
 
   # PCA
   # ---------------
@@ -123,6 +137,8 @@ if (__name__ == "__main__"):
   # Modes
   print("> Computing modes ...")
   modes_opts = inputs["pca"]["modes"]
+  if (scaling is not None):
+    modes_opts.update(scaling)
   pca.compute_modes(X=X, **modes_opts)
 
   print("Done!")
