@@ -3,7 +3,7 @@ import abc
 import numpy as np
 import dill as pickle
 
-from .utils import build_scaling_param
+from .utils import init_scaling_param
 from typing import Dict, List, Optional, Union
 
 
@@ -93,8 +93,8 @@ class Basic(abc.ABC):
     :raises ValueError: If `xscale` has zero values or incorrect shape.
     """
     # Initialize scaling parameters
-    xr = build_scaling_param(xref, nb_feat, ref_value=0.0)
-    xs = build_scaling_param(xscale, nb_feat, ref_value=1.0)
+    xr = init_scaling_param(xref, nb_feat, ref_value=0.0)
+    xs = init_scaling_param(xscale, nb_feat, ref_value=1.0)
     # If scaling is inactive, reset to default
     if (not active):
       xr.fill(0.0)

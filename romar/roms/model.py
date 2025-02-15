@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 
 from typing import Optional, Union
-from .utils import build_scaling_param
+from .utils import init_scaling_param
 
 
 class ROM(object):
@@ -76,10 +76,10 @@ class ROM(object):
     # Compute projection operator
     self.proj = phi @ psi.T
     # Handle reference values
-    self.xref = build_scaling_param(xref, self.nb_eqs, ref_value=0.0)
+    self.xref = init_scaling_param(xref, self.nb_eqs, ref_value=0.0)
     self.xref[~self.mask]= 0.0
     # Handle scaling values
-    self.xscale = build_scaling_param(xscale, self.nb_eqs, ref_value=1.0)
+    self.xscale = init_scaling_param(xscale, self.nb_eqs, ref_value=1.0)
     self.xscale[~self.mask]= 1.0
     self.xscale_mat = np.diag(self.xscale)
     self.ov_xscale_mat = np.diag(1.0/self.xscale)
@@ -124,7 +124,8 @@ class ROM(object):
   # ===================================
   def encode(
     self,
-    y: np.ndarray
+    x: np.ndarray,
+    der: bool = False   # derivative
   ) -> np.ndarray:
     """
     Encode the full state vector into the reduced-order representation.
@@ -143,15 +144,18 @@ class ROM(object):
     if (not self.built):
       raise ValueError("ROM model not built.")
     # Ensure correct dimensions
-    if (y.shape[-1] != self.nb_eqs):
+    if (x.shape[-1] != self.nb_eqs):
       raise ValueError("Input state shape mismatch: Expected " \
-                       f"last dimension {self.nb_eqs}, got {y.shape[-1]}.")
+                       f"last dimension {self.nb_eqs}, got {x.shape[-1]}.")
     # Encode
-    return (y - self.xref) @ self.encoder.T
+    if (not der):
+      x -= self.xref
+    return x @ self.encoder.T
 
   def decode(
     self,
-    z: np.ndarray
+    z: np.ndarray,
+    der: bool = False   # derivative
   ) -> np.ndarray:
     """
     Decode the reduced-order state back into full-state representation.
@@ -174,11 +178,14 @@ class ROM(object):
       raise ValueError("Input reduced state shape mismatch: Expected " \
                        f"last dimension {self.rom_dim}, got {z.shape[-1]}.")
     # Decode
-    return z @ self.decoder.T + self.xref
+    x = z @ self.decoder.T
+    if (not der):
+      x += self.xref
+    return x
 
   def encdec_jac(
     self,
     j: np.ndarray
   ) -> np.ndarray:
-    """decode-encode jacobian matrix"""
+    """encode-decode jacobian matrix"""
     return self.encoder @ j @ self.decoder

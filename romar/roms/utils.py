@@ -1,9 +1,11 @@
 import numpy as np
 
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
+
+SCALINGS = {"std", "pareto", None}
 
 
-def build_scaling_param(
+def init_scaling_param(
   x: Optional[Union[str, np.ndarray]] = None,
   nb_feat: int = 1,
   ref_value: float = 1.0
@@ -35,3 +37,38 @@ def build_scaling_param(
     raise ValueError(f"Expected input vector of length {nb_feat}, " \
                       f"but got {len(x)}.")
   return x
+
+def compute_scaling(
+  scaling: str,
+  X: np.ndarray
+) -> Tuple[np.ndarray]:
+  """
+  Compute scaling parameters based on the selected method.
+
+  :param X: Data matrix of shape (nb_features, nb_samples).
+  :type X: np.ndarray
+
+  :return: Tuple containing:
+            - Mean reference of shape (nb_features,).
+            - Scaling factor of shape (nb_features,).
+  :rtype: Tuple[np.ndarray]
+  """
+  check_scaling(scaling)
+  nb_feat = X.shape[0]
+  xref = np.mean(X, axis=-1)
+  std = np.std(X, axis=-1)
+  if (scaling == "std"):
+    xscale = std
+  elif (scaling == "pareto"):
+    xscale = np.sqrt(std)
+  else:
+    xref = np.zeros(nb_feat)
+    xscale = np.ones(nb_feat)
+  return xref, xscale
+
+def check_scaling(
+  scaling: str
+) -> None:
+  if (scaling not in _SCALINGS):
+    raise ValueError(f"Invalid scaling method: '{scaling}'. " \
+                     f"Must be one of {_SCALINGS}.")

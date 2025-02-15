@@ -3,9 +3,9 @@ import numpy as np
 
 from .basic import Basic
 from .. import backend as bkd
-from typing import Dict, List, Optional, Tuple, Union
+from .utils import check_scaling, compute_scaling
+from typing import Dict, List, Optional, Union
 
-_SCALINGS = {"std", "pareto", None}
 _ROTATIONS = {"varimax", "quartimax", None}
 
 
@@ -42,9 +42,7 @@ class PCA(Basic):
     super(PCA, self).__init__(path_to_saving)
     # Scaling method
     self.scaling = scaling
-    if (self.scaling not in _SCALINGS):
-      raise ValueError(f"Invalid scaling method: '{self.scaling}'. " \
-                       f"Must be one of {_SCALINGS}.")
+    check_scaling(self.scaling)
     # Rotation method
     self.rotation = rotation
     if (self.rotation not in _ROTATIONS):
@@ -104,7 +102,7 @@ class PCA(Basic):
       "psi": phi,
       "mask": mask,
       "xref": self.xref,
-      "xscale": np.diag(self.xscale)
+      "xscale": self.xscale
     }
     self._save(data)
     return data
@@ -138,39 +136,12 @@ class PCA(Basic):
     nb_feat = X.shape[0]
     if active:
       if ((xref is None) or (xscale is None)):
-        xref, xscale = self._compute_scaling(X)
+        xref, xscale = compute_scaling(X)
       if ((xref.shape[0] != nb_feat) or (xscale.shape[0] != nb_feat)):
         raise ValueError(f"'xref' and 'xscale' must match ({nb_feat},) as " \
                          f"shape. Received {xref.shape} and {xscale.shape}.")
     self._set_scaling(nb_feat, xref, xscale, active)
     return self._apply_scaling(X.T).T
-
-  def _compute_scaling(
-    self,
-    X: np.ndarray
-  ) -> Tuple[np.ndarray]:
-    """
-    Compute scaling parameters based on the selected method.
-
-    :param X: Data matrix of shape (nb_features, nb_samples).
-    :type X: np.ndarray
-
-    :return: Tuple containing:
-             - Mean reference of shape (nb_features,).
-             - Scaling factor of shape (nb_features,).
-    :rtype: Tuple[np.ndarray]
-    """
-    nb_feat = X.shape[0]
-    xref = np.mean(X, axis=-1)
-    std = np.std(X, axis=-1)
-    if (self.scaling == "std"):
-      xscale = std
-    elif (self.scaling == "pareto"):
-      xscale = np.sqrt(std)
-    else:
-      xref = np.zeros(nb_feat)
-      xscale = np.ones(nb_feat)
-    return xref, xscale
 
   # Component rotation
   # ===================================
@@ -178,7 +149,7 @@ class PCA(Basic):
     self,
     phi: np.ndarray,
     tol: float = 1e-8,
-    max_iter: int = 500
+    max_iter: int = 100
   ) -> np.ndarray:
     """
     Apply rotation to principal components.

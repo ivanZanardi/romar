@@ -30,7 +30,9 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import numpy as np
+import dill as pickle
 
+from romar import roms
 from romar import utils
 from romar import systems as sys_mod
 
@@ -39,6 +41,15 @@ from romar import systems as sys_mod
 if (__name__ == "__main__"):
 
   print("Initialization ...")
+
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"]
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
 
   # System
   # -----------------------------------
@@ -49,11 +60,6 @@ if (__name__ == "__main__"):
 
   # Data generation
   # -----------------------------------
-  # Initialization
-  # ---------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"]
-  os.makedirs(path_to_saving, exist_ok=True)
   # Time grid
   t = np.geomspace(**inputs["grids"]["t"])
 
@@ -87,6 +93,19 @@ if (__name__ == "__main__"):
     # Save runtime
     with open(path_to_saving + "/runtime.txt", "w") as file:
       file.write("Mean running time: %.8e s" % runtime)
+    # Compute scaling
+    X = utils.load_case_parallel(
+      path=path_to_saving,
+      irange=[0,mu_opts["nb_samples"]],
+      key="y",
+      nb_workers=inputs["param_space"]["nb_workers"]
+    )
+    X = np.hstack(X)
+    for scaling in roms.SCALINGS:
+      if (scaling is not None):
+        data = roms.compute_scaling(scaling=scaling, X=X)
+        with open(path_to_saving + f"/scaling_{scaling}.p", "w") as file:
+          pickle.dump(data, file)
 
   # Defined cases
   # ---------------
@@ -100,11 +119,5 @@ if (__name__ == "__main__"):
     )
     if (runtime is None):
       print(f"Case '{k}' not converged!")
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
 
   print("Done!")

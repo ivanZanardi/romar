@@ -97,9 +97,9 @@ class Basic(object):
     self._jac_np = bkd.make_fun_np(torch.func.jacrev(self._fun_pt, argnums=1))
 
   def fun(self, t, y):
-    y = self.rom.decode(y) if self.use_rom else y
+    y = self.rom.decode(y, der=False) if self.use_rom else y
     f = self._fun(t, y)
-    f = self.rom.encode(f) if self.use_rom else f
+    f = self.rom.encode(f, der=True) if self.use_rom else f
     return f
 
   @abc.abstractmethod
@@ -107,7 +107,7 @@ class Basic(object):
     pass
 
   def jac(self, t, y):
-    y = self.rom.decode(y) if self.use_rom else y
+    y = self.rom.decode(y, der=False) if self.use_rom else y
     j = self._jac(t, y)
     j = self.rom.encdec_jac(j) if self.use_rom else j
     return j
