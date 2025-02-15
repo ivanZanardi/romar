@@ -97,9 +97,9 @@ class Basic(object):
     self._jac_np = bkd.make_fun_np(torch.func.jacrev(self._fun_pt, argnums=1))
 
   def fun(self, t, y):
-    y = self.rom.decode(y, der=False) if self.use_rom else y
+    y = self.rom.decode(y, is_der=False) if self.use_rom else y
     f = self._fun(t, y)
-    f = self.rom.encode(f, der=True) if self.use_rom else f
+    f = self.rom.encode(f, is_der=True) if self.use_rom else f
     return f
 
   @abc.abstractmethod
@@ -107,7 +107,7 @@ class Basic(object):
     pass
 
   def jac(self, t, y):
-    y = self.rom.decode(y, der=False) if self.use_rom else y
+    y = self.rom.decode(y, is_der=False) if self.use_rom else y
     j = self._jac(t, y)
     j = self.rom.encdec_jac(j) if self.use_rom else j
     return j
@@ -342,11 +342,11 @@ class Basic(object):
     self.use_rom = True
     y0 = self.set_up(y0, rho)
     # Encode initial conditions
-    z0 = self.rom.encode(y0)
+    z0 = self.rom.encode(y0, is_der=False)
     # Solving
     z, runtime = self._solve(t, z0, linear)
     # Decode solution
-    y = self.rom.decode(z.T).T
+    y = self.rom.decode(z.T, is_der=False).T
     return y, runtime
 
   def get_tgrid(

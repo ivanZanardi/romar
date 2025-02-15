@@ -94,17 +94,19 @@ if (__name__ == "__main__"):
     with open(path_to_saving + "/runtime.txt", "w") as file:
       file.write("Mean running time: %.8e s" % runtime)
     # Compute scaling
-    X = utils.load_case_parallel(
+    print("Compute scaling ...")
+    X = np.hstack(utils.load_case_parallel(
       path=path_to_saving,
       irange=[0,mu_opts["nb_samples"]],
       key="y",
-      nb_workers=inputs["param_space"]["nb_workers"]
-    )
-    X = np.hstack(X)
+      nb_workers=inputs["param_space"]["nb_workers"],
+      desc=None
+    ))
     for scaling in roms.SCALINGS:
       if (scaling is not None):
         data = roms.compute_scaling(scaling=scaling, X=X)
-        with open(path_to_saving + f"/scaling_{scaling}.p", "w") as file:
+        filename = path_to_saving + f"/scaling_{scaling}.p"
+        with open(filename, "wb") as file:
           pickle.dump(data, file)
 
   # Defined cases

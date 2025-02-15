@@ -56,6 +56,6 @@
     "nb_workers": 10
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test1/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/data/"
   }
 }

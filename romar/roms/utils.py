@@ -64,11 +64,11 @@ def compute_scaling(
   else:
     xref = np.zeros(nb_feat)
     xscale = np.ones(nb_feat)
-  return xref, xscale
+  return {"xref": xref, "xscale": xscale}
 
 def check_scaling(
   scaling: str
 ) -> None:
-  if (scaling not in _SCALINGS):
+  if (scaling not in SCALINGS):
     raise ValueError(f"Invalid scaling method: '{scaling}'. " \
-                     f"Must be one of {_SCALINGS}.")
+                     f"Must be one of {SCALINGS}.")

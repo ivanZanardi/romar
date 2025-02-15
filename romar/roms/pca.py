@@ -41,8 +41,8 @@ class PCA(Basic):
     """
     super(PCA, self).__init__(path_to_saving)
     # Scaling method
+    check_scaling(scaling)
     self.scaling = scaling
-    check_scaling(self.scaling)
     # Rotation method
     self.rotation = rotation
     if (self.rotation not in _ROTATIONS):
@@ -136,7 +136,7 @@ class PCA(Basic):
     nb_feat = X.shape[0]
     if active:
       if ((xref is None) or (xscale is None)):
-        xref, xscale = compute_scaling(X)
+        xref, xscale = [compute_scaling(X)[k] for k in ("xref", "xscale")]
       if ((xref.shape[0] != nb_feat) or (xscale.shape[0] != nb_feat)):
         raise ValueError(f"'xref' and 'xscale' must match ({nb_feat},) as " \
                          f"shape. Received {xref.shape} and {xscale.shape}.")

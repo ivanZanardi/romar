@@ -9,7 +9,7 @@ import dill as pickle
 
 from romar import env
 from tqdm import tqdm
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 # Classes
@@ -141,7 +141,9 @@ def load_case_parallel(
   path: str,
   irange: List[int],
   key: Union[str, None] = None,
-  nb_workers: int = 1
+  nb_workers: int = 1,
+  desc: Optional[str] = "Cases",
+  delimiter: str = "  "
 ) -> List[Any]:
   """
   Load simluated cases in parallel or sequentially based on the number
@@ -166,7 +168,7 @@ def load_case_parallel(
   iterable = tqdm(
     iterable=range(*irange),
     ncols=80,
-    desc="Cases",
+    desc=delimiter+desc if (desc is not None) else None,
     file=sys.stdout
   )
   if (nb_workers > 1):
@@ -181,7 +183,7 @@ def generate_case_parallel(
   irange: List[int],
   sol_kwargs: Dict[str, Any] = {},
   nb_workers: int = 1,
-  desc: str = "Cases",
+  desc: Optional[str] = "Cases",
   verbose: bool = True,
   delimiter: str = "  "
 ) -> None:

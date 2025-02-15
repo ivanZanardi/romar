@@ -72,9 +72,9 @@ class CoBRAS(Basic):
     """
     super(CoBRAS, self).__init__(path_to_saving)
     # Validate required `tgrid` keys
-    required_keys = {"start", "stop", "num"}
-    if (not required_keys.issubset(tgrid.keys())):
-      raise ValueError(f"'tgrid' must contain keys: {required_keys}. " \
+    tgrid_keys = {"start", "stop", "num"}
+    if (not tgrid_keys.issubset(tgrid.keys())):
+      raise ValueError(f"'tgrid' must contain keys: {tgrid_keys}. " \
                        f"Received: {tgrid.keys()}")
     self.tgrid = tgrid
     self.tmin = self.tgrid["start"]
@@ -357,7 +357,7 @@ class CoBRAS(Basic):
     :param niter: Number of iterations for randomized SVD.
     :type niter: int
 
-    :return: Dictionary containing computed PCA components.
+    :return: Dictionary containing computed ROM data.
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
@@ -366,10 +366,10 @@ class CoBRAS(Basic):
     # Balance covariance matrices
     rank = min(rank, X.shape[0])
     X, Y = map(bkd.to_torch, (X, Y))
-    U, s, Vh = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
+    U, s, V = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
     # Compute balancing transformation
     sqrt_s = torch.diag(torch.sqrt(1.0/s))
-    phi = X @ Vh @ sqrt_s
+    phi = X @ V @ sqrt_s
     psi = Y @ U @ sqrt_s
     # Save results
     data = utils.map_nested_dict(bkd.to_numpy, {

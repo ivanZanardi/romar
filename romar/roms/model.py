@@ -67,7 +67,7 @@ class ROM(object):
     self.mask = mask.astype(bool).reshape(-1)
     if (len(self.mask) != self.nb_eqs):
       raise ValueError("Mask size mismatch: " \
-                       f"expected {self.nb_eqs}, got {len(mask)}.")
+                      f"expected {self.nb_eqs}, got {len(mask)}.")
     # Biorthogonalize the basis
     phi = phi @ sp.linalg.inv(psi.T @ phi)
     # Construct full basis matrices
@@ -125,7 +125,7 @@ class ROM(object):
   def encode(
     self,
     x: np.ndarray,
-    der: bool = False   # derivative
+    is_der: bool = False   # if vector x is a derivative
   ) -> np.ndarray:
     """
     Encode the full state vector into the reduced-order representation.
@@ -148,14 +148,14 @@ class ROM(object):
       raise ValueError("Input state shape mismatch: Expected " \
                        f"last dimension {self.nb_eqs}, got {x.shape[-1]}.")
     # Encode
-    if (not der):
+    if (not is_der):
       x -= self.xref
     return x @ self.encoder.T
 
   def decode(
     self,
     z: np.ndarray,
-    der: bool = False   # derivative
+    is_der: bool = False   # if vector z is a derivative
   ) -> np.ndarray:
     """
     Decode the reduced-order state back into full-state representation.
@@ -179,7 +179,7 @@ class ROM(object):
                        f"last dimension {self.rom_dim}, got {z.shape[-1]}.")
     # Decode
     x = z @ self.decoder.T
-    if (not der):
+    if (not is_der):
       x += self.xref
     return x
 

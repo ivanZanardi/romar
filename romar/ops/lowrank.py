@@ -19,13 +19,13 @@ def svd_lowrank_xy(
   matrix computations.
 
   :param X: Input tensor of shape (m, n).
-  :param Y: Input tensor of shape (p, m).
+  :param Y: Input tensor of shape (m, p).
   :param q: Target rank for the approximation. Default is 6.
   :param niter: Number of power iterations to improve approximation.
                 Default is 2.
 
   :return: A tuple (U, s, V), where:
-           - U: Left singular vectors of shape (m, q).
+           - U: Left singular vectors of shape (p, q).
            - s: Singular values of shape (q,).
            - V: Right singular vectors of shape (n, q).
   """
@@ -48,19 +48,21 @@ def _svd_lowrank(
   """
   Internal function to compute the low-rank SVD approximation.
 
-  Uses the randomized SVD method based on Halko et al., 2009.
-  The method constructs an approximate basis for the range of `Y^T @ X`
-  and then computes SVD on the reduced matrix.
+  This function approximates the SVD of `Y^T @ X` using randomized
+  algorithms based on Halko et al. (2009). It efficiently computes the
+  dominant singular values and vectors, making it suitable for large-scale
+  matrix computations.
 
   :param X: Input tensor of shape (m, n).
-  :param Y: Input tensor of shape (p, m).
-  :param q: Target rank for the approximation.
-  :param niter: Number of power iterations to refine the basis.
+  :param Y: Input tensor of shape (m, p).
+  :param q: Target rank for the approximation. Default is 6.
+  :param niter: Number of power iterations to improve approximation.
+                Default is 2.
 
-  :return: A tuple (U, s, V) with:
-           - U: Approximate left singular vectors.
-           - s: Singular values.
-           - V: Approximate right singular vectors.
+  :return: A tuple (U, s, V), where:
+           - U: Left singular vectors of shape (p, q).
+           - s: Singular values of shape (q,).
+           - V: Right singular vectors of shape (n, q).
   """
   # Compute an approximate basis for the column space of Y^T @ X
   Q = _get_approximate_basis(X, Y, q, niter=niter)
@@ -87,9 +89,10 @@ def _get_approximate_basis(
   a basis for `Y^T @ X`, which is used in the low-rank SVD computation.
 
   :param X: Input tensor of shape (m, n).
-  :param Y: Input tensor of shape (p, m).
-  :param q: Target rank for the approximation.
-  :param niter: Number of power iterations to improve accuracy.
+  :param Y: Input tensor of shape (m, p).
+  :param q: Target rank for the approximation. Default is 6.
+  :param niter: Number of power iterations to improve approximation.
+                Default is 2.
 
   :return: An orthonormal basis Q of shape (n, q).
   """
