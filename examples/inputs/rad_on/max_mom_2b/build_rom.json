@@ -60,7 +60,7 @@
   },
   "cobras": {
     "init": {
-      "scale": false
+      "scale": true
     },
     "cov_mats": {
       "compute": {
@@ -75,7 +75,7 @@
       "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/cov_mats.p"
     },
     "modes": {
-      "xnot": [0,1,-2,-1],
+      "xnot": [0,-2,-1],
       "niter": 50
     }
   },
@@ -85,8 +85,7 @@
     },
     "modes": {
       "scale": true,
-      "xnot": [0,1,-2,-1],
-      "niter": 50
+      "xnot": [0,-2,-1]
     }
   },
   "paths": {

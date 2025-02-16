@@ -25,6 +25,10 @@ __all__ = [
 import warnings
 warnings.filterwarnings("ignore")
 
+# Ignore all warnings from R
+import rpy2.robjects as ro
+ro.r('options(warn=-1)')
+
 # Logging
 from absl import logging
 logging.set_verbosity(logging.ERROR)

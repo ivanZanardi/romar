@@ -98,7 +98,7 @@ if (__name__ == "__main__"):
       # Loop over ROM dimensions
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
-        system.set_rom(
+        system.rom.build(
           phi=model["basis"]["phi"][:,:r],
           psi=model["basis"]["psi"][:,:r],
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
@@ -112,7 +112,7 @@ if (__name__ == "__main__"):
       print("> Saving statistics ...")
       # > Error
       filename = path_to_saving + f"/{name}_err.p"
-      with open(filename, "wb") as f:
+      with open(filename, "wb") as file:
         pickle.dump({"t": t, "data": error}, file)
       # > Runtime and not converged cases
       for (k, v) in (

@@ -60,7 +60,7 @@
   },
   "cobras": {
     "init": {
-      "scale": true
+      "scale": false
     },
     "cov_mats": {
       "compute": {
@@ -72,10 +72,10 @@
       },
       "read": false,
       "save": true,
-      "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2a/cov_mats.p"
+      "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/cov_mats.p"
     },
     "modes": {
-      "xnot": [-2,-1],
+      "xnot": [0,1,-2,-1],
       "niter": 50
     }
   },
@@ -85,10 +85,10 @@
     },
     "modes": {
       "scale": true,
-      "xnot": [-2,-1]
+      "xnot": [0,1,-2,-1]
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2a/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/"
   }
 }

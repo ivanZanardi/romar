@@ -1,17 +1,12 @@
+import torch
 import numpy as np
-import rpy2.robjects as ro
-
-from rpy2.robjects import numpy2ri
-from rpy2.robjects.packages import importr
 
 from .basic import Basic
+from .. import backend as bkd
 from .utils import check_scaling, compute_scaling
 from typing import Dict, List, Optional, Union
 
-# Activate automatic conversion between R and NumPy
-numpy2ri.activate()
-# Import 'psych' R package
-psych = importr("psych")
+_ROTATIONS = {"varimax", "quartimax", None}
 
 
 class PCA(Basic):
@@ -49,9 +44,10 @@ class PCA(Basic):
     check_scaling(scaling)
     self.scaling = scaling
     # Rotation method
-    if (rotation is None):
-      rotation = "none"
-    self.rotation = rotation.lower()
+    self.rotation = rotation
+    if (self.rotation not in _ROTATIONS):
+      raise ValueError(f"Invalid rotation method: '{self.rotation}'. " \
+                       f"Must be one of {_ROTATIONS}.")
 
   # Compute principal components
   # ===================================
@@ -62,7 +58,8 @@ class PCA(Basic):
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
     xnot: Optional[List[int]] = None,
-    rank: int = 100
+    rank: int = 100,
+    niter: int = 50
   ) -> Dict[str, np.ndarray]:
     """
     Compute PCA modes for the given dataset.
@@ -85,26 +82,22 @@ class PCA(Basic):
     :return: Dictionary containing computed PCA components.
     :rtype: Dict[str, np.ndarray]
     """
-    # Get data matrix shape
-    nb_feat, nb_samples = X.shape
     # Scale data if required
     X = self._scale(X, xref=xref, xscale=xscale, active=scale)
     # Mask data
-    mask = self._make_mask(nb_feat, xnot)
+    mask = self._make_mask(X.shape[0], xnot)
     X = X[mask]
-    # Convert to R matrix
-    Xr = ro.r.matrix(X.T, nrow=nb_samples, ncol=nb_feat)
-    # Perform PCA with Varimax rotation
-    p = psych.principal(
-      r=Xr,
-      nfactors=min(rank, nb_feat),
-      rotate=self.rotation
-    )
-    # Extract rotated loadings
-    phi = np.array(p.rx2("loadings"))
+    # Compute SVD
+    phi, s, _ = map(bkd.to_numpy, torch.svd_lowrank(
+      A=bkd.to_torch(X),
+      q=min(rank, X.shape[0]),
+      niter=niter
+    ))
+    # Apply rotation
+    phi = self._rotate(phi)
     # Save results
     data = {
-      "s": np.ones(phi.shape[1]),
+      "s": s,
       "phi": phi,
       "psi": phi,
       "mask": mask,
@@ -150,3 +143,48 @@ class PCA(Basic):
                          f"shape. Received {xref.shape} and {xscale.shape}.")
     self._set_scaling(nb_feat, xref, xscale, active)
     return self._apply_scaling(X.T).T
+
+  # Component rotation
+  # ===================================
+  def _rotate(
+    self,
+    phi: np.ndarray,
+    tol: float = 1e-8,
+    max_iter: int = 100
+  ) -> np.ndarray:
+    """
+    Apply rotation to principal components.
+
+    :param phi: Matrix of principal components (nb_features, nb_components).
+    :type phi: np.ndarray
+    :param tol: Convergence tolerance.
+    :type tol: float
+    :param max_iter: Maximum iterations.
+    :type max_iter: int
+
+    :return: Rotated principal components.
+    :rtype: np.ndarray
+    """
+    if (self.rotation is None):
+      return phi
+    nb_feat, nb_comp = phi.shape
+    # Initialize rotation matrix
+    R = np.eye(nb_comp)
+    # Initial variance measure
+    var = 0
+    # Iterate
+    for _ in range(max_iter):
+      comp_rot = phi @ R
+      if (self.rotation == "varimax"):
+        tmp = comp_rot * np.transpose((comp_rot**2).sum(axis=0) / nb_feat)
+      elif (self.rotation == "quartimax"):
+        tmp = 0
+      # Compute new rotation
+      u, s, vh = np.linalg.svd(phi.T @ (comp_rot**3 - tmp))
+      R = u @ vh
+      var_new = np.sum(s)
+      # Check convergence
+      if ((var != 0) and (var_new < var * (1.0 + tol))):
+        break
+      var = var_new
+    return phi @ R

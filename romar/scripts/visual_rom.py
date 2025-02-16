@@ -73,8 +73,8 @@ if (__name__ == "__main__"):
       model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
         # Load basis
-        with open(model["basis"], "rb") as f:
-          model["basis"] = pickle.load(f)
+        with open(model["basis"], "rb") as file:
+          model["basis"] = pickle.load(file)
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
