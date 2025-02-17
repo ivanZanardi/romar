@@ -103,7 +103,7 @@ if (__name__ == "__main__"):
       desc=None
     ))
     scalings = {}
-    for scaling in roms.SCALINGS:
+    for scaling in roms.POSSIBLE_SCALINGS:
       if (scaling is not None):
         scalings[scaling] = roms.compute_scaling(scaling=scaling, X=X)
     filename = path_to_saving + "/scalings.p"

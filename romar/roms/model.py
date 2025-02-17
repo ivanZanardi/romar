@@ -76,7 +76,7 @@ class ROM(object):
     self.phi = self._build_basis(phi)
     self.psi = self._build_basis(psi)
     # Compute projection operator
-    self.proj = phi @ psi.T
+    self.proj = self.phi @ self.psi.T
     # Handle reference values
     self.xref = init_scaling_param(xref, self.nb_eqs, ref_value=0.0)
     self.xref[~self.mask]= 0.0
