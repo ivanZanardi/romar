@@ -1,11 +1,17 @@
-import torch
 import numpy as np
+import rpy2.robjects as ro
 
-from .utils import *
+from rpy2.robjects import numpy2ri
+from rpy2.robjects.packages import importr
+
 from .basic import Basic
-from .. import backend as bkd
+from .utils import check_scaling, compute_scaling
 from typing import Dict, List, Optional, Union
-from factor_analyzer.rotator import Rotator, POSSIBLE_ROTATIONS
+
+# Activate automatic conversion between R and NumPy
+numpy2ri.activate()
+# Import 'psych' R package
+psych = importr("psych")
 
 
 class PCA(Basic):
@@ -27,8 +33,10 @@ class PCA(Basic):
     Initialize the PCA class.
 
     :param scaling: Scaling method for normalization.
+                    Options: "std", "pareto", or None.
     :type scaling: str, optional
     :param rotation: Rotation method for principal components.
+                     Options: "varimax", "quartimax", or None.
     :type rotation: str, optional
     :param path_to_saving: Directory path to save computed PCA results.
     :type path_to_saving: str
@@ -38,17 +46,12 @@ class PCA(Basic):
     """
     super(PCA, self).__init__(path_to_saving)
     # Scaling method
-    self.scaling = check_method(
-      method="scaling",
-      name=scaling,
-      valid_names=POSSIBLE_SCALINGS
-    )
+    check_scaling(scaling)
+    self.scaling = scaling
     # Rotation method
-    self.rotation = check_method(
-      method="rotation",
-      name=rotation,
-      valid_names=POSSIBLE_ROTATIONS
-    )
+    if (rotation is None):
+      rotation = "none"
+    self.rotation = rotation.lower()
 
   # Compute principal components
   # ===================================
@@ -59,48 +62,50 @@ class PCA(Basic):
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
     xnot: Optional[List[int]] = None,
-    rank: int = 100,
-    niter: int = 50
+    rank: int = 100
   ) -> Dict[str, np.ndarray]:
     """
-    Compute PCA modes for the given dataset using randomized SVD.
+    Compute PCA modes for the given dataset.
 
-    :param X: Data matrix with shape (nb_features, nb_samples).
+    :param X: Data matrix of shape (nb_features, nb_samples).
     :type X: np.ndarray
-    :param scale: If True, applies scaling to the dataset. Default is True.
-    :type scale: bool
+    :param scale: Whether to apply scaling (default: True).
+    :type scale: bool, optional
     :param xref: Mean reference values for scaling (array or file path).
-    :type xref: Optional[Union[str, np.ndarray]]
+    :type xref: Union[str, np.ndarray], optional
     :param xscale: Scaling factors (array or file path).
-    :type xscale: Optional[Union[str, np.ndarray]]
-    :param xnot: List of feature indices to exclude from PCA computation.
-    :type xnot: Optional[List[int]]
-    :param rank: Maximum rank for randomized SVD. Default is 100.
+    :type xscale: Union[str, np.ndarray], optional
+    :param xnot: List of feature indices to exclude from PCA.
+    :type xnot: List[int], optional
+    :param rank: Maximum rank for randomized SVD.
     :type rank: int
-    :param niter: Number of iterations for randomized SVD. Default is 50.
+    :param niter: Number of iterations for randomized SVD.
     :type niter: int
 
     :return: Dictionary containing computed PCA components.
     :rtype: Dict[str, np.ndarray]
     """
     # Scale data if required
-    X = self._scale(X=X, xref=xref, xscale=xscale, active=scale)
+    X = self._scale(X, xref=xref, xscale=xscale, active=scale)
+    print(X.shape)
     # Mask data
-    mask = self._make_mask(nb_feat=X.shape[0], xnot=xnot)
+    mask = self._make_mask(X.shape[0], xnot)
     X = X[mask]
-    # Compute SVD
-    rank = min(rank, X.shape[0])
-    phi, s, _ = map(bkd.to_numpy, torch.svd_lowrank(
-      A=bkd.to_torch(X),
-      q=rank,
-      niter=niter
-    ))
-    # Apply rotation
-    rotator = Rotator(method=self.rotation)
-    phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
+    # Get data matrix shape
+    nb_feat, nb_samples = X.shape
+    # Convert to R matrix
+    Xr = ro.r.matrix(X.T, nrow=nb_samples, ncol=nb_feat)
+    # Perform PCA with Varimax rotation
+    p = psych.principal(
+      r=Xr,
+      nfactors=min(rank, nb_feat),
+      rotate=self.rotation
+    )
+    # Extract rotated loadings
+    phi = np.array(p.rx2("loadings"))
     # Save results
     data = {
-      "s": np.ones_like(s),
+      "s": np.ones(phi.shape[1]),
       "phi": phi,
       "psi": phi,
       "mask": mask,
@@ -120,21 +125,21 @@ class PCA(Basic):
     active: bool = True
   ) -> np.ndarray:
     """
-    Apply scaling to the dataset if enabled.
+    Apply scaling to the dataset.
 
-    :param X: Input data matrix.
+    :param X: Data matrix.
     :type X: np.ndarray
-    :param xref: Mean reference values for scaling (array or file path).
-    :type xref: Optional[Union[str, np.ndarray]]
+    :param xref: Mean reference values (array or file path).
+    :type xref: Union[str, np.ndarray], optional
     :param xscale: Scaling factors (array or file path).
-    :type xscale: Optional[Union[str, np.ndarray]]
-    :param active: If True, applies scaling. Default is True.
+    :type xscale: Union[str, np.ndarray], optional
+    :param active: Whether to apply scaling (default: True).
     :type active: bool
 
     :return: Scaled dataset.
     :rtype: np.ndarray
 
-    :raises ValueError: If `xref` or `xscale` dimensions do not match `X`.
+    :raises ValueError: If `xref` or `xscale` has incorrect dimensions.
     """
     nb_feat = X.shape[0]
     if active:

@@ -41,6 +41,7 @@ def plot_cum_energy(
 def plot_evolution(
   x,
   y,
+  colors=None,
   ls=None,
   xlim=None,
   ylim=None,
@@ -72,10 +73,10 @@ def plot_evolution(
     i = 0
     for (k, yk) in y.items():
       if (k.upper() == "FOM"):
-        _c = "k"
+        _c = "k" if (colors is None) else colors[k]
         _ls = "-" if (ls is None) else ls
       else:
-        _c = COLORS[i]
+        _c = COLORS[i] if (colors is None) else colors[k]
         _ls = "--" if (ls is None) else ls
         i += 1
       if isinstance(yk, dict):
@@ -267,6 +268,7 @@ def plot_err_evolution(
   error,
   species,
   labels,
+  rrange=None,
   tlim=None,
   ylim_err=None,
   err_scale="linear",
@@ -275,16 +277,19 @@ def plot_err_evolution(
 ):
   os.makedirs(path, exist_ok=True)
   rlist = sorted(list(error.keys()), key=int)
+  colors = None
+  if (rrange is not None):
+    colors = {f"$r={r}$": COLORS[i] for (i, r) in enumerate(range(*rrange))}
   # Temperatures
   for k in ("Th", "Te"):
     plot_evolution(
       x=t,
       y={f"$r={r}$": error[r]["temp"][k]["mean"] for r in rlist},
+      colors=colors,
       xlim=tlim,
-      # ylim=ylim_err["temp"] if (ylim_err is not None) else None,
+      ylim=ylim_err["temp"][k] if (ylim_err is not None) else None,
       ls="-",
       hline=hline["temp"],
-      # legend_loc="lower left",
       legend_loc="best",
       labels=[r"$t$ [s]", fr"$T_{k[1]}$ error [\%]"],
       scales=["log", err_scale],
@@ -305,11 +310,11 @@ def plot_err_evolution(
       plot_evolution(
         x=t,
         y={f"$r={r}$": error[r]["mom"][s][f"m{m}"]["mean"] for r in rlist},
+        colors=colors,
         xlim=tlim,
-        # ylim=ylim_err["temp"] if (ylim_err is not None) else None,
+        ylim=ylim_err["mom"][s][f"m{m}"] if (ylim_err is not None) else None,
         ls="-",
         hline=hline["mom"],
-        # legend_loc="lower left",
         legend_loc="best",
         labels=[r"$t$ [s]", label],
         scales=["log", err_scale],
@@ -321,11 +326,11 @@ def plot_err_evolution(
   plot_evolution(
     x=t,
     y={f"$r={r}$": error[r]["dist"]["mean"] for r in rlist},
+    colors=colors,
     xlim=tlim,
-    # ylim=ylim_err,
+    ylim=ylim_err["dist"] if (ylim_err is not None) else None,
     ls="-",
     hline=hline["dist"],
-    # legend_loc="lower left",
     legend_loc="best",
     labels=[r"$t$ [s]", fr"$w_i$ error [\%]"],
     scales=["log", err_scale],

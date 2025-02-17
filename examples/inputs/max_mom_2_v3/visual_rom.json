@@ -26,18 +26,18 @@
   },
   "models": {
     "cobras": {
-      "active": true,
+      "active": false,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/cobras_basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/pca_basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/"
   },
   "data": {
     "cases": [
@@ -82,6 +82,6 @@
     "animate": false,
     "markersize": 6
   },
-  "rom_range": [5,9],
+  "rom_range": [5,11],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

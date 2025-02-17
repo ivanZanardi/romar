@@ -81,6 +81,7 @@
   },
   "pca": {
     "init": {
+      "scaling": "pareto",
       "rotation": "varimax"
     },
     "modes": {

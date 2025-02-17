@@ -70,22 +70,23 @@ if (__name__ == "__main__"):
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
-      model = copy.deepcopy(model)
+      _model = copy.deepcopy(model)
       if (name in _VALID_MODELS):
         # Load basis
         with open(model["basis"], "rb") as file:
-          model["basis"] = pickle.load(file)
+          _model["basis"] = pickle.load(file)
         # Load error
         if (model.get("error", None) is not None):
           with open(model["error"], "rb") as file:
-            model["error"] = pickle.load(file)
+            _model["error"] = pickle.load(file)
         else:
-          model["error"] = None
+          _model["error"] = None
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
         )
-      models[name] = model
+      models[name] = _model
+      del _model
 
   # Loop over ROM models
   # ---------------
@@ -99,8 +100,8 @@ if (__name__ == "__main__"):
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
         system.rom.build(
-          phi=model["basis"]["phi"][:,:r],
-          psi=model["basis"]["psi"][:,:r],
+          phi=model["basis"]["phi"][r],
+          psi=model["basis"]["psi"][r],
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
         idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
@@ -126,9 +127,8 @@ if (__name__ == "__main__"):
       t = model["error"]["t"]
       error = {}
       for r in range(*rrange):
-        k = str(r)
-        if (k in model["error"]["data"]):
-          error[k] = model["error"]["data"][k]
+        if (r in model["error"]["data"]):
+          error[r] = model["error"]["data"][r]
     # Plot error statistics
     print("> Plotting error evolution ...")
     pp.plot_err_evolution(
@@ -136,6 +136,7 @@ if (__name__ == "__main__"):
       t=t,
       error=error,
       species=system.mix.species,
+      rrange=rrange,
       **inputs["plot"]
     )
 

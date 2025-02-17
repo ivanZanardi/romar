@@ -123,7 +123,7 @@ if (__name__ == "__main__"):
   # Modes
   print("> Computing modes ...")
   modes_opts = inputs["cobras"]["modes"]
-  cobras.compute_modes(Xw=Xw, Yw=Yw, **modes_opts)
+  _ = cobras.compute_modes(Xw=Xw, Yw=Yw, **modes_opts)
 
   # PCA
   # ---------------
@@ -139,6 +139,6 @@ if (__name__ == "__main__"):
   modes_opts = inputs["pca"]["modes"]
   if (scaling is not None):
     modes_opts.update(scaling)
-  pca.compute_modes(X=X, **modes_opts)
+  _ = pca.compute_modes(X=X, **modes_opts)
 
   print("Done!")

@@ -95,8 +95,7 @@ class CoBRAS(Basic):
     fix_tmin: bool = False
   ) -> Tuple[np.ndarray]:
     """
-    Compute state and gradient covariance matrices based on quadrature
-    points and system dynamics.
+    Compute state and gradient covariance matrices from system simulations.
 
     This method computes covariance matrices using quadrature points
     and system dynamics, with optional parallel execution.
@@ -118,10 +117,9 @@ class CoBRAS(Basic):
     :type fix_tmin: bool, optional
 
     :return: Tuple containing:
-            - `X` (np.ndarray): State covariance matrix.
-            - `Y` (np.ndarray): Gradient covariance matrix.
-            - `wx` (np.ndarray): Weights for state covariance matrix.
-            - `wy` (np.ndarray): Weights for gradient covariance matrix.
+            - `X` (np.ndarray): Unweighted state covariance matrix.
+            - `Xw` (np.ndarray): Weighted state covariance matrix.
+            - `Yw` (np.ndarray): Weighted gradient covariance matrix.
     :rtype: Tuple[np.ndarray]
     """
     # Unpack initial conditions quadrature points and weights
@@ -180,32 +178,41 @@ class CoBRAS(Basic):
     fix_tmin: bool = False
   ) -> None:
     """
-    Compute state and gradient covariance matrices based on quadrature
-    points and system dynamics.
+    Compute state and gradient covariance matrices using quadrature points
+    and system dynamics.
 
-    :param X: List to store state covariance matrix contributions.
+    This function evaluates state trajectories and their corresponding gradient
+    adjoint solutions to construct weighted covariance matrices. The computed
+    matrices are stored in the provided lists (`X`, `Xw`, and `Yw`).
+
+    :param X: List to store unweighted state covariance matrix samples.
     :type X: List[np.ndarray]
-    :param Y: List to store gradient covariance matrix contributions.
-    :type Y: List[np.ndarray]
-    :param wx: List to store weights corresponding to `X` matrix.
-    :type wx: List[np.ndarray]
-    :param wy: List to store weights corresponding to `y` matrix.
-    :type wy: List[np.ndarray]
-    :param mu: Initial condition quadrature point.
+    :param Xw: List to store weighted state covariance matrix contributions.
+    :type Xw: List[np.ndarray]
+    :param Yw: List to store weighted gradient covariance matrix contributions.
+    :type Yw: List[np.ndarray]
+    :param mu: Quadrature point representing an initial condition.
     :type mu: np.ndarray
     :param w_mu: Weight associated with the quadrature point `mu`.
     :type w_mu: float
-    :param nb_meas: Number of output measurements for adjoint simulations.
+    :param nb_meas: Number of measurement points for adjoint simulations.
+                    Default is 5.
     :type nb_meas: int, optional
-    :param noise: Whether to include noise in the initial conditions.
+    :param noise: If True, perturbs the initial conditions with Gaussian noise
+                  (standard deviation = 0.1) to improve robustness.
+                  Default is False.
     :type noise: bool, optional
-    :param err_max: Maximum error percentage for linear model validity.
+    :param err_max: Maximum allowable error percentage between the linearized
+                    and nonlinear models, used to determine the validity range
+                    (`tmax`) of the linear approximation.
+                    Default is 25.0.
     :type err_max: float, optional
-    :param fix_tmin: Whether to use a fixed `tmin` based on the global time
-                     scale.
+    :param fix_tmin: If True, forces the use of a predefined `tmin` instead
+                     of computing it dynamically from the system's timescale.
+                     Default is False.
     :type fix_tmin: bool, optional
 
-    :return: None (Results are stored in `X`, `Y`, `wx`, and `wy` lists).
+    :return: None (results are appended to `X`, `Xw`, and `Yw`).
     :rtype: None
     """
     # Scaling factor for output measurements
@@ -344,20 +351,21 @@ class CoBRAS(Basic):
     niter: int = 50
   ) -> Dict[str, np.ndarray]:
     """
-    Compute balancing modes based on input covariance matrices.
+    Compute balancing modes using covariance matrices.
 
-    :param Xw: Wighted state covariance matrix.
+    :param Xw: Weighted state covariance matrix.
     :type Xw: np.ndarray
-    :param Yw: Wighted gradient covariance matrix.
+    :param Yw: Weighted gradient covariance matrix.
     :type Yw: np.ndarray
-    :param xnot: List of feature indices to exclude.
-    :type xnot: List[int], optional
-    :param rank: Maximum rank for randomized SVD.
+    :param xnot: List of feature indices to exclude (default: None).
+    :type xnot: Optional[List[int]]
+    :param rank: Maximum rank for randomized SVD (default: 100).
     :type rank: int
-    :param niter: Number of iterations for randomized SVD.
+    :param niter: Number of iterations for randomized SVD (default: 50).
     :type niter: int
 
-    :return: Dictionary containing computed ROM data.
+    :return: Dictionary containing computed ROM data including basis functions
+             and singular values.
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
@@ -374,8 +382,8 @@ class CoBRAS(Basic):
     # Save results
     data = utils.map_nested_dict(bkd.to_numpy, {
       "s": s,
-      "phi": phi,
-      "psi": psi,
+      "phi": {r: phi[:,:r] for r in range(1,rank+1)},
+      "psi": {r: psi[:,:r] for r in range(1,rank+1)},
       "mask": mask,
       "xref": self.xref,
       "xscale": self.xscale

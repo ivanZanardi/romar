@@ -109,7 +109,7 @@ class Basic(object):
   def jac(self, t, y):
     y = self.rom.decode(y, is_der=False) if self.use_rom else y
     j = self._jac(t, y)
-    j = self.rom.encdec_jac(j) if self.use_rom else j
+    j = self.rom.reduce_jac(j) if self.use_rom else j
     return j
 
   def _jac(self, t, y):

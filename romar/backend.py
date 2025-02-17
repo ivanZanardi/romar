@@ -61,23 +61,15 @@ def to_backend(x):
   if (x is not None):
     return to_torch(x) if (_BKD == "torch") else to_numpy(x)
 
-# def make_fun_np(fun_torch):
-#   def fun_np(*args, **kwargs):
-#     args = [to_torch(x) for x in args]
-#     kwargs = {k: to_torch(x) for (k, x) in kwargs.items()}
-#     output = tf.nest.flatten(fun_torch(*args, **kwargs))
-#     output = [to_numpy(y) for y in output]
-#     return output if (len(output) > 1) else output[0]
-#   return fun_np
-
 def make_fun_np(fun_torch):
   """
   Decorator to convert function inputs from NumPy to PyTorch tensors and
   convert function outputs from PyTorch tensors to NumPy arrays.
-  
+
   :param fun_torch: Function that operates on PyTorch tensors.
   :type fun_torch: callable
-  :return: A wrapped function that accepts NumPy arrays and returns NumPy arrays.
+  :return: A wrapped function that accepts NumPy arrays and returns NumPy
+           arrays.
   :type fun_torch: callable
   """
   @functools.wraps(fun_torch)

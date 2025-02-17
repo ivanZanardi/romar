@@ -63,6 +63,8 @@ class ROM(object):
     :param xscale: Scaling factors for state variables (default: identity).
     :type xscale: Optional[np.ndarray], optional
     """
+    # Set flag
+    self.built = False
     # Ensure mask is boolean and properly shaped
     self.mask = mask.astype(bool).reshape(-1)
     if (len(self.mask) != self.nb_eqs):
@@ -125,7 +127,7 @@ class ROM(object):
   def encode(
     self,
     x: np.ndarray,
-    is_der: bool = False   # if vector x is a derivative
+    is_der: bool = False
   ) -> np.ndarray:
     """
     Encode the full state vector into the reduced-order representation.
@@ -133,6 +135,9 @@ class ROM(object):
     :param y: Full state vector of shape `(nb_eqs,)` or `(N, nb_eqs)`,
               where `N` is the batch size (optional).
     :type y: np.ndarray
+    :param is_der: If True, encodes a derivative vector instead of a state
+                   vector.
+    :type is_der: bool
 
     :return: Encoded reduced-state representation of shape `(rom_dim,)`
              if `y` is `(nb_eqs,)`, or `(N, rom_dim)` if `y` is `(N, nb_eqs)`.
@@ -146,16 +151,16 @@ class ROM(object):
     # Ensure correct dimensions
     if (x.shape[-1] != self.nb_eqs):
       raise ValueError("Input state shape mismatch: Expected " \
-                       f"last dimension {self.nb_eqs}, got {x.shape[-1]}.")
+                      f"last dimension {self.nb_eqs}, got {x.shape[-1]}.")
     # Encode
     if (not is_der):
-      x -= self.xref
+      x = x - self.xref
     return x @ self.encoder.T
 
   def decode(
     self,
     z: np.ndarray,
-    is_der: bool = False   # if vector z is a derivative
+    is_der: bool = False
   ) -> np.ndarray:
     """
     Decode the reduced-order state back into full-state representation.
@@ -163,6 +168,9 @@ class ROM(object):
     :param z: Reduced state vector of shape `(rom_dim,)` or `(N, rom_dim)`,
               where `N` is the batch size (optional).
     :type z: np.ndarray
+    :param is_der: If True, decodes a derivative vector instead of a state
+                   vector.
+    :type is_der: bool
 
     :return: Reconstructed full state vector of shape `(nb_eqs,)`
              if `z` is `(rom_dim,)`, or `(N, nb_eqs)` if `z` is `(N, rom_dim)`.
@@ -176,16 +184,24 @@ class ROM(object):
     # Ensure correct dimensions
     if (z.shape[-1] != self.rom_dim):
       raise ValueError("Input reduced state shape mismatch: Expected " \
-                       f"last dimension {self.rom_dim}, got {z.shape[-1]}.")
+                      f"last dimension {self.rom_dim}, got {z.shape[-1]}.")
     # Decode
     x = z @ self.decoder.T
     if (not is_der):
-      x += self.xref
+      x = x + self.xref
     return x
 
-  def encdec_jac(
+  def reduce_jac(
     self,
     j: np.ndarray
   ) -> np.ndarray:
-    """encode-decode jacobian matrix"""
+    """
+    Perform encoding and decoding on a Jacobian matrix.
+
+    :param j: Jacobian matrix of shape `(nb_eqs, nb_eqs)`.
+    :type j: np.ndarray
+
+    :return: Reduced Jacobian matrix.
+    :rtype: np.ndarray
+    """
     return self.encoder @ j @ self.decoder

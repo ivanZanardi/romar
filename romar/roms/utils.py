@@ -1,10 +1,11 @@
-import os
 import numpy as np
 
 from .. import backend as bkd
-from typing import Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
-SCALINGS = {"std", "level", "range", "max", "pareto", "vast", "0to1", "-1to1"}
+POSSIBLE_SCALINGS = {
+  "std", "level", "range", "max", "pareto", "vast", "0to1", "-1to1"
+}
 
 
 def init_scaling_param(
@@ -37,27 +38,32 @@ def init_scaling_param(
   x = np.asarray(x).reshape(-1)
   if (len(x) != nb_feat):
     raise ValueError(f"Expected input vector of length {nb_feat}, " \
-                      f"but got {len(x)}.")
+                     f"but got {len(x)}.")
   return x
 
 def compute_scaling(
   scaling: str,
   X: np.ndarray
-) -> Tuple[np.ndarray]:
+) -> Dict[str, np.ndarray]:
   """
   Compute scaling parameters based on the selected method.
 
+  :param scaling: Scaling method to apply.
+  :type scaling: str
   :param X: Data matrix of shape (nb_features, nb_samples).
   :type X: np.ndarray
 
-  :return: Tuple containing:
-            - Mean reference of shape (nb_features,).
-            - Scaling factor of shape (nb_features,).
-  :rtype: Tuple[np.ndarray]
+  :return: Dictionary containing:
+           - 'xref': Mean reference of shape (nb_features,).
+           - 'xscale': Scaling factor of shape (nb_features,).
+  :rtype: Dict[str, np.ndarray]
   """
   # Scaling method
-  scaling = scaling.lower()
-  check_scaling(scaling)
+  scaling = check_method(
+    method="scaling",
+    name=scaling,
+    valid_names=POSSIBLE_SCALINGS
+  )
   # Dimension
   nb_feat = X.shape[0]
   # Common factors
@@ -72,26 +78,48 @@ def compute_scaling(
     xscale = xref
   elif (scaling == "range"):
     xscale = xmax - xmin
+    xscale = np.where(xmax == xmin, 1.0, xmax - xmin)
   elif (scaling == "max"):
-    xscale = xmax
+    xscale = np.where(xmax == 0.0, 1.0, xmax)
   elif (scaling == "pareto"):
     xscale = np.sqrt(xstd)
   elif (scaling == "vast"):
-    xscale = xstd * xstd / (xref + bkd.epsilon())
+    xscale = xstd * xstd / (xref + bkd.epsilon()*np.sign(xref))
   elif (scaling == "0to1"):
     xref = xmin
-    xscale = xmax - xmin
+    xscale = np.where(xmax == xmin, 1.0, xmax - xmin)
   elif (scaling == "-1to1"):
     xref = 0.5*(xmax + xmin)
-    xscale = 0.5*(xmax - xmin)
+    xscale = np.where(xmax == xmin, 1.0, 0.5*(xmax - xmin))
   else:
     xref = np.zeros(nb_feat)
     xscale = np.ones(nb_feat)
   return {"xref": xref, "xscale": xscale}
 
-def check_scaling(
-  scaling: Optional[str] = None
-) -> None:
-  if ((scaling is not None) and (scaling not in SCALINGS)):
-    raise ValueError(f"Invalid scaling method: '{scaling}'. " \
-                     f"Must be one of {SCALINGS}.")
+def check_method(
+  method: Optional[str] = None,
+  name: Optional[str] = None,
+  valid_names: Optional[List[str]] = None
+) -> Optional[str]:
+  """
+  Validate the method name against a list of valid methods.
+
+  :param method: Method category (e.g., "scaling").
+  :type method: Optional[str]
+  :param name: Name of the specific method.
+  :type name: Optional[str]
+  :param valid_names: List of valid method names.
+  :type valid_names: Optional[List[str]]
+
+  :return: Validated method name.
+  :rtype: Optional[str]
+
+  :raises ValueError: If the method name is invalid.
+  """
+  if (name is not None):
+    name = name.lower()
+    if ((valid_names is not None) and (name not in valid_names)):
+      raise ValueError(f"Invalid {method} method: '{name}'. " \
+                       f"Must be one of {valid_names}.")
+    else:
+      return name
