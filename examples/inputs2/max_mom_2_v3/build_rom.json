@@ -55,12 +55,12 @@
     }
   },
   "scaling": {
-    "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/scalings.p",
+    "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/data/scalings.p",
     "method": "pareto"
   },
   "cobras": {
     "init": {
-      "scale": true
+      "scale": false
     },
     "cov_mats": {
       "compute": {
@@ -72,24 +72,24 @@
       },
       "read": false,
       "save": true,
-      "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/cov_mats.p"
+      "filename": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/cov_mats.p"
     },
     "modes": {
-      "xnot": [-2,-1],
+      "xnot": [0,1,-2,-1],
       "niter": 50
     }
   },
   "pca": {
     "init": {
+      "scaling": "pareto",
       "rotation": "varimax"
     },
     "modes": {
       "scale": true,
-      "xnot": [-2,-1],
-      "niter": 50
+      "xnot": [0,1,-2,-1]
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/"
   }
 }

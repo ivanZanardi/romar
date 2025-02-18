@@ -28,26 +28,22 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/cobras_basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/pca_basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2c/"
   },
   "data": {
-    "cases": [
-      "lrho_lT",
-      "lrho_hT",
-      "hrho_lT",
-      "hrho_hT",
-      "mrho_mT"
-    ],
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/data/",
+    "irange": [0,100],
+    "nb_workers": 10,
+    "eps": 1e-8
   },
   "plot": {
     "labels": {
@@ -57,20 +53,7 @@
       "Arp": "\\text{Ar$^+$}",
       "em": "\\text{e$^-$}"
     },
-    "tlim": {
-      "lrho_lT": null,
-      "lrho_hT": null,
-      "hrho_lT": null,
-      "hrho_hT": null,
-      "mrho_mT": null
-    },
-    "teval": {
-      "lrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "lrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "hrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "hrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "mrho_mT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]
-    },
+    "tlim": null,
     "ylim_err": null,
     "err_scale": "log",
     "hline": {
@@ -78,10 +61,8 @@
       "mom": 1.0,
       "dist": 10.0
     },
-    "max_mom": 2,
-    "animate": false,
-    "markersize": 6
+    "max_mom": 2
   },
-  "rom_range": [7,12],
+  "rom_range": [5,9],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

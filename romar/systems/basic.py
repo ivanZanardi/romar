@@ -2,6 +2,7 @@ import abc
 import sys
 import time
 import torch
+import signal
 import numpy as np
 import scipy as sp
 import joblib as jl
@@ -316,6 +317,45 @@ class Basic(object):
     runtime = np.array(runtime).reshape(1)
     return y, runtime
 
+  def _solve_tout(
+    self,
+    t: np.ndarray,
+    y0: np.ndarray,
+    linear: bool = False,
+    timeout: int = 1e2
+  ) -> Tuple[np.ndarray]:
+    """
+    Solve the system of equations with an optional timeout.
+
+    :param t: Time grid for the solver.
+    :type t: np.ndarray
+    :param y0: Initial condition for the system.
+    :type y0: np.ndarray
+    :param linear: Whether to use a linearized version of the model.
+    :type linear: bool
+    :param timeout: Maximum allowed execution time in seconds.
+    :type timeout: int, optional
+
+    :return: Tuple containing the solution `y` and runtime duration.
+    :rtype: Tuple[np.ndarray, np.ndarray]
+
+    :raises TimeoutException: If the solver exceeds the allowed execution time.
+    """
+    # Set signal alarm for timeout
+    signal.signal(signal.SIGALRM, utils.timeout_handler)
+    signal.alarm(int(timeout))
+    try:
+      # Solve the system
+      y, runtime = self._solve(t, y0, linear)
+      # Disable alarm after successful execution
+      signal.alarm(0)
+    except utils.TimeoutException as e:
+      y, runtime = None, None
+    finally:
+      # Ensure alarm is disabled in case of early return
+      signal.alarm(0)
+    return y, runtime
+
   def solve_fom(
     self,
     t: np.ndarray,
@@ -335,7 +375,8 @@ class Basic(object):
     t: np.ndarray,
     y0: np.ndarray,
     rho: float,
-    linear: bool = False
+    linear: bool = False,
+    timeout: int = 1e2
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
     # Setting up
@@ -344,9 +385,11 @@ class Basic(object):
     # Encode initial conditions
     z0 = self.rom.encode(y0, is_der=False)
     # Solving
-    z, runtime = self._solve(t, z0, linear)
+    z, runtime = self._solve_tout(t, z0, linear, timeout)
     # Decode solution
-    y = self.rom.decode(z.T, is_der=False).T
+    y = None
+    if (runtime is not None):
+      y = self.rom.decode(z.T, is_der=False).T
     return y, runtime
 
   def get_tgrid(
@@ -414,15 +457,17 @@ class Basic(object):
     path: Optional[str] = None,
     index: Optional[int] = None,
     filename: Optional[str] = None,
-    eps: float = 1e-8
+    eps: float = 1e-8,
+    timeout: int = 1e2
   ) -> Tuple[Optional[np.ndarray]]:
+    result = (None, None)
     try:
       # Load test case
       icase = utils.load_case(path=path, index=index, filename=filename)
       t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
       # Solve ROM
-      y_rom, runtime = self.solve_rom(t, y0, rho)
-      if (y_rom.shape[1] == len(t)):
+      y_rom, runtime = self.solve_rom(t, y0, rho, timeout=timeout)
+      if ((runtime is not None) and (y_rom.shape[1] == len(t))):
         # Converged
         prim_fom = self.get_prim(y_fom, clip=False)
         prim_rom = self.get_prim(y_rom, clip=False)
@@ -436,11 +481,10 @@ class Basic(object):
             "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
           }
         }
-        return data, runtime
-      else:
-        return None, None
+        result = (data, runtime)
     except:
-      return None, None
+      pass
+    return result
 
   # Postprocessing
   # -----------------------------------
@@ -515,7 +559,7 @@ class Basic(object):
       ]
     # Split error values and running times
     error, runtime = list(zip(*sols))
-    not_converged  = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]
+    not_conv = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]
     error = [x for x in error if (x is not None)]
     runtime = [x for x in runtime if (x is not None)]
     converged = len(runtime)/nb_samples
@@ -541,9 +585,9 @@ class Basic(object):
         "mean": float(np.mean(runtime, 0)),
         "std": float(np.std(runtime, 0))
       }
-      return error, runtime, not_converged
+      return error, runtime, not_conv
     else:
-      return None, None, not_converged
+      return None, None, not_conv
 
   def compute_err_dist(
     self,

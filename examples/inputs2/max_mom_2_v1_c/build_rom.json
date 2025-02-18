@@ -55,7 +55,7 @@
     }
   },
   "scaling": {
-    "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/scalings.p",
+    "filename": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/data/scalings.p",
     "method": "pareto"
   },
   "cobras": {
