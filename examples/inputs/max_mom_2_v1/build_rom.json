@@ -76,7 +76,7 @@
     },
     "modes": {
       "xnot": [-2,-1],
-      "niter": 50
+      "niter": 100
     }
   },
   "pca": {
@@ -85,7 +85,8 @@
     },
     "modes": {
       "scale": true,
-      "xnot": [-2,-1]
+      "xnot": [-2,-1],
+      "niter": 100
     }
   },
   "paths": {
