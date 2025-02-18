@@ -22,12 +22,12 @@ def get_quad_nd(
             dimension.
   :type x: Tuple[np.ndarray]
   :param dist: Type of distribution used for scaling weights. Options:
-         - "uniform" (default)
-         - "loguniform"
+               - "uniform" (default)
+               - "loguniform"
   :type dist: Union[Tuple[str], str], optional
   :param quad: Quadrature method for each dimension. Options:
-         - "gl" (Gauss-Legendre, default)
-         - "trapz" (Trapezoidal)
+               - "gl" (Gauss-Legendre, default)
+               - "trapz" (Trapezoidal)
   :type quad: Union[Tuple[str], str], optional
   :param deg: Degree of Gauss-Legendre quadrature (only used if `quad="gl"`).
               Default is 3.
