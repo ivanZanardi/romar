@@ -322,7 +322,7 @@ class Basic(object):
     t: np.ndarray,
     y0: np.ndarray,
     linear: bool = False,
-    timeout: int = 1e2
+    tout: int = 1e2
   ) -> Tuple[np.ndarray]:
     """
     Solve the system of equations with an optional timeout.
@@ -333,8 +333,8 @@ class Basic(object):
     :type y0: np.ndarray
     :param linear: Whether to use a linearized version of the model.
     :type linear: bool
-    :param timeout: Maximum allowed execution time in seconds.
-    :type timeout: int, optional
+    :param tout: Maximum allowed execution time in seconds.
+    :type tout: int, optional
 
     :return: Tuple containing the solution `y` and runtime duration.
     :rtype: Tuple[np.ndarray, np.ndarray]
@@ -343,7 +343,7 @@ class Basic(object):
     """
     # Set signal alarm for timeout
     signal.signal(signal.SIGALRM, utils.timeout_handler)
-    signal.alarm(int(timeout))
+    signal.alarm(int(tout))
     try:
       # Solve the system
       y, runtime = self._solve(t, y0, linear)
@@ -376,7 +376,7 @@ class Basic(object):
     y0: np.ndarray,
     rho: float,
     linear: bool = False,
-    timeout: int = 1e2,
+    tout: int = 1e2,
     decode: bool = True
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
@@ -386,7 +386,7 @@ class Basic(object):
     # Encode initial conditions
     z0 = self.rom.encode(y0, is_der=False)
     # Solving
-    z, runtime = self._solve_tout(t, z0, linear, timeout)
+    z, runtime = self._solve_tout(t, z0, linear, tout)
     if decode:
       # Decode solution
       y = None
@@ -462,15 +462,21 @@ class Basic(object):
     index: Optional[int] = None,
     filename: Optional[str] = None,
     eps: float = 1e-8,
-    timeout: int = 1e2
+    tout: int = 1e2,
+    tlim: Optional[List[float]] = None
   ) -> Tuple[Optional[np.ndarray]]:
     result = (None, None)
     try:
       # Load test case
       icase = utils.load_case(path=path, index=index, filename=filename)
       t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
+      # Time window
+      if (tlim is not None):
+        i = (t >= np.amin(tlim)) * (t <= np.amax(tlim))
+        t = t[i]
+        y_fom = y_fom[:,i]
       # Solve ROM
-      y_rom, runtime = self.solve_rom(t, y0, rho, timeout=timeout)
+      y_rom, runtime = self.solve_rom(t, y0, rho, tout=tout)
       if ((runtime is not None) and (y_rom.shape[1] == len(t))):
         # Converged
         prim_fom = self.get_prim(y_fom, clip=False)
@@ -541,7 +547,9 @@ class Basic(object):
     path: str,
     irange: List[int],
     nb_workers: int = 1,
-    eps: float = 1e-8
+    eps: float = 1e-8,
+    tout: int = 1e2,
+    tlim: Optional[List[float]] = None
   ) -> Tuple[Optional[np.ndarray]]:
     irange = np.sort(irange)
     nb_samples = irange[1]-irange[0]
@@ -551,16 +559,20 @@ class Basic(object):
       desc="  Cases",
       file=sys.stdout
     )
+    kwargs = dict(
+      path=path,
+      eps=eps,
+      tout=tout,
+      tlim=tlim
+    )
     if (nb_workers > 1):
       sols = jl.Parallel(nb_workers)(
         jl.delayed(
           env.make_fun_parallel(self.compute_sol_rom)
-        )(index=i, path=path, eps=eps) for i in iterable
+        )(index=i, **kwargs) for i in iterable
       )
     else:
-      sols = [
-        self.compute_sol_rom(index=i, path=path, eps=eps) for i in iterable
-      ]
+      sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
     # Split error values and running times
     error, runtime = list(zip(*sols))
     not_conv = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]

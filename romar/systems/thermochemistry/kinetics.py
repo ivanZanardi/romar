@@ -198,36 +198,13 @@ class Kinetics(object):
     # Electron and ion number densities
     ne = self.mix.species["em"].n.reshape(1)
     ni = torch.sum(self.mix.species["Arp"].n).reshape(1)
+    ne, ni = map(torch.abs, (ne, ni))
     if self.use_tables:
       # Look-up table
       return 2.0 * ve * self._compute_ei_Q11_kapper(ne, Te)
     else:
       # Curve fit model
       return 8.0/3.0 * ve * self._compute_ei_Q11_magin(ne, ni, Th, Te)
-
-  def _compute_ei_Q11_magin(self, ne, ni, Th, Te):
-    """
-    See: Magin's PhD thesis, ULB, 2004
-    """
-    # Average closest impact parameters for 'em-Arp' and 'em-em' interactions
-    f0 = const.UE*const.UE/(8.0*torch.pi*const.UEPS0*const.UKB)
-    bh = f0/Th
-    be = f0/Te
-    # Debye shielding distance (em and Arp contributions)
-    Ds = self._compute_Ds(ne, ni, Th, Te)
-    Ds = torch.minimum(Ds,10000.0*(be + bh))
-    # Non-dimensional temperature for charge-charge interactions
-    Tse = torch.maximum(Ds/(2.0*be), torch.tensor(0.1))
-    # Common factors
-    lnT1 = torch.log(Tse)
-    lnT2 = lnT1*lnT1
-    lnT3 = lnT2*lnT1
-    lnT4 = lnT3*lnT1
-    efac = torch.pi*Ds*Ds/(Tse*Tse)
-    # Collision integral for 'em-Arp' and 'em-em' interactions
-    c = self.processes["EI"]["Q11_fit"]
-    Q11 = torch.exp(c[0]*lnT4 + c[1]*lnT3 + c[2]*lnT2 + c[3]*lnT1 + c[4])
-    return efac * Q11
 
   def _compute_ei_Q11_kapper(self, ne, Te):
     """
@@ -240,6 +217,30 @@ class Kinetics(object):
     lam = 1.24e7*torch.sqrt(T3/ne)
     # Compute momentum-averaged cross section
     return 5.85e-10*torch.log(lam)/T2
+
+  def _compute_ei_Q11_magin(self, ne, ni, Th, Te):
+    """
+    See: Magin's PhD thesis, ULB, 2004
+    """
+    # Average closest impact parameters for 'em-Arp' and 'em-em' interactions
+    f0 = const.UE*const.UE/(8.0*torch.pi*const.UEPS0*const.UKB)
+    bh = f0/Th
+    be = f0/Te
+    # Debye shielding distance (em and Arp contributions)
+    Ds = self._compute_Ds(ne, ni, Th, Te)
+    Ds = torch.minimum(Ds,1e4*(be + bh))
+    # Non-dimensional temperature for charge-charge interactions
+    Tse = torch.maximum(Ds/(2.0*be), torch.tensor(0.1))
+    # Common factors
+    lnT1 = torch.log(Tse)
+    lnT2 = lnT1*lnT1
+    lnT3 = lnT2*lnT1
+    lnT4 = lnT3*lnT1
+    efac = torch.pi*Ds*Ds/(Tse*Tse)
+    # Collision integral for 'em-Arp' and 'em-em' interactions
+    c = self.processes["EI"]["Q11_fit"]
+    Q11 = torch.exp(c[0]*lnT4 + c[1]*lnT3 + c[2]*lnT2 + c[3]*lnT1 + c[4])
+    return efac * Q11
 
   def _compute_Ds(self, ne, ni, Th, Te):
     """Debye shielding distance"""
