@@ -28,16 +28,16 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/cobras_basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/pca_basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/tm2/"
   },
   "data": {
     "cases": [
@@ -47,7 +47,8 @@
       "hrho_hT",
       "mrho_mT"
     ],
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
+    "tlim": [0.0, 1e-2]
   },
   "plot": {
     "labels": {
@@ -65,11 +66,11 @@
       "mrho_mT": null
     },
     "teval": {
-      "lrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "lrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "hrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "hrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3],
-      "mrho_mT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]
+      "lrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
+      "lrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
+      "hrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
+      "hrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
+      "mrho_mT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
     },
     "ylim_err": null,
     "err_scale": "log",
@@ -82,6 +83,6 @@
     "animate": false,
     "markersize": 6
   },
-  "rom_range": [7,12],
+  "rom_range": [5,12],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

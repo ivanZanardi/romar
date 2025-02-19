@@ -28,22 +28,23 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/cobras_basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/pca_basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/max_mom_2b/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/tm3/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/rad_on_test10/data/",
-    "irange": [0,100],
+    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
+    "irange": [0,500],
     "nb_workers": 10,
-    "eps": 1e-8
+    "eps": 1e-8,
+    "tlim": [0.0, 1e-3]
   },
   "plot": {
     "labels": {
@@ -54,7 +55,27 @@
       "em": "\\text{e$^-$}"
     },
     "tlim": null,
-    "ylim_err": null,
+    "ylim_err": {
+      "dist": [8e-2, 2e2],
+      "temp": {
+        "Th": [1e-6, 2e0],
+        "Te": [1e-3, 2e1]
+      },
+      "mom": {
+        "Ar": {
+          "m0": [1e-6, 2e0],
+          "m1": [1e-2, 1e1]
+        },
+        "Arp": {
+          "m0": [1e-2, 2e2],
+          "m1": [1e-3, 1e1]
+        },
+        "em": {
+          "m0": [1e-2, 2e2],
+          "m1": [1e-1, 1e1]
+        }
+      }
+    },
     "err_scale": "log",
     "hline": {
       "temp": 1.0,

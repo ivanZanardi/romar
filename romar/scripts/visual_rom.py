@@ -105,6 +105,7 @@ if (__name__ == "__main__"):
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p",
           eps=inputs["data"].get("eps", 1e-8),
+          tout=inputs["data"].get("tout", 1e-2),
           tlim=inputs["data"].get("tlim", None)
         )
         if (isol is not None):

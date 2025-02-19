@@ -44,8 +44,8 @@
       },
       "Th": {
         "start": 2e4,
-        "stop": 5e4,
-        "num": 26
+        "stop": 3.5e4,
+        "num": 13
       },
       "Te": {
         "start": 293.6,
@@ -55,7 +55,7 @@
     }
   },
   "scaling": {
-    "filename": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/data/scalings.p",
+    "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/scalings.p",
     "method": "pareto"
   },
   "cobras": {
@@ -72,7 +72,7 @@
       },
       "read": false,
       "save": true,
-      "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/cov_mats.p"
+      "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tlow/cov_mats.p"
     },
     "modes": {
       "xnot": [-2,-1],
@@ -90,6 +90,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tlow/"
   }
 }

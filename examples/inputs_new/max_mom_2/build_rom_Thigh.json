@@ -43,9 +43,9 @@
         "num": 6
       },
       "Th": {
-        "start": 2e4,
+        "start": 3.5e4,
         "stop": 5e4,
-        "num": 26
+        "num": 13
       },
       "Te": {
         "start": 293.6,
@@ -72,7 +72,7 @@
       },
       "read": false,
       "save": true,
-      "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/cov_mats.p"
+      "filename": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Thigh/cov_mats.p"
     },
     "modes": {
       "xnot": [-2,-1],
@@ -90,6 +90,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_v1/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Thigh/"
   }
 }
