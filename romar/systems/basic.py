@@ -376,7 +376,8 @@ class Basic(object):
     y0: np.ndarray,
     rho: float,
     linear: bool = False,
-    timeout: int = 1e2
+    timeout: int = 1e2,
+    decode: bool = True
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
     # Setting up
@@ -386,11 +387,14 @@ class Basic(object):
     z0 = self.rom.encode(y0, is_der=False)
     # Solving
     z, runtime = self._solve_tout(t, z0, linear, timeout)
-    # Decode solution
-    y = None
-    if (runtime is not None):
-      y = self.rom.decode(z.T, is_der=False).T
-    return y, runtime
+    if decode:
+      # Decode solution
+      y = None
+      if (runtime is not None):
+        y = self.rom.decode(z.T, is_der=False).T
+      return y, runtime
+    else:
+      return z, runtime
 
   def get_tgrid(
     self,
