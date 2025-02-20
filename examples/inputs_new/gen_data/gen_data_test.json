@@ -48,7 +48,7 @@
           "Th": [2.0e4, 5.0e4],
           "Te": [293.6, 293.6]
         },
-        "nb_samples": 500,
+        "nb_samples": 100,
         "log_vars": ["Te", "rho"],
         "eps": 1e-8
       }
