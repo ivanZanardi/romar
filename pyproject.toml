@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "romar"
 version = "0.0.1"
 dynamic = ["dependencies"]
-description = "Reduced Order modeling for Non-Equilibrium Kinetics"
+description = "Reduced Order Modeling for Argon plasma"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
@@ -19,7 +19,8 @@ keywords = [
   "ROM",
   "Reduced Order Modeling",
   "Non-Equilibrium",
-  "Kinetics"
+  "Kinetics",
+  "Radiation"
 ]
 classifiers = [
   "Development Status :: 1 - Beta",
