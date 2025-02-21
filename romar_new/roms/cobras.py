@@ -180,19 +180,23 @@ class CoBRAS(Basic):
     """
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
-    t, y, rho, w_t, w_mu = [data[k] for k in ("t", "y", "rho", "w_t", "w_mu")]
-    # Time grid
+    # > Time grid
+    tmin = float(data["tmin"])
+    t = data["t"].reshape(-1)
     nt = len(t)
-    tmin = np.amin(t[t>0.0])
+    # > Solution
+    y = data["y"].T
+    rho = float(data["rho"])
     # Set weights
     w_meas = 1.0/np.sqrt(nb_meas)
+    w_t, w_mu = [data[k] for k in ("w_t", "w_mu")]
     if (not use_quad_w):
       w_mu = 1.0/np.sqrt(nb_mu)
       w_t[:] = 1.0/np.sqrt(nt)
     # Build an interpolator for the solution
     sol_interp = self._build_sol_interp(t, y)
     # Loop over each initial time for adjoint simulations
-    for j in range(len(t)-1):
+    for j in range(nt-1):
       # Generate a time grid for the j-th linear model
       tj = np.geomspace(t[j]+1e-15, t[-1], num=100)
       yj = sol_interp(tj)

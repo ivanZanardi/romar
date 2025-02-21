@@ -29,14 +29,27 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import os
-import numpy as np
 import dill as pickle
 
-from romar import ops
 from romar import roms
 from romar import utils
-from romar import systems as sys_mod
-from romar.systems.thermochemistry.equilibrium import MU_VARS
+from romar import systems
+
+# Utils
+# =====================================
+def _get_cov_mats(model, opts):
+  if (not opts.get("read", False)):
+    print("> Computing covariance matrices ...")
+    cov_mats = model.compute_cov_mats(**opts["compute"])
+    if opts.get("save", False):
+      filename = os.path.join(path_to_saving, f"{model.name}_cov_mats.p")
+      with open(filename, "wb") as file:
+        pickle.dump(cov_mats, file)
+  else:
+    print("> Reading covariance matrices ...")
+    with open(opts["filename"], "rb") as file:
+      cov_mats = pickle.load(file)
+  return cov_mats
 
 # Main
 # =====================================
@@ -56,7 +69,7 @@ if (__name__ == "__main__"):
   # System
   # ---------------
   system = utils.get_class(
-    modules=[sys_mod],
+    modules=[systems],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
   system.compute_c_mat(**inputs["system"]["c_mat"])
@@ -72,26 +85,6 @@ if (__name__ == "__main__"):
         scalings = pickle.load(file)
       scaling = scalings[scaling]
 
-  # Quadrature points
-  # ---------------
-  # > Initial conditions space (mu)
-  x, dist = [], []
-  for k in MU_VARS:
-    kfun = np.linspace if (k == "T") else np.geomspace
-    x.append(kfun(**inputs["grids"]["mu"][k]))
-    kdist = "loguniform" if (k == "Te") else "uniform"
-    dist.append(kdist)
-  mu, w_mu = ops.get_quad_nd(
-    x=x,
-    deg=2,
-    dist=dist
-  )
-  quad_mu = {"x": mu, "w": np.sqrt(w_mu)}
-  # > Save quadrature points
-  filename = path_to_saving + "/quad_mu.p"
-  with open(filename, "wb") as file:
-    pickle.dump(quad_mu, file)
-
   # CoBRAS
   # ---------------
   # Model
@@ -99,31 +92,17 @@ if (__name__ == "__main__"):
   cobras_opts = inputs["cobras"].get("init", {})
   cobras_opts.update(dict(
     system=system,
-    tgrid=inputs["grids"]["t"],
-    quad_mu=quad_mu,
+    path_to_data=inputs["paths"]["data"],
     path_to_saving=path_to_saving
   ))
   if (scaling is not None):
     cobras_opts.update(scaling)
   cobras = roms.CoBRAS(**cobras_opts)
   # Covariance matrices
-  cov_mats_opts = inputs["cobras"]["cov_mats"]
-  if (not cov_mats_opts.get("read", False)):
-    print("> Computing covariance matrices ...")
-    cov_mats = cobras.compute_cov_mats(**cov_mats_opts["compute"])
-    if cov_mats_opts.get("save", False):
-      filename = os.path.join(path_to_saving, "cov_mats.p")
-      with open(filename, "wb") as file:
-        pickle.dump(cov_mats, file)
-  else:
-    print("> Reading covariance matrices ...")
-    with open(cov_mats_opts["filename"], "rb") as file:
-      cov_mats = pickle.load(file)
-  X, Xw, Yw = cov_mats
+  X, Y = _get_cov_mats(model=cobras, opts=inputs["cobras"]["cov_mats"])
   # Modes
   print("> Computing modes ...")
-  modes_opts = inputs["cobras"]["modes"]
-  _ = cobras.compute_modes(Xw=Xw, Yw=Yw, **modes_opts)
+  cobras.compute_modes(X=X, Y=Y, **inputs["cobras"]["modes"])
 
   # PCA
   # ---------------
@@ -131,14 +110,17 @@ if (__name__ == "__main__"):
   print("PCA model")
   pca_opts = inputs["pca"].get("init", {})
   pca_opts.update(dict(
+    system=system,
+    path_to_data=inputs["paths"]["data"],
     path_to_saving=path_to_saving
   ))
+  if (scaling is not None):
+    pca_opts.update(scaling)
   pca = roms.PCA(**pca_opts)
+  # Covariance matrices
+  X = _get_cov_mats(model=pca, opts=inputs["pca"]["cov_mats"])
   # Modes
   print("> Computing modes ...")
-  modes_opts = inputs["pca"]["modes"]
-  if (scaling is not None):
-    modes_opts.update(scaling)
-  _ = pca.compute_modes(X=X, **modes_opts)
+  pca.compute_modes(X=X, **inputs["pca"]["modes"])
 
   print("Done!")

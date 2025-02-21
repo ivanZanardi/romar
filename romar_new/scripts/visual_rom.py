@@ -36,8 +36,8 @@ import matplotlib.pyplot as plt
 plt.style.use(inputs.get("mpl_style", "default"))
 
 from romar import utils
+from romar import systems
 from romar import postproc as pp
-from romar import systems as sys_mod
 
 _VALID_MODELS = {"cobras", "pca"}
 
@@ -59,7 +59,7 @@ if (__name__ == "__main__"):
   # System
   # -----------------------------------
   system = utils.get_class(
-    modules=[sys_mod],
+    modules=[systems],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
 

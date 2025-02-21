@@ -29,9 +29,9 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
-from romar import roms
 from romar import utils
-from romar import systems as sys_mod
+from romar import systems
+from romar.data import Data
 
 # Main
 # =====================================
@@ -40,7 +40,7 @@ if (__name__ == "__main__"):
   print("Initialization ...")
 
   # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/train/"
+  path_to_saving = inputs["paths"]["saving"] + "/data/train/"
   os.makedirs(path_to_saving, exist_ok=True)
 
   # Copy input file
@@ -51,17 +51,17 @@ if (__name__ == "__main__"):
   # System
   # ---------------
   system = utils.get_class(
-    modules=[sys_mod],
+    modules=[systems],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
 
   # Data
   # ---------------
-  data = roms.Data(
+  data = Data(
     system=system,
     grids=inputs["data"]["grids"],
     path_to_saving=path_to_saving
   )
-  data.compute_sols(**inputs["data"]["compute"])
+  data.generate_data_train(**inputs["data"]["generate"])
 
   print("Done!")

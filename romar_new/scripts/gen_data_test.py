@@ -1,5 +1,5 @@
 """
-Generate FOM data.
+Generate FOM testing data.
 """
 
 import os
@@ -30,11 +30,10 @@ env.set(**inputs["env"])
 # Libraries
 # =====================================
 import numpy as np
-import dill as pickle
 
-from romar import roms
 from romar import utils
-from romar import systems as sys_mod
+from romar import systems
+from romar.data import Data
 
 # Main
 # =====================================
@@ -43,7 +42,7 @@ if (__name__ == "__main__"):
   print("Initialization ...")
 
   # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/test/"
+  path_to_saving = inputs["paths"]["saving"] + "/data/test/"
   os.makedirs(path_to_saving, exist_ok=True)
 
   # Copy input file
@@ -52,71 +51,29 @@ if (__name__ == "__main__"):
     json.dump(inputs, file, indent=2)
 
   # System
-  # -----------------------------------
+  # ---------------
   system = utils.get_class(
-    modules=[sys_mod],
+    modules=[systems],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
 
-  # Data generation
-  # -----------------------------------
-  # Time grid
-  t = np.geomspace(**inputs["grids"]["t"])
-
-  # Sampled cases
+  # Data
   # ---------------
-  # Construct design matrix
-  mu_opts = inputs["param_space"]["sampled"]["mu"]
-  if (mu_opts["nb_samples"] > 0):
-    # Sampled initial conditions parameters
-    mu = system.construct_design_mat_mu(**mu_opts)
-    mu.to_csv(
-      path_to_saving + "/samples_mu.csv",
-      float_format="%.8e",
-      index=True
-    )
-    # Generate data
-    print("Running sampled cases ...")
-    runtime = utils.generate_case_parallel(
-      sol_fun=system.compute_sol_fom,
-      irange=[0,mu_opts["nb_samples"]],
-      sol_kwargs=dict(
-        t=t,
-        mu=mu.values,
-        noise=False,
-        path=path_to_saving
-      ),
-      nb_workers=inputs["param_space"]["nb_workers"],
-      desc=None,
-      delimiter="> "
-    )
-    # Save runtime
-    with open(path_to_saving + "/runtime.txt", "w") as file:
-      file.write("Mean running time: %.8e s" % runtime)
-    # Compute scaling
-    print("Compute scalings ...")
-    X = np.hstack(utils.load_case_parallel(
-      path=path_to_saving,
-      irange=[0,mu_opts["nb_samples"]],
-      key="y",
-      nb_workers=inputs["param_space"]["nb_workers"],
-      desc=None
-    ))
-    scalings = {}
-    for scaling in roms.POSSIBLE_SCALINGS:
-      if (scaling is not None):
-        scalings[scaling] = roms.compute_scaling(scaling=scaling, X=X)
-    filename = path_to_saving + "/scalings.p"
-    with open(filename, "wb") as file:
-      pickle.dump(scalings, file)
+  data = Data(
+    system=system,
+    grids=inputs["data"]["grids"],
+    path_to_saving=path_to_saving
+  )
+  data.generate_data_test(**inputs["data"]["sampled"])
 
   # Defined cases
   # ---------------
-  for (k, muk) in inputs["param_space"]["defined"]["cases"].items():
+  t = np.geomspace(**data.grids["t"])
+  for (k, muk) in inputs["data"]["defined"]["cases"].items():
     print(f"Running case '{k}' ...")
-    runtime = system.compute_sol_fom(
-      t=t,
+    runtime = data.compute_sol(
       mu=muk,
+      t=t,
       noise=False,
       filename=path_to_saving + f"/case_{k}.p"
     )

@@ -143,7 +143,8 @@ def load_case_parallel(
   key: Optional[str] = None,
   nb_workers: int = 1,
   desc: Optional[str] = "Cases",
-  delimiter: str = "  "
+  delimiter: str = "  ",
+  verbose: bool = True
 ) -> List[Any]:
   """
   Load simluated cases in parallel or sequentially based on the number
@@ -169,7 +170,8 @@ def load_case_parallel(
     iterable=range(*irange),
     ncols=80,
     desc=delimiter+desc if (desc is not None) else None,
-    file=sys.stdout
+    file=sys.stdout,
+    disable=(not verbose)
   )
   if (nb_workers > 1):
     return jl.Parallel(nb_workers)(

@@ -12,8 +12,8 @@ from typing import *
 from . import env
 from . import ops
 from . import utils
-from systems.thermochemistry.equilibrium import MU_VARS
-from roms.utils import compute_scaling, POSSIBLE_SCALINGS
+from .systems.thermochemistry.equilibrium import MU_VARS
+from .roms.utils import compute_scaling, POSSIBLE_SCALINGS
 
 
 class Data(object):
@@ -160,7 +160,7 @@ class Data(object):
     if (nb_workers > 1):
       # Run jobs in parallel
       runtime = jl.Parallel(nb_workers)(
-        jl.delayed(env.make_fun_parallel(self._compute_sol))(
+        jl.delayed(env.make_fun_parallel(self.compute_sol))(
           index=i,
           mu=mu[i],
           w_mu=w_mu[i] if (w_mu is not None) else None,
@@ -169,7 +169,7 @@ class Data(object):
       )
     else:
       # Run jobs in series
-      runtime = [self._compute_sol(
+      runtime = [self.compute_sol(
         index=i,
         mu=mu[i],
         w_mu=w_mu[i] if (w_mu is not None) else None,
@@ -179,15 +179,16 @@ class Data(object):
     self._compute_scalings(nb_samples=nb_samples, nb_workers=nb_workers)
     return runtime
 
-  def _compute_sol(
+  def compute_sol(
     self,
-    index: int,
     mu: np.ndarray,
+    index: Optional[int] = None,
     w_mu: Optional[float] = None,
     t: Optional[np.ndarray] = None,
     noise: bool = False,
     sigma: float = 1e-1,
-    fix_tmin: bool = False
+    fix_tmin: bool = False,
+    filename: Optional[str] = None
   ) -> Optional[float]:
     # Compute the initial solution for the system
     y0, rho = self.system.get_init_sol(mu, noise=noise, sigma=sigma)
@@ -200,6 +201,7 @@ class Data(object):
       # > Generate a time quadrature grid and associated weights
       t, w_t = self._get_quad_t(tmin)
     else:
+      tmin = self.tmin
       w_t = None
     # Solve the nonlinear forward problem to compute the state evolution
     y, runtime = self.system.solve_fom(t, y0, rho)
@@ -211,12 +213,18 @@ class Data(object):
         "w_mu": w_mu,
         "t": t,
         "w_t": w_t,
+        "tmin": tmin,
         "y0": y0,
         "rho": rho,
         "y": y,
         "runtime": runtime
       }
-      utils.save_case(path=self.path_to_saving, index=index, data=sol)
+      utils.save_case(
+        path=self.path_to_saving,
+        index=index,
+        data=sol,
+        filename=filename
+      )
     else:
       runtime = None
     return runtime
@@ -258,7 +266,7 @@ class Data(object):
       irange=[0,nb_samples],
       key="y",
       nb_workers=nb_workers,
-      desc=None
+      verbose=False
     ))
     scalings = {s: compute_scaling(scaling=s, X=X) for s in POSSIBLE_SCALINGS}
     # Save scalings
