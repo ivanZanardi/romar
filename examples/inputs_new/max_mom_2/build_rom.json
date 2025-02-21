@@ -53,7 +53,7 @@
     "modes": {
       "xnot": [-2,-1],
       "rank": 50,
-      "niter": 50
+      "niter": 100
     }
   },
   "pca": {
@@ -74,7 +74,7 @@
       "rotation": "varimax",
       "xnot": [-2,-1],
       "rank": 50,
-      "niter": 50
+      "niter": 100
     }
   },
   "paths": {

@@ -393,16 +393,6 @@ class Basic(object):
     else:
       return z, runtime
 
-  def get_tgrid(
-    self,
-    start: float,
-    stop: float,
-    num: int
-  ) -> np.ndarray:
-    t = np.geomspace(start, stop, num=num-1)
-    t = np.insert(t, 0, 0.0)
-    return t
-
   # Postprocessing
   # ===================================
   def compute_sol_rom(

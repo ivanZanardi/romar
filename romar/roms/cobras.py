@@ -180,40 +180,42 @@ class CoBRAS(Basic):
     """
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
-    # > Time grid
-    tmin = float(data["tmin"])
-    t = data["t"].reshape(-1)
-    nt = len(t)
-    # > Solution
-    y = data["y"].T
-    rho = float(data["rho"])
-    # Set weights
-    w_meas = 1.0/np.sqrt(nb_meas)
-    w_t, w_mu = [data[k] for k in ("w_t", "w_mu")]
-    if (not use_quad_w):
-      w_mu = 1.0/np.sqrt(nb_mu)
-      w_t[:] = 1.0/np.sqrt(nt)
-    # Build an interpolator for the solution
-    sol_interp = self._build_sol_interp(t, y)
-    # Loop over each initial time for adjoint simulations
-    for j in range(nt-1):
-      # Generate a time grid for the j-th linear model
-      tj = np.geomspace(t[j]+1e-15, t[-1], num=100)
-      yj = sol_interp(tj)
-      tj -= tj[0]
-      # Determine the maximum valid time for linear model approximation
-      tmax = self.system.compute_lin_tmax(tj, yj, rho, err_max)
-      # Compute the combined quadrature weight (mu and t)
-      wij = w_mu*w_t[j]
-      if (tmax > tmin):
-        # Generate a time grid for the j-th linear adjoint simulation
-        tadj = np.geomspace(tmin, tmax, num=nb_meas)
-        # Solve the j-th linear adjoint model
-        Yij = w_meas*self._solve_adjoint_lin(tadj, y[j], rho).T
-        # Store samples for gradient covariance matrix
-        Y.append(wij*Yij)
-      # Store samples for state covariance matrix
-      X.append(wij*self._apply_scaling(y[j]))
+    if (data is not None):
+      # Unpack
+      # > Time grid
+      tmin = float(data["tmin"])
+      t = data["t"].reshape(-1)
+      nt = len(t)
+      # > Solution
+      y = data["y"].T
+      rho = float(data["rho"])
+      # Set weights
+      w_meas = 1.0/np.sqrt(nb_meas)
+      w_t, w_mu = [data[k] for k in ("w_t", "w_mu")]
+      if (not use_quad_w):
+        w_mu = 1.0/np.sqrt(nb_mu)
+        w_t[:] = 1.0/np.sqrt(nt)
+      # Build an interpolator for the solution
+      sol_interp = self._build_sol_interp(t, y)
+      # Loop over each initial time for adjoint simulations
+      for j in range(nt-1):
+        # Generate a time grid for the j-th linear model
+        tj = np.geomspace(t[j]+1e-15, t[-1], num=100)
+        yj = sol_interp(tj)
+        tj -= tj[0]
+        # Determine the maximum valid time for linear model approximation
+        tmax = self.system.compute_lin_tmax(tj, yj, rho, err_max)
+        # Compute the combined quadrature weight (mu and t)
+        wij = w_mu*w_t[j]
+        if (tmax > tmin):
+          # Generate a time grid for the j-th linear adjoint simulation
+          tadj = np.geomspace(tmin, tmax, num=nb_meas)
+          # Solve the j-th linear adjoint model
+          Yij = w_meas*self._solve_adjoint_lin(tadj, y[j], rho).T
+          # Store samples for gradient covariance matrix
+          Y.append(wij*Yij)
+        # Store samples for state covariance matrix
+        X.append(wij*self._apply_scaling(y[j]))
 
   def _build_sol_interp(
     self,

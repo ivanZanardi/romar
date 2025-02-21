@@ -30,7 +30,9 @@ class Data(object):
     self.system = system
     # Grids
     self.grids = grids
+    # > Time grid
     self.tmin = self.grids["t"]["start"]
+    self.tvec = np.geomspace(**self.grids["t"])
     # Saving options
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
@@ -98,7 +100,7 @@ class Data(object):
     # Compute solutions
     return self.compute_sols(
       mu=mu,
-      t=np.geomspace(**self.grids["t"]),
+      t=self.tvec,
       nb_workers=nb_workers
     )
 
@@ -201,7 +203,7 @@ class Data(object):
       # > Generate a time quadrature grid and associated weights
       t, w_t = self._get_quad_t(tmin)
     else:
-      tmin = self.tmin
+      tmin = np.amin(t[t>0.0])
       w_t = None
     # Solve the nonlinear forward problem to compute the state evolution
     y, runtime = self.system.solve_fom(t, y0, rho)
@@ -248,12 +250,9 @@ class Data(object):
     :rtype: Tuple[np.ndarray]
     """
     self.grids["t"]["start"] = tmin
-    x, w = ops.get_quad_1d(
-      x=self.system.get_tgrid(**self.grids["t"]),
-      quad="gl",
-      deg=deg,
-      dist="uniform"
-    )
+    x = np.geomspace(**self.grids["t"])
+    x = np.insert(x, 0, 0.0)
+    x, w = ops.get_quad_1d(x=x, quad="gl", deg=deg, dist="uniform")
     return x, np.sqrt(w)
 
   def _compute_scalings(

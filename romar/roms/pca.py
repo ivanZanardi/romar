@@ -125,14 +125,16 @@ class PCA(Basic):
     """
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
-    t, y, w_t, w_mu = [data[k] for k in ("t", "y", "w_t", "w_mu")]
-    # Set weights
-    if (not use_quad_w):
-      w_mu = 1.0/np.sqrt(nb_mu)
-      w_t[:] = 1.0/np.sqrt(len(t))
-    w_t = w_t.reshape(-1,1)
-    # Scale
-    X.append(w_mu * w_t * self._apply_scaling(y.T))
+    if (data is not None):
+      # Unpack
+      t, y, w_t, w_mu = [data[k] for k in ("t", "y", "w_t", "w_mu")]
+      # Set weights
+      if (not use_quad_w):
+        w_mu = 1.0/np.sqrt(nb_mu)
+        w_t[:] = 1.0/np.sqrt(len(t))
+      w_t = w_t.reshape(-1,1)
+      # Scale
+      X.append(w_mu * w_t * self._apply_scaling(y.T))
 
   # Compute principal components
   # ===================================

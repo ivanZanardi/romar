@@ -35,12 +35,12 @@
         "rho": {
           "start": 1e-3,
           "stop": 1e-1,
-          "num": 1
+          "num": 6
         },
         "Th": {
           "start": 2e4,
           "stop": 5e4,
-          "num": 2
+           "num": 26
         },
         "Te": {
           "start": 293.6,
