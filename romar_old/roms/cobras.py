@@ -35,7 +35,8 @@ class CoBRAS(Basic):
   def __init__(
     self,
     system: Any,
-    path_to_data: str,
+    tgrid: Dict[str, float],
+    quad_mu: Dict[str, np.ndarray],
     scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
     xscale: Optional[Union[str, np.ndarray]] = None,
@@ -69,19 +70,29 @@ class CoBRAS(Basic):
 
     :raises ValueError: If `tgrid` does not contain the required keys.
     """
-    super(CoBRAS, self).__init__(
-      system, path_to_data, scale, xref, xscale, path_to_saving
-    )
+    super(CoBRAS, self).__init__(path_to_saving)
+    # Validate required `tgrid` keys
+    tgrid_keys = {"start", "stop", "num"}
+    if (not tgrid_keys.issubset(tgrid.keys())):
+      raise ValueError(f"'tgrid' must contain keys: {tgrid_keys}. " \
+                       f"Received: {tgrid.keys()}")
+    self.tgrid = tgrid
+    self.tmin = self.tgrid["start"]
+    # Store system and quadrature points
+    self.system = system
+    self.quad_mu = quad_mu
+    # Set scaling if system equations are defined
+    self._set_scaling(self.system.nb_eqs, xref, xscale, active=scale)
 
   # Compute covariance matrices
   # ===================================
   def compute_cov_mats(
     self,
-    irange: List[int],
     nb_meas: int = 5,
+    noise: bool = False,
     err_max: float = 25.0,
-    use_quad_w: bool = True,
-    nb_workers: int = 1
+    nb_workers: int = 1,
+    fix_tmin: bool = False
   ) -> Tuple[np.ndarray]:
     """
     Compute state and gradient covariance matrices from system simulations.
@@ -107,14 +118,15 @@ class CoBRAS(Basic):
 
     :return: Tuple containing:
             - `X` (np.ndarray): Unweighted state covariance matrix.
-            - `X` (np.ndarray): Weighted state covariance matrix.
-            - `Y` (np.ndarray): Weighted gradient covariance matrix.
+            - `Xw` (np.ndarray): Weighted state covariance matrix.
+            - `Yw` (np.ndarray): Weighted gradient covariance matrix.
     :rtype: Tuple[np.ndarray]
     """
-    # Loop over computed solutions
-    irange = np.sort(irange)
+    # Unpack initial conditions quadrature points and weights
+    mu, w_mu = self.quad_mu["x"], self.quad_mu["w"]
+    # Loop over initial conditions quadrature points
     iterable = tqdm(
-      iterable=range(*irange),
+      iterable=range(len(mu)),
       ncols=80,
       desc="Trajectories",
       file=sys.stdout
@@ -123,36 +135,47 @@ class CoBRAS(Basic):
       # Define input arguments for covariance matrices calculation
       kwargs = dict(
         X=manager.list(),
-        Y=manager.list(),
-        nb_mu=irange[1]-irange[0],
+        Xw=manager.list(),
+        Yw=manager.list(),
         nb_meas=nb_meas,
+        noise=noise,
         err_max=err_max,
-        use_quad_w=use_quad_w
+        fix_tmin=fix_tmin
       )
       if (nb_workers > 1):
         # Run jobs in parallel
-        fun = env.make_fun_parallel(self._compute_cov_mats)
         jl.Parallel(nb_workers)(
-          jl.delayed(fun)(index=i, **kwargs) for i in iterable
+          jl.delayed(env.make_fun_parallel(self._compute_cov_mats))(
+            mu=mu[i],
+            w_mu=w_mu[i],
+            **kwargs
+          ) for i in iterable
         )
       else:
         # Run jobs in series
         for i in iterable:
-          self._compute_cov_mats(index=i, **kwargs)
+          self._compute_cov_mats(
+            mu=mu[i],
+            w_mu=w_mu[i],
+            **kwargs
+          )
       # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
-      Y = np.vstack(list(kwargs["Y"])).T
-    return X, Y
+      Xw = np.vstack(list(kwargs["Xw"])).T
+      Yw = np.vstack(list(kwargs["Yw"])).T
+    return X, Xw, Yw
 
   def _compute_cov_mats(
     self,
-    index: int,
     X: List[np.ndarray],
-    Y: List[np.ndarray],
-    nb_mu: int,
+    Xw: List[np.ndarray],
+    Yw: List[np.ndarray],
+    mu: np.ndarray,
+    w_mu: float,
     nb_meas: int = 5,
+    noise: bool = False,
     err_max: float = 25.0,
-    use_quad_w: bool = True
+    fix_tmin: bool = False
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -160,45 +183,56 @@ class CoBRAS(Basic):
 
     This function evaluates state trajectories and their corresponding gradient
     adjoint solutions to construct weighted covariance matrices. The computed
-    matrices are stored in the provided lists (`X`, `X`, and `Y`).
+    matrices are stored in the provided lists (`X`, `Xw`, and `Yw`).
 
-    :param X: List to store weighted state covariance matrix contributions.
+    :param X: List to store unweighted state covariance matrix samples.
     :type X: List[np.ndarray]
-    :param Y: List to store weighted gradient covariance matrix contributions.
-    :type Y: List[np.ndarray]
+    :param Xw: List to store weighted state covariance matrix contributions.
+    :type Xw: List[np.ndarray]
+    :param Yw: List to store weighted gradient covariance matrix contributions.
+    :type Yw: List[np.ndarray]
+    :param mu: Quadrature point representing an initial condition.
+    :type mu: np.ndarray
+    :param w_mu: Weight associated with the quadrature point `mu`.
+    :type w_mu: float
     :param nb_meas: Number of measurement points for adjoint simulations.
                     Default is 5.
     :type nb_meas: int, optional
+    :param noise: If True, perturbs the initial conditions with Gaussian noise
+                  (standard deviation = 0.1) to improve robustness.
+                  Default is False.
+    :type noise: bool, optional
     :param err_max: Maximum allowable error percentage between the linearized
                     and nonlinear models, used to determine the validity range
                     (`tmax`) of the linear approximation.
                     Default is 25.0.
     :type err_max: float, optional
+    :param fix_tmin: If True, forces the use of a predefined `tmin` instead
+                     of computing it dynamically from the system's timescale.
+                     Default is False.
+    :type fix_tmin: bool, optional
 
-    :return: None (results are appended to `X` and `Y`).
+    :return: None (results are appended to `X`, `Xw`, and `Yw`).
     :rtype: None
     """
-    # Load solution
-    data = utils.load_case(path=self.path_to_data, index=index)
-    # > Time grid
-    tmin = float(data["tmin"])
-    t = data["t"].reshape(-1)
-    nt = len(t)
-    # > Solution
-    y = data["y"].T
-    rho = float(data["rho"])
-    # Set weights
-    w_meas = 1.0/np.sqrt(nb_meas)
-    w_t, w_mu = [data[k] for k in ("w_t", "w_mu")]
-    if (not use_quad_w):
-      w_mu = 1.0/np.sqrt(nb_mu)
-      w_t[:] = 1.0/np.sqrt(nt)
+    # Scaling factor for output measurements
+    w_meas = 1.0 / np.sqrt(nb_meas)
+    # Compute the initial solution for the system
+    y0, rho = self.system.equil.get_init_sol(mu, noise=noise, sigma=1e-1)
+    # Determine the smallest time scale for resolving system dynamics
+    tmin = self.system.compute_timescale(y0, rho)
+    if fix_tmin:
+      tmin = max(tmin, self.tmin)
+    # Generate a time quadrature grid and associated weights
+    t, w_t = self._get_tquad(tmin)
+    # Solve the nonlinear forward problem to compute the state evolution
+    y = self.system.solve_fom(t, y0, rho)[0].T
     # Build an interpolator for the solution
     sol_interp = self._build_sol_interp(t, y)
     # Loop over each initial time for adjoint simulations
-    for j in range(nt-1):
+    for j in range(len(t)-1):
       # Generate a time grid for the j-th linear model
-      tj = np.geomspace(t[j]+1e-15, t[-1], num=100)
+      tj = np.geomspace(t[j], t[-1], num=100)
       yj = sol_interp(tj)
       tj -= tj[0]
       # Determine the maximum valid time for linear model approximation
@@ -210,10 +244,39 @@ class CoBRAS(Basic):
         tadj = np.geomspace(tmin, tmax, num=nb_meas)
         # Solve the j-th linear adjoint model
         Yij = w_meas*self._solve_adjoint_lin(tadj, y[j], rho).T
-        # Store samples for gradient covariance matrix
-        Y.append(wij*Yij)
-      # Store samples for state covariance matrix
-      X.append(wij*self._apply_scaling(y[j]))
+        # Store weights and samples for gradient covariance matrix
+        Yw.append(wij*Yij)
+      # Store weights and samples for state covariance matrix
+      Xw.append(wij*self._apply_scaling(y[j]))
+      # Not normalized state covariance matrix
+      X.append(y[j])
+
+  def _get_tquad(
+    self,
+    tmin: float,
+    deg: int = 2
+  ) -> Tuple[np.ndarray]:
+    """
+    Generate time quadrature points and weights.
+
+    :param tmin: Minimum time to resolve system dynamics.
+    :type tmin: float
+    :param deg: Degree of the quadrature rule. Defaults to 2.
+    :type deg: int
+
+    :return: Tuple containing:
+             - Time quadrature points (1D numpy array).
+             - Corresponding weights (1D numpy array).
+    :rtype: Tuple[np.ndarray]
+    """
+    self.tgrid["start"] = tmin
+    x, w = ops.get_quad_1d(
+      x=self.system.get_tgrid(**self.tgrid),
+      quad="gl",
+      deg=deg,
+      dist="uniform"
+    )
+    return x, np.sqrt(w)
 
   def _build_sol_interp(
     self,
@@ -281,19 +344,19 @@ class CoBRAS(Basic):
   # ===================================
   def compute_modes(
     self,
-    X: np.ndarray,
-    Y: np.ndarray,
+    Xw: np.ndarray,
+    Yw: np.ndarray,
     xnot: Optional[List[int]] = None,
     rank: int = 100,
     niter: int = 50
-  ) -> None:
+  ) -> Dict[str, np.ndarray]:
     """
     Compute balancing modes using covariance matrices.
 
-    :param X: Weighted state covariance matrix.
-    :type X: np.ndarray
-    :param Y: Weighted gradient covariance matrix.
-    :type Y: np.ndarray
+    :param Xw: Weighted state covariance matrix.
+    :type Xw: np.ndarray
+    :param Yw: Weighted gradient covariance matrix.
+    :type Yw: np.ndarray
     :param xnot: List of feature indices to exclude (default: None).
     :type xnot: Optional[List[int]]
     :param rank: Maximum rank for randomized SVD (default: 100).
@@ -306,8 +369,8 @@ class CoBRAS(Basic):
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
-    mask = self._make_mask(X.shape[0], xnot)
-    X, Y = X[mask], Y[mask]
+    mask = self._make_mask(Xw.shape[0], xnot)
+    X, Y = Xw[mask], Yw[mask]
     # Balance covariance matrices
     rank = min(rank, X.shape[0])
     X, Y = map(bkd.to_torch, (X, Y))
@@ -319,10 +382,11 @@ class CoBRAS(Basic):
     # Save results
     data = utils.map_nested_dict(bkd.to_numpy, {
       "s": s,
-      "phi": {r: phi[:,:r] for r in range(2,rank+1)},
-      "psi": {r: psi[:,:r] for r in range(2,rank+1)},
+      "phi": {r: phi[:,:r] for r in range(1,rank+1)},
+      "psi": {r: psi[:,:r] for r in range(1,rank+1)},
       "mask": mask,
       "xref": self.xref,
       "xscale": self.xscale
     })
     self._save(data)
+    return data

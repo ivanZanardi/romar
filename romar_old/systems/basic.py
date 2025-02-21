@@ -6,9 +6,11 @@ import signal
 import numpy as np
 import scipy as sp
 import joblib as jl
+import pandas as pd
 import tensorflow as tf
 
 from tqdm import tqdm
+from pyDOE2 import lhs
 from typing import *
 
 from .. import env
@@ -16,6 +18,7 @@ from .. import utils
 from ..roms import ROM
 from .. import backend as bkd
 from .thermochemistry import *
+from .thermochemistry.equilibrium import MU_VARS
 
 
 class Basic(object):
@@ -403,8 +406,56 @@ class Basic(object):
     t = np.insert(t, 0, 0.0)
     return t
 
-  # Postprocessing
+  # Data generation and testing
   # ===================================
+  def construct_design_mat_mu(
+    self,
+    limits: Dict[str, List[float]],
+    nb_samples: int,
+    log_vars: Tuple[str] = ("Te", "rho"),
+    eps: float = 1e-8
+  ) -> Tuple[pd.DataFrame]:
+    # Sample remaining parameters
+    design_space = [np.sort(limits[k]) for k in MU_VARS]
+    design_space = np.array(design_space).T
+    # Log-scale
+    ilog = [i for (i, k) in enumerate(MU_VARS) if (k in log_vars)]
+    design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
+    # Construct
+    ddim = design_space.shape[1]
+    dmat = lhs(ddim, samples=int(nb_samples))
+    # Rescale
+    amin, amax = design_space
+    mu = dmat * (amax - amin) + amin
+    mu[:,ilog] = np.exp(mu[:,ilog]) - eps
+    # Convert to dataframe
+    mu = pd.DataFrame(data=mu, columns=MU_VARS)
+    return mu
+
+  def compute_sol_fom(
+    self,
+    t: np.ndarray,
+    mu: np.ndarray,
+    noise: bool = False,
+    path: Optional[str] = None,
+    index: Optional[int] = None,
+    shift: int = 0,
+    filename: Optional[str] = None
+  ) -> Optional[np.ndarray]:
+    mui = mu[index] if (index is not None) else mu
+    y0, rho = self.get_init_sol(mui, noise)
+    y, runtime = self.solve_fom(t, y0, rho)
+    if (y.shape[1] == len(t)):
+      # Converged
+      data = {"index": index, "mu": mui, "t": t, "y0": y0, "rho": rho, "y": y}
+      if (index is not None):
+        index += shift
+      utils.save_case(path=path, index=index, data=data, filename=filename)
+    else:
+      # Not converged
+      runtime = None
+    return runtime
+
   def compute_sol_rom(
     self,
     path: Optional[str] = None,
@@ -445,6 +496,8 @@ class Basic(object):
       pass
     return result
 
+  # Postprocessing
+  # -----------------------------------
   def postproc_sol(self, n, Th, Te):
     return {
       "mom": self.compute_mom(n),
@@ -488,7 +541,7 @@ class Basic(object):
     return dist
 
   # Error computation
-  # ===================================
+  # -----------------------------------
   def compute_err(
     self,
     path: str,

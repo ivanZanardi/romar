@@ -1,5 +1,5 @@
 """
-Evaluate accuracy of ROM model.
+Visualize ROM vs FOM trajectories.
 """
 
 import sys
@@ -48,7 +48,7 @@ if (__name__ == "__main__"):
   print("Initialization ...")
 
   # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/error/"
+  path_to_saving = inputs["paths"]["saving"] + "/visual/"
   os.makedirs(path_to_saving, exist_ok=True)
 
   # Copy input file
@@ -75,12 +75,6 @@ if (__name__ == "__main__"):
         # Load basis
         with open(model["basis"], "rb") as file:
           _model["basis"] = pickle.load(file)
-        # Load error
-        if (model.get("error", None) is not None):
-          with open(model["error"], "rb") as file:
-            _model["error"] = pickle.load(file)
-        else:
-          _model["error"] = None
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
@@ -88,56 +82,73 @@ if (__name__ == "__main__"):
       models[name] = _model
       del _model
 
-  # Loop over ROM models
+  # Loop over test cases
   # ---------------
-  for (name, model) in models.items():
-    print("Evaluating accuracy of ROM '%s' ..." % model["name"])
+  for icase in inputs["data"]["cases"]:
+    print(f"Evaluating case '{icase}' ...")
+    # > Loop over ROM dimensions
     rrange = np.sort(inputs["rom_range"])
-    if (model["error"] is None):
+    for r in range(*rrange):
+      # > Saving folder
+      path_to_saving_i = path_to_saving + f"/case_{icase}/r{r}/"
+      os.makedirs(path_to_saving_i, exist_ok=True)
+      # > Loop over ROM models
       t = None
-      error, runtime, not_conv = {}, {}, {}
-      # Loop over ROM dimensions
-      for r in range(*rrange):
-        print("> Solving with %i dimensions ..." % r)
+      sols, errs = {}, {}
+      for (name, model) in models.items():
+        print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
         system.rom.build(
           phi=model["basis"]["phi"][r],
           psi=model["basis"]["psi"][r],
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
-        idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
-        if (idata is not None):
+        isol, _ = system.compute_sol_rom(
+          filename=inputs["data"]["path"]+f"/case_{icase}.p",
+          eps=inputs["data"].get("eps", 1e-8),
+          tout=inputs["data"].get("tout", 1e-2),
+          tlim=inputs["data"].get("tlim", None)
+        )
+        if (isol is not None):
           if (t is None):
-            t = idata["t"]
-          error[r], runtime[r] = idata["err"], iruntime
-      # Save error statistics
-      print("> Saving statistics ...")
-      # > Error
-      filename = path_to_saving + f"/{name}_err.p"
-      with open(filename, "wb") as file:
-        pickle.dump({"t": t, "data": error}, file)
-      # > Runtime and not converged cases
-      for (k, v) in (
-        ("runtime", runtime),
-        ("not_conv", not_conv)
-      ):
-        filename = path_to_saving + f"/{name}_{k}.json"
-        with open(filename, "w") as file:
-          json.dump(v, file, indent=2)
-    else:
-      t = model["error"]["t"]
-      error = {}
-      for r in range(*rrange):
-        if (r in model["error"]["data"]):
-          error[r] = model["error"]["data"][r]
-    # Plot error statistics
-    print("> Plotting error evolution ...")
-    pp.plot_err_evolution(
-      path=path_to_saving+f"/{name}/",
-      t=t,
-      error=error,
-      species=system.mix.species,
-      rrange=rrange,
-      **inputs["plot"]
-    )
+            t = isol.pop("t").squeeze()
+          if ("FOM" not in sols):
+            sols["FOM"] = isol.pop("FOM")
+          sols[model["name"]] = isol.pop("ROM")
+          errs[model["name"]] = isol.pop("err")
+
+      # > Postprocessing
+      print(f"> Postprocessing with {r} dimensions ...")
+      plot_evol_kwargs = dict(
+        path=path_to_saving_i,
+        t=t,
+        y=sols,
+        err=errs,
+        err_scale=inputs["plot"].get("err_scale", "log"),
+        tlim=inputs["plot"]["tlim"][icase],
+        hline=inputs["plot"].get("hline", None),
+        ylim_err=inputs["plot"].get("ylim_err", None)
+      )
+      pp.plot_temp_evolution(
+        **plot_evol_kwargs
+      )
+      pp.plot_mom_evolution(
+        **plot_evol_kwargs,
+        species=system.mix.species,
+        labels=inputs["plot"]["labels"],
+        max_mom=inputs["plot"].get("max_mom", 2)
+      )
+      plot_dist_kwargs = dict(
+        path=path_to_saving_i,
+        t=t,
+        y=sols,
+        species=system.mix.species,
+        markersize=inputs["plot"].get("markersize", 1)
+      )
+      pp.plot_multi_dist_2d(
+        **plot_dist_kwargs,
+        teval=inputs["plot"]["teval"][icase]
+      )
+      if inputs["plot"]["animate"]:
+        pp.animate_dist(**plot_dist_kwargs)
 
   print("Done!")

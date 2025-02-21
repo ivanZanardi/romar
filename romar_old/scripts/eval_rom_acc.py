@@ -92,7 +92,7 @@ if (__name__ == "__main__"):
   # ---------------
   for (name, model) in models.items():
     print("Evaluating accuracy of ROM '%s' ..." % model["name"])
-    rrange = np.sort(inputs["rom_range"])
+    rrange = inputs["rom_range"]
     if (model["error"] is None):
       t = None
       error, runtime, not_conv = {}, {}, {}

@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Union
 # =====================================
 def get_class(
   modules: Union[types.ModuleType, List[types.ModuleType]],
-  name: Optional[str] = None,
+  name: Union[str, None] = None,
   kwargs: Union[dict, None] = None
 ) -> callable:
   """
@@ -81,7 +81,7 @@ def save_case(
   path: str,
   index: int,
   data: Any,
-  filename: Optional[str] = None
+  filename: Union[str, None] = None
 ) -> None:
   """
   Save simluated case to a file with specific format.
@@ -105,10 +105,10 @@ def save_case(
     pickle.dump(data, file)
 
 def load_case(
-  path: Optional[str] = None,
-  index: Optional[int] = 0,
-  key: Optional[str] = None,
-  filename: Optional[str] = None
+  path: Union[str, None] = None,
+  index: Union[int, None] = 0,
+  key: Union[str, None] = None,
+  filename: Union[str, None] = None
 ) -> Any:
   """
   Load simluated case from a file and optionally retrieve a specific item.
@@ -122,7 +122,7 @@ def load_case(
   :param index: Index used to generate the filename.
   :type index: int
   :param key: Optional key to retrieve a specific item from the data.
-  :type key: Optional[str]
+  :type key: Union[str, None]
 
   :return: The data from the file, or the specific item if a key is provided.
   :rtype: Any
@@ -140,11 +140,10 @@ def load_case(
 def load_case_parallel(
   path: str,
   irange: List[int],
-  key: Optional[str] = None,
+  key: Union[str, None] = None,
   nb_workers: int = 1,
   desc: Optional[str] = "Cases",
-  delimiter: str = "  ",
-  verbose: bool = True
+  delimiter: str = "  "
 ) -> List[Any]:
   """
   Load simluated cases in parallel or sequentially based on the number
@@ -158,7 +157,7 @@ def load_case_parallel(
   :param range: Range of indices for the cases to be loaded.
   :type range: List[int]
   :param key: Optional key to pass to the `load_case` function.
-  :type key: Optional[str]
+  :type key: Union[str, None]
   :param nb_workers: Number of parallel workers to use. Default is 1.
   :type nb_workers: int
 
@@ -170,8 +169,7 @@ def load_case_parallel(
     iterable=range(*irange),
     ncols=80,
     desc=delimiter+desc if (desc is not None) else None,
-    file=sys.stdout,
-    disable=(not verbose)
+    file=sys.stdout
   )
   if (nb_workers > 1):
     return jl.Parallel(nb_workers)(

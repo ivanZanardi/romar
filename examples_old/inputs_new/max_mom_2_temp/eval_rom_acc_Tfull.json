@@ -28,16 +28,18 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/cobras_basis.p",
+      "error": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp2/error/cobras_err.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/pca_basis.p",
+      "error": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp2/error/pca_err.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp3/"
   },
   "data": {
     "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
@@ -56,22 +58,22 @@
     },
     "tlim": null,
     "ylim_err": {
-      "dist": [8e-2, 2e2],
+      "dist": [8e-2, 1e3],
       "temp": {
-        "Th": [1e-6, 2e0],
-        "Te": [1e-3, 2e1]
+        "Th": [1e-6, 1e1],
+        "Te": [1e-3, 5e1]
       },
       "mom": {
         "Ar": {
           "m0": [1e-6, 2e0],
-          "m1": [1e-2, 1e1]
+          "m1": [1e-2, 1e2]
         },
         "Arp": {
-          "m0": [1e-2, 2e2],
+          "m0": [1e-2, 5e2],
           "m1": [1e-3, 1e1]
         },
         "em": {
-          "m0": [1e-2, 2e2],
+          "m0": [1e-2, 5e2],
           "m1": [1e-1, 1e1]
         }
       }
@@ -84,6 +86,6 @@
     },
     "max_mom": 2
   },
-  "rom_range": [5,12],
+  "rom_range": [5,12,2],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

@@ -4,7 +4,7 @@ import numpy as np
 import dill as pickle
 
 from .utils import init_scaling_param
-from typing import *
+from typing import Dict, List, Optional, Union
 
 
 class Basic(abc.ABC):
@@ -17,11 +17,6 @@ class Basic(abc.ABC):
   # ===================================
   def __init__(
     self,
-    system: Any,
-    path_to_data: str,
-    scale: bool = False,
-    xref: Optional[Union[str, np.ndarray]] = None,
-    xscale: Optional[Union[str, np.ndarray]] = None,
     path_to_saving: str = "./"
   ) -> None:
     """
@@ -32,21 +27,9 @@ class Basic(abc.ABC):
     """
     # Class name
     self.name = self.__class__.__name__.lower()
-    # Store system
-    self.system = system
-    # Path to solutions
-    self.path_to_data = path_to_data
-    # Set scaling if system equations are defined
-    self._set_scaling(self.system.nb_eqs, xref, xscale, active=scale)
     # Saving options
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)
-
-  # Compute covariance matrices
-  # ===================================
-  @abc.abstractmethod
-  def compute_cov_mats(self, *args, **kwargs) -> None:
-    pass
 
   # Compute modes
   # ===================================
