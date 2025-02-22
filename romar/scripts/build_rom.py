@@ -74,6 +74,11 @@ if (__name__ == "__main__"):
   # ROMs
   # ---------------
   for (name, opts) in inputs["models"].items():
+    # Model checking
+    if (name not in roms.VALID_ROMS):
+      raise ValueError(
+        f"Unsupported ROM model: '{name}'. Valid options: {roms.VALID_ROMS}"
+      )
     # Model initialization
     print(f"{name} model")
     model = utils.get_class(
