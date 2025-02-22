@@ -185,6 +185,8 @@ class CoBRASLin(CoBRAS):
           Yi = w_mu * w_t[i] * w_meas * Yi
           Y.append(Yi)
           conv_adj.append(self.nb_out)
+        else:
+          conv_adj.append(0)
 
   def _solve_adj(
     self,
