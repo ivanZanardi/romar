@@ -100,7 +100,7 @@ class PCA(Basic):
           self._compute_cov_mats(index=i, **kwargs)
       # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
-    return X
+    return {"X": X}
 
   def _compute_cov_mats(
     self,

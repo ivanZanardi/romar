@@ -35,22 +35,6 @@ from romar import roms
 from romar import utils
 from romar import systems
 
-# Utils
-# =====================================
-def _get_cov_mats(model, opts):
-  if (not opts.get("read", False)):
-    print("> Computing covariance matrices ...")
-    cov_mats = model.compute_cov_mats(**opts["compute"])
-    if opts.get("save", False):
-      filename = os.path.join(path_to_saving, f"{model.name}_cov_mats.p")
-      with open(filename, "wb") as file:
-        pickle.dump(cov_mats, file)
-  else:
-    print("> Reading covariance matrices ...")
-    with open(opts["filename"], "rb") as file:
-      cov_mats = pickle.load(file)
-  return cov_mats
-
 # Main
 # =====================================
 if (__name__ == "__main__"):
@@ -76,51 +60,46 @@ if (__name__ == "__main__"):
 
   # Scaling
   # ---------------
-  scaling = None
+  scale = False
+  scaling = {}
   scaling_opts = inputs.get("scaling", {})
   if ("filename" in scaling_opts):
-    scaling = scaling_opts.get("method", None)
-    if (scaling is not None):
+    scale = scaling_opts.get("active", False)
+    method = scaling_opts.get("method", None)
+    if (method is not None):
       with open(scaling_opts["filename"], "rb") as file:
         scalings = pickle.load(file)
-      scaling = scalings[scaling]
+      scaling = scalings[method]
 
-  # CoBRAS
+  # ROMs
   # ---------------
-  # Model
-  print("CoBRAS model")
-  cobras_opts = inputs["cobras"].get("init", {})
-  cobras_opts.update(dict(
-    system=system,
-    path_to_data=inputs["paths"]["data"],
-    path_to_saving=path_to_saving
-  ))
-  if (scaling is not None):
-    cobras_opts.update(scaling)
-  cobras = roms.CoBRAS(**cobras_opts)
-  # Covariance matrices
-  X, Y = _get_cov_mats(model=cobras, opts=inputs["cobras"]["cov_mats"])
-  # Modes
-  print("> Computing modes ...")
-  cobras.compute_modes(X=X, Y=Y, **inputs["cobras"]["modes"])
-
-  # PCA
-  # ---------------
-  # Model
-  print("PCA model")
-  pca_opts = inputs["pca"].get("init", {})
-  pca_opts.update(dict(
-    system=system,
-    path_to_data=inputs["paths"]["data"],
-    path_to_saving=path_to_saving
-  ))
-  if (scaling is not None):
-    pca_opts.update(scaling)
-  pca = roms.PCA(**pca_opts)
-  # Covariance matrices
-  X = _get_cov_mats(model=pca, opts=inputs["pca"]["cov_mats"])
-  # Modes
-  print("> Computing modes ...")
-  pca.compute_modes(X=X, **inputs["pca"]["modes"])
+  for (name, opts) in inputs["models"].items():
+    # Model initialization
+    print(f"{name} model")
+    model = utils.get_class(
+      modules=[roms],
+      name=name
+    )(
+      system=system,
+      path_to_data=inputs["paths"]["data"],
+      scale=scale,
+      path_to_saving=path_to_saving,
+      **scaling
+    )
+    # Covariance matrices
+    if (not opts["cov_mats"].get("read", False)):
+      print("> Computing covariance matrices ...")
+      cov_mats = model.compute_cov_mats(**opts["cov_mats"]["compute"])
+      if opts["cov_mats"].get("save", False):
+        filename = os.path.join(path_to_saving, f"{model.name}_cov_mats.p")
+        with open(filename, "wb") as file:
+          pickle.dump(cov_mats, file)
+    else:
+      print("> Reading covariance matrices ...")
+      with open(opts["cov_mats"]["filename"], "rb") as file:
+        cov_mats = pickle.load(file)
+    # Modes
+    print("> Computing modes ...")
+    model.compute_modes(**cov_mats, **opts["modes"])
 
   print("Done!")

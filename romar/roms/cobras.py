@@ -174,7 +174,7 @@ class CoBRAS(Basic):
       # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
       Y = np.vstack(list(kwargs["Y"])).T
-    return X, Y
+    return {"X": X, "Y": Y}
 
   def _compute_cov_mats(
     self,
