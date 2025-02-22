@@ -1,0 +1,84 @@
+{
+  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64"
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_proj": false,
+      "use_factorial": true,
+      "use_tables": false
+    },
+    "c_mat": {
+      "max_mom": 2,
+      "state_specs": false,
+      "include_em": false,
+      "include_temp": false
+    }
+  },
+  "scaling": {
+    "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/scalings.p",
+    "method": "pareto"
+  },
+  "cobras": {
+    "init": {
+      "scale": true
+    },
+    "cov_mats": {
+      "compute": {
+        "irange": [0,500],
+        "nb_meas": 5,
+        "err_max": 25.0,
+        "use_quad_w": true,
+        "nb_workers": 10
+      },
+      "read": false,
+      "save": true,
+      "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras_cov_mats.p"
+    },
+    "modes": {
+      "xnot": [-2,-1],
+      "rank": 50,
+      "niter": 100
+    }
+  },
+  "pca": {
+    "init": {
+      "scale": true
+    },
+    "cov_mats": {
+      "compute": {
+        "irange": [0,500],
+        "use_quad_w": true,
+        "nb_workers": 10
+      },
+      "read": false,
+      "save": true,
+      "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca_cov_mats.p"
+    },
+    "modes": {
+      "rotation": "varimax",
+      "xnot": [-2,-1],
+      "rank": 50,
+      "niter": 100
+    }
+  },
+  "paths": {
+    "data": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/",
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/"
+  }
+}
