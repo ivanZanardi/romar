@@ -1,17 +1,9 @@
-import sys
-import torch
 import numpy as np
 import scipy as sp
-import joblib as jl
-import multiprocessing
 
-from tqdm import tqdm
 from typing import *
 
-from .. import env
-from .. import ops
 from .. import utils
-from .. import backend as bkd
 from .cobras import CoBRAS
 
 
@@ -179,9 +171,9 @@ class CoBRASLin(CoBRAS):
         ti = np.geomspace(t0, t[-1], num=100)
         yi = ysol(ti)
         ti = ti-t0
-        # Determine the maximum valid time for linear model approximation
+        # > Determine the maximum valid time for linear model approximation
         tmax = self.system.compute_lin_tmax(ti, yi, rho, err_max)
-        # Solve the adjoint problem and store samples
+        # > Solve the adjoint problem and store samples
         if (tmax > 0.0):
           Yi = self._solve_adj(
             t0=t0,
@@ -228,6 +220,6 @@ class CoBRASLin(CoBRAS):
       L = np.diag(np.exp(ti*l))
       g[i] = Vinv.T @ (L @ VC)
     # Manipulate tensor
-    g = np.transpose(g, axes=(2,0,1))
-    g = np.reshape(g, (-1,shape[1]))
-    return g
+    g = np.transpose(g, axes=(1,2,0))
+    g = np.reshape(g, (shape[1],-1))
+    return g.T
