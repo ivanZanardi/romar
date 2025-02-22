@@ -36,26 +36,20 @@
     "method": "pareto"
   },
   "models": {
-    "CoBRAS": {
+    "PCA": {
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
-          "final_times": [1e-7, 1e-6, 1e-5],
-          "perc_init_times": 0.2,
-          "rtol": 1e-2,
-          "atol": 1e-4,
-          "tout": 30.0,
-          "nb_meas": 5,
+          "irange": [0,500],
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras_cov_mats.p"
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca/cov_mats.p"
       },
       "modes": {
+        "rotation": "varimax",
         "xnot": [-2,-1],
-        "max_y_norm": null,
         "rank": 50,
         "niter": 50
       }
@@ -63,15 +57,15 @@
     "CoBRASLin": {
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
+          "irange": [0,500],
           "err_max": 25.0,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin_cov_mats.p"
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin/cov_mats.p"
       },
       "modes": {
         "xnot": [-2,-1],
@@ -80,20 +74,26 @@
         "niter": 50
       }
     },
-    "PCA": {
+    "CoBRAS": {
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
+          "irange": [0,500],
+          "final_times": [1e-7, 1e-6, 1e-5],
+          "perc_init_times": 0.3,
+          "rtol": 1e-2,
+          "atol": 1e-4,
+          "tout": 30.0,
+          "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 20
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca_cov_mats.p"
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras/cov_mats.p"
       },
       "modes": {
-        "rotation": "varimax",
         "xnot": [-2,-1],
+        "max_y_norm": null,
         "rank": 50,
         "niter": 50
       }
