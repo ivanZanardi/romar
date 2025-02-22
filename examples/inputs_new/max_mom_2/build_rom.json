@@ -44,6 +44,7 @@
           "perc_init_times": 0.2,
           "rtol": 1e-2,
           "atol": 1e-4,
+          "tout": 30.0,
           "nb_meas": 5,
           "use_quad_w": false,
           "nb_workers": 2

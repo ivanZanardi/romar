@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import signal
 import inspect
 import collections
 import numpy as np
@@ -296,8 +297,29 @@ def l2_relative_error(y_true, y_pred, axis=-1, eps=1e-7):
 # Timeout
 # =====================================
 class TimeoutException(Exception):
-    """Custom exception for timeout handling."""
-    pass
+  """Custom exception for timeout handling."""
+  pass
 
 def timeout_handler(signum, frame):
-    raise TimeoutException("Solver exceeded the allowed execution time.")
+  raise TimeoutException("Solver exceeded the allowed execution time.")
+
+def make_fun_tout(
+  fun: callable,
+  tout: float = 1e2
+) -> callable:
+  def fun_tout(*args, **kwargs):
+    # Set signal alarm for timeout
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(int(tout))
+    try:
+      # Call function
+      output = fun(*args, **kwargs)
+      # Disable alarm after successful execution
+      signal.alarm(0)
+    except TimeoutException as e:
+      output = None
+    finally:
+      # Ensure alarm is disabled in case of early return
+      signal.alarm(0)
+    return output
+  return fun_tout

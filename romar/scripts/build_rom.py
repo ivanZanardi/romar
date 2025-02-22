@@ -88,7 +88,7 @@ if (__name__ == "__main__"):
       system=system,
       path_to_data=inputs["paths"]["data"],
       scale=scale,
-      path_to_saving=path_to_saving,
+      path_to_saving=path_to_saving + f"/{name.lower()}/",
       **scaling
     )
     # Covariance matrices
@@ -96,12 +96,13 @@ if (__name__ == "__main__"):
       print("> Computing covariance matrices ...")
       cov_mats = model.compute_cov_mats(**opts["cov_mats"]["compute"])
       if opts["cov_mats"].get("save", False):
-        filename = os.path.join(path_to_saving, f"{model.name}_cov_mats.p")
+        filename = model.path_to_saving + "/cov_mats.p"
         with open(filename, "wb") as file:
           pickle.dump(cov_mats, file)
     else:
       print("> Reading covariance matrices ...")
-      with open(opts["cov_mats"]["filename"], "rb") as file:
+      filename = opts["cov_mats"]["filename"]
+      with open(filename, "rb") as file:
         cov_mats = pickle.load(file)
     # Modes
     print("> Computing modes ...")

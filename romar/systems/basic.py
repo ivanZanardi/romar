@@ -338,20 +338,18 @@ class Basic(object):
 
     :raises TimeoutException: If the solver exceeds the allowed execution time.
     """
-    # Set signal alarm for timeout
-    signal.signal(signal.SIGALRM, utils.timeout_handler)
-    signal.alarm(int(tout))
-    try:
-      # Solve the system
-      y, runtime = self._solve(t, y0, linear)
-      # Disable alarm after successful execution
-      signal.alarm(0)
-    except utils.TimeoutException as e:
-      y, runtime = None, None
-    finally:
-      # Ensure alarm is disabled in case of early return
-      signal.alarm(0)
-    return y, runtime
+    output = utils.make_fun_tout(
+      fun=self._solve,
+      tout=tout
+    )(
+      t=t,
+      y0=y0,
+      linear=linear
+    )
+    if (output is not None):
+      return output
+    else:
+      return None, None
 
   def solve_fom(
     self,

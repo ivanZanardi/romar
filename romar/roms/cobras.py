@@ -74,6 +74,7 @@ class CoBRAS(Basic):
     )
     # Output matrix
     self.C = self.system.C @ self.xscale_mat
+    self.nb_out = self.C.shape[0]
 
   # Compute covariance matrices
   # ===================================
@@ -84,6 +85,7 @@ class CoBRAS(Basic):
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-5,
+    tout: float = 30.0,
     nb_meas: int = 5,
     use_quad_w: bool = True,
     nb_workers: int = 1
@@ -111,7 +113,8 @@ class CoBRAS(Basic):
         final_times=final_times,
         perc_init_times=perc_init_times,
         rtol=rtol,
-        atol=atol
+        atol=atol,
+        tout=tout
       ),
       irange=irange,
       nb_meas=nb_meas,
@@ -159,6 +162,7 @@ class CoBRAS(Basic):
       kwargs.update(dict(
         X=manager.list(),
         Y=manager.list(),
+        conv_adj=manager.list(),
         nb_mu=irange[-1]-irange[0],
         nb_meas=nb_meas,
         use_quad_w=use_quad_w
@@ -176,6 +180,10 @@ class CoBRAS(Basic):
       # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
       Y = np.vstack(list(kwargs["Y"])).T
+      # Converged adjoint problems
+      conv_adj = list(kwargs["conv_adj"])
+      nb_adj = len(conv_adj) * self.nb_out
+      print(f"Total converged adjoints: {sum(conv_adj)}/{nb_adj}")
     return {"X": X, "Y": Y}
 
   def _compute_cov_mats(
@@ -183,11 +191,13 @@ class CoBRAS(Basic):
     index: int,
     X: List[np.ndarray],
     Y: List[np.ndarray],
+    conv_adj: List[int],
     nb_mu: int,
     final_times: List[float],
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-5,
+    tout: float = 30.0,
     nb_meas: int = 5,
     use_quad_w: bool = True
   ) -> None:
@@ -261,16 +271,18 @@ class CoBRAS(Basic):
         tf = t0 + np.random.choice(final_times)
         tf = min(tf, t[-1])
         # > Solve the adjoint problem and store samples
-        Yi = self._solve_adj(
+        Yi, conv = self._solve_adj(
           t0=t0,
           tf=tf,
           nb_meas=nb_meas,
           ysol=ysol,
           rtol=rtol,
-          atol=atol
+          atol=atol,
+          tout=tout
         )
         Yi = w_mu * w_t[i] * w_meas * Yi
         Y.append(Yi)
+        conv_adj.append(conv)
 
   def _solve_adj(
     self,
@@ -279,16 +291,23 @@ class CoBRAS(Basic):
     nb_meas: int,
     ysol: sp.interpolate.interp1d,
     rtol: float = 1e-3,
-    atol: float = 1e-5
+    atol: float = 1e-5,
+    tout: float = 30.0
   ) -> np.ndarray:
     """solve the adjoint problem"""
     # Generate a time grid
     t = np.geomspace(t0, tf, num=nb_meas+1)
     t = tf - np.flip(t)
+    # Make solve function with timout control
+    solve_ivp = utils.make_fun_tout(
+      fun=sp.integrate.solve_ivp,
+      tout=tout
+    )
     # Compute gradients
     grad = []
+    conv = 0
     for g0 in self.C:
-      g = sp.integrate.solve_ivp(
+      sol = solve_ivp(
         fun=self._fun_adj,
         t_span=[t[0],t[-1]],
         y0=g0,
@@ -299,9 +318,11 @@ class CoBRAS(Basic):
         rtol=rtol,
         atol=atol,
         jac=self._jac_adj
-      ).y
-      grad.append(g.T)
-    return np.vstack(grad)
+      )
+      if (sol is not None):
+        grad.append(sol.y.T)
+        conv += 1
+    return np.vstack(grad), conv
 
   def _fun_adj(
     self,

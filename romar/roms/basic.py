@@ -163,7 +163,7 @@ class Basic(abc.ABC):
 
     :raises OSError: If there is an issue saving the file.
     """
-    filename = os.path.join(self.path_to_saving, f"{self.name}_basis.p")
+    filename = self.path_to_saving + "/basis.p"
     try:
       with open(filename, "wb") as f:
         pickle.dump(data, f)

@@ -108,6 +108,7 @@ class CoBRASLin(CoBRAS):
     index: int,
     X: List[np.ndarray],
     Y: List[np.ndarray],
+    conv_adj: List[int],
     nb_mu: int,
     err_max: float = 25.0,
     nb_meas: int = 5,
@@ -183,6 +184,7 @@ class CoBRASLin(CoBRAS):
           )
           Yi = w_mu * w_t[i] * w_meas * Yi
           Y.append(Yi)
+          conv_adj.append(self.nb_out)
 
   def _solve_adj(
     self,
