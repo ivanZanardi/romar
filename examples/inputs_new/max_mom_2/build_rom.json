@@ -41,11 +41,12 @@
         "compute": {
           "irange": [0,2],
           "final_times": [1e-7, 1e-6, 1e-5],
-          "perc_init_times": 0.7,
-          "rtol": 1e-3,
+          "perc_init_times": 0.2,
+          "rtol": 1e-2,
+          "atol": 1e-4,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 10
+          "nb_workers": 2
         },
         "read": false,
         "save": true,
@@ -65,7 +66,7 @@
           "err_max": 25.0,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 10
+          "nb_workers": 2
         },
         "read": false,
         "save": true,
@@ -83,7 +84,7 @@
         "compute": {
           "irange": [0,2],
           "use_quad_w": false,
-          "nb_workers": 10
+          "nb_workers": 2
         },
         "read": false,
         "save": true,

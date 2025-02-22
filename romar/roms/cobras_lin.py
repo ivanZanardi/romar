@@ -145,7 +145,7 @@ class CoBRASLin(CoBRAS):
       nt = len(t)
       # Set up system
       self.system.use_rom = False
-      self.system.mix.set_rho(rho)
+      _ = self.system.set_up(y0=data["y0"], rho=rho)
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # Set weights

@@ -83,6 +83,7 @@ class CoBRAS(Basic):
     final_times: List[float],
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
+    atol: float = 1e-5,
     nb_meas: int = 5,
     use_quad_w: bool = True,
     nb_workers: int = 1
@@ -109,7 +110,8 @@ class CoBRAS(Basic):
       kwargs=dict(
         final_times=final_times,
         perc_init_times=perc_init_times,
-        rtol=rtol
+        rtol=rtol,
+        atol=atol
       ),
       irange=irange,
       nb_meas=nb_meas,
@@ -119,7 +121,7 @@ class CoBRAS(Basic):
 
   def _compute_cov_mats_loop(
     self,
-    kwargs: Dict[Any],
+    kwargs: Dict[str, Any],
     irange: List[int],
     nb_meas: int = 5,
     use_quad_w: bool = True,
@@ -154,7 +156,7 @@ class CoBRAS(Basic):
     )
     with multiprocessing.Manager() as manager:
       # Define input arguments for covariance matrices calculation
-      kwargs.upate(dict(
+      kwargs.update(dict(
         X=manager.list(),
         Y=manager.list(),
         nb_mu=irange[-1]-irange[0],
@@ -185,6 +187,7 @@ class CoBRAS(Basic):
     final_times: List[float],
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
+    atol: float = 1e-5,
     nb_meas: int = 5,
     use_quad_w: bool = True
   ) -> None:
@@ -220,7 +223,7 @@ class CoBRAS(Basic):
       nt = len(t)
       # Set up system
       self.system.use_rom = False
-      self.system.mix.set_rho(rho)
+      _ = self.system.set_up(y0=data["y0"], rho=rho)
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # Sample initial times
@@ -263,7 +266,8 @@ class CoBRAS(Basic):
           tf=tf,
           nb_meas=nb_meas,
           ysol=ysol,
-          rtol=rtol
+          rtol=rtol,
+          atol=atol
         )
         Yi = w_mu * w_t[i] * w_meas * Yi
         Y.append(Yi)
@@ -274,7 +278,8 @@ class CoBRAS(Basic):
     tf: float,
     nb_meas: int,
     ysol: sp.interpolate.interp1d,
-    rtol: float = 1e-3
+    rtol: float = 1e-3,
+    atol: float = 1e-5
   ) -> np.ndarray:
     """solve the adjoint problem"""
     # Generate a time grid
@@ -292,7 +297,7 @@ class CoBRAS(Basic):
         args=(tf, ysol),
         first_step=1e-10,
         rtol=rtol,
-        atol=0.0,
+        atol=atol,
         jac=self._jac_adj
       ).y
       grad.append(g.T)
