@@ -80,7 +80,9 @@ if (__name__ == "__main__"):
         f"Unsupported ROM model: '{name}'. Valid options: {roms.VALID_ROMS}"
       )
     # Model initialization
-    print(f"{name} model")
+    print("-"*20)
+    print(f"'{name}' model")
+    print("-"*20)
     model = utils.get_class(
       modules=[roms],
       name=name

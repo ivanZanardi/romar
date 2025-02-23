@@ -36,56 +36,18 @@
     "method": "pareto"
   },
   "models": {
-    "PCA": {
-      "cov_mats": {
-        "compute": {
-          "irange": [0,500],
-          "use_quad_w": false,
-          "nb_workers": 10
-        },
-        "read": false,
-        "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca/cov_mats.p"
-      },
-      "modes": {
-        "rotation": "varimax",
-        "xnot": [-2,-1],
-        "rank": 50,
-        "niter": 50
-      }
-    },
-    "CoBRASLin": {
-      "cov_mats": {
-        "compute": {
-          "irange": [0,500],
-          "err_max": 25.0,
-          "nb_meas": 5,
-          "use_quad_w": false,
-          "nb_workers": 10
-        },
-        "read": false,
-        "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin/cov_mats.p"
-      },
-      "modes": {
-        "xnot": [-2,-1],
-        "max_y_norm": 1e3,
-        "rank": 50,
-        "niter": 50
-      }
-    },
     "CoBRAS": {
       "cov_mats": {
         "compute": {
           "irange": [0,500],
           "final_times": [1e-7, 1e-6, 1e-5],
-          "perc_init_times": 0.33,
+          "perc_init_times": 0.3,
           "rtol": 1e-3,
           "atol": 1e-6,
           "tout": 30.0,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 20
+          "nb_workers": 1
         },
         "read": false,
         "save": true,

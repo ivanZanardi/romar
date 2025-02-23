@@ -280,8 +280,9 @@ class CoBRAS(Basic):
           atol=atol,
           tout=tout
         )
-        Yi = w_mu * w_t[i] * w_meas * Yi
-        Y.append(Yi)
+        if (Yi is not None):
+          Yi = w_mu * w_t[i] * w_meas * Yi
+          Y.append(Yi)
         conv_adj.append(conv)
 
   def _solve_adj(
@@ -298,7 +299,7 @@ class CoBRAS(Basic):
     # Generate a time grid
     t = np.geomspace(t0, tf, num=nb_meas+1)
     t = tf - np.flip(t)
-    # Make solve function with timout control
+    # Make solve function with timeout control
     solve_ivp = utils.make_fun_tout(
       fun=sp.integrate.solve_ivp,
       tout=tout
@@ -322,7 +323,8 @@ class CoBRAS(Basic):
       if (sol is not None):
         grad.append(sol.y.T)
         conv += 1
-    return np.vstack(grad), conv
+    grad = np.vstack(grad) if (len(grad) > 0) else None
+    return grad, conv
 
   def _fun_adj(
     self,
