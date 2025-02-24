@@ -41,13 +41,13 @@
         "compute": {
           "irange": [0,500],
           "final_times": [1e-7, 1e-6, 1e-5],
-          "perc_init_times": 0.3,
+          "perc_init_times": 0.33,
           "rtol": 1e-3,
           "atol": 1e-6,
           "tout": 30.0,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 1
+          "nb_workers": 20
         },
         "read": false,
         "save": true,

@@ -208,7 +208,7 @@ class Data(object):
     # Solve the nonlinear forward problem to compute the state evolution
     y, runtime = self.system.solve_fom(t, y0, rho)
     # Check convergence
-    if (y.shape[1] == len(t)):
+    if ((y is not None) and (y.shape[1] == len(t))):
       sol = {
         "index": index,
         "mu": mu,

@@ -2,7 +2,6 @@ import abc
 import sys
 import time
 import torch
-import signal
 import numpy as np
 import scipy as sp
 import joblib as jl
@@ -289,14 +288,17 @@ class Basic(object):
     self,
     t: np.ndarray,
     y0: np.ndarray,
-    linear: bool = False
-  ) -> Tuple[np.ndarray]:
+    linear: bool = False,
+    tout: float = 0.0
+  ) -> Tuple[Optional[np.ndarray]]:
     # Linear model
     if linear:
       self.compute_lin_fom_ops(y0)
+    # Make solve function with timeout control
+    solve_ivp = utils.make_solve_ivp(tout)
     # Solving
     runtime = time.time()
-    y = sp.integrate.solve_ivp(
+    sol = solve_ivp(
       fun=self.fun_lin if linear else self.fun,
       t_span=[0.0,t[-1]],
       y0=np.zeros_like(y0) if linear else y0,
@@ -306,50 +308,16 @@ class Basic(object):
       rtol=1e-6,
       atol=1e-15,
       jac=self.jac_lin if linear else self.jac,
-    ).y
-    # Linear model
-    if linear:
-      y += y0.reshape(-1,1)
+    )
     runtime = time.time()-runtime
     runtime = np.array(runtime).reshape(1)
+    # Check convergence
+    y = None
+    if (sol is not None):
+      y = sol.y
+      if linear:
+        y += y0.reshape(-1,1)
     return y, runtime
-
-  def _solve_tout(
-    self,
-    t: np.ndarray,
-    y0: np.ndarray,
-    linear: bool = False,
-    tout: int = 1e2
-  ) -> Tuple[np.ndarray]:
-    """
-    Solve the system of equations with an optional timeout.
-
-    :param t: Time grid for the solver.
-    :type t: np.ndarray
-    :param y0: Initial condition for the system.
-    :type y0: np.ndarray
-    :param linear: Whether to use a linearized version of the model.
-    :type linear: bool
-    :param tout: Maximum allowed execution time in seconds.
-    :type tout: int, optional
-
-    :return: Tuple containing the solution `y` and runtime duration.
-    :rtype: Tuple[np.ndarray, np.ndarray]
-
-    :raises TimeoutException: If the solver exceeds the allowed execution time.
-    """
-    output = utils.make_fun_tout(
-      fun=self._solve,
-      tout=tout
-    )(
-      t=t,
-      y0=y0,
-      linear=linear
-    )
-    if (output is not None):
-      return output
-    else:
-      return None, None
 
   def solve_fom(
     self,
@@ -371,7 +339,7 @@ class Basic(object):
     y0: np.ndarray,
     rho: float,
     linear: bool = False,
-    tout: int = 1e2,
+    tout: float = 1e2,
     decode: bool = True
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
@@ -381,11 +349,11 @@ class Basic(object):
     # Encode initial conditions
     z0 = self.rom.encode(y0, is_der=False)
     # Solving
-    z, runtime = self._solve_tout(t, z0, linear, tout)
+    z, runtime = self._solve(t, z0, linear, tout)
+    # Decoding
     if decode:
-      # Decode solution
       y = None
-      if (runtime is not None):
+      if (z is not None):
         y = self.rom.decode(z.T, is_der=False).T
       return y, runtime
     else:
@@ -402,19 +370,17 @@ class Basic(object):
     tout: int = 1e2,
     tlim: Optional[List[float]] = None
   ) -> Tuple[Optional[np.ndarray]]:
-    result = (None, None)
-  # try:
     # Load test case
     icase = utils.load_case(path=path, index=index, filename=filename)
     t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
     # Time window
     if (tlim is not None):
-      i = (t >= np.amin(tlim)) * (t <= np.amax(tlim))
+      i = (t >= tlim.min()) * (t <= tlim.max())
       t = t[i]
       y_fom = y_fom[:,i]
     # Solve ROM
-    y_rom, runtime = self.solve_rom(t, y0, rho, tout=tout)
-    if ((runtime is not None) and (y_rom.shape[1] == len(t))):
+    y_rom, runtime = self.solve_rom(t, y0, rho, tout)
+    if ((y_rom is not None) and (y_rom.shape[1] == len(t))):
       # Converged
       prim_fom = self.get_prim(y_fom, clip=False)
       prim_rom = self.get_prim(y_rom, clip=False)
@@ -428,10 +394,9 @@ class Basic(object):
           "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
         }
       }
-      result = (data, runtime)
-    # except:
-    #   pass
-    return result
+      return data, runtime
+    else:
+      return None, runtime
 
   def postproc_sol(self, n, Th, Te):
     return {
@@ -508,35 +473,41 @@ class Basic(object):
       )
     else:
       sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
-    # Split error values and running times
-    error, runtime = list(zip(*sols))
-    not_conv = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]
-    error = [x for x in error if (x is not None)]
-    runtime = [x for x in runtime if (x is not None)]
-    converged = len(runtime)/nb_samples
-    print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
-    if (converged >= 0.5):
-      # Stack error values
-      t = error[0]["t"]
-      _error = error[0]
-      for ierror in error[1:]:
-        _error = tf.nest.map_structure(
-          lambda e1, e2: np.vstack([e1, e2]), _error, ierror
+    # Split data values and running times
+    data, runtime = list(zip(*sols))
+    # Get converged/not converged indices
+    i_conv = np.where([(i is not None) for i in data])[0]
+    i_not_conv = np.setdiff1d(np.arange(nb_samples), i_conv)
+    # Get not converged solutions identifiers
+    not_conv = np.arange(*irange)[i_not_conv]
+    # Extract converged solutions
+    data = [data[i] for i in i_conv]
+    runtime = [runtime[i] for i in i_conv]
+    # Return converged data only
+    nb_conv = len(i_conv)
+    print(f"  Total converged cases: {nb_conv}/{nb_samples}")
+    if (nb_conv/nb_samples >= 0.8):
+      # Stack data values
+      t = data[0]["t"]
+      _data = data[0]
+      for idata in data[1:]:
+        _data = tf.nest.map_structure(
+          lambda e1, e2: np.vstack([e1, e2]), _data, idata
         )
       # Compute statistics
-      error = tf.nest.map_structure(
+      data = tf.nest.map_structure(
         lambda e: {
           "mean": np.mean(e, axis=0),
           "std": np.std(e, axis=0)
         },
-        _error
+        _data
       )
-      error["t"] = t
+      data["t"] = t
       runtime = {
         "mean": float(np.mean(runtime, 0)),
         "std": float(np.std(runtime, 0))
       }
-      return error, runtime, not_conv
+      return data, runtime, not_conv
     else:
       return None, None, not_conv
 

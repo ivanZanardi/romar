@@ -84,7 +84,7 @@ class CoBRAS(Basic):
     final_times: List[float],
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
-    atol: float = 1e-5,
+    atol: float = 1e-6,
     tout: float = 30.0,
     nb_meas: int = 5,
     use_quad_w: bool = True,
@@ -180,7 +180,7 @@ class CoBRAS(Basic):
       # Stack matrices
       X = np.vstack(list(kwargs["X"])).T
       Y = np.vstack(list(kwargs["Y"])).T
-      # Converged adjoint problems
+      # Converged adjoints
       conv_adj = list(kwargs["conv_adj"])
       nb_adj = len(conv_adj) * self.nb_out
       print(f"Total converged adjoints: {sum(conv_adj)}/{nb_adj}")
@@ -196,7 +196,7 @@ class CoBRAS(Basic):
     final_times: List[float],
     perc_init_times: float = 1.0,
     rtol: float = 1e-3,
-    atol: float = 1e-5,
+    atol: float = 1e-6,
     tout: float = 30.0,
     nb_meas: int = 5,
     use_quad_w: bool = True
@@ -292,7 +292,7 @@ class CoBRAS(Basic):
     nb_meas: int,
     ysol: sp.interpolate.interp1d,
     rtol: float = 1e-3,
-    atol: float = 1e-5,
+    atol: float = 1e-6,
     tout: float = 30.0
   ) -> np.ndarray:
     """solve the adjoint problem"""
@@ -300,10 +300,7 @@ class CoBRAS(Basic):
     t = np.geomspace(t0, tf, num=nb_meas+1)
     t = tf - np.flip(t)
     # Make solve function with timeout control
-    solve_ivp = utils.make_fun_tout(
-      fun=sp.integrate.solve_ivp,
-      tout=tout
-    )
+    solve_ivp = utils.make_solve_ivp(tout)
     # Compute gradients
     grad = []
     conv = 0
@@ -320,10 +317,10 @@ class CoBRAS(Basic):
         atol=atol,
         jac=self._jac_adj
       )
-      if (sol is not None):
+      if ((sol is not None) and (sol.y.shape[1] == nb_meas)):
         grad.append(sol.y.T)
         conv += 1
-    grad = np.vstack(grad) if (len(grad) > 0) else None
+    grad = np.vstack(grad) if (conv > 0) else None
     return grad, conv
 
   def _fun_adj(
