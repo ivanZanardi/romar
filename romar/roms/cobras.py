@@ -34,7 +34,7 @@ class CoBRAS(Basic):
   # ===================================
   def __init__(
     self,
-    system: Any,
+    system: callable,
     path_to_data: str,
     scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
@@ -89,7 +89,7 @@ class CoBRAS(Basic):
     nb_meas: int = 5,
     use_quad_w: bool = True,
     nb_workers: int = 1
-  ) -> Tuple[np.ndarray]:
+  ) -> Dict[str, np.ndarray]:
     """
     Compute state and gradient covariance matrices from system simulations.
 
@@ -129,7 +129,7 @@ class CoBRAS(Basic):
     nb_meas: int = 5,
     use_quad_w: bool = True,
     nb_workers: int = 1
-  ) -> Tuple[np.ndarray]:
+  ) -> Dict[str, np.ndarray]:
     """
     Compute state and gradient covariance matrices from system simulations.
 
@@ -249,7 +249,6 @@ class CoBRAS(Basic):
         )
       # Set weights
       # -----------
-      w_meas = 1.0/np.sqrt(nb_meas)
       w_t, w_mu = [data[k] for k in ("w_t", "w_mu")]
       if (not use_quad_w):
         w_t[:] = 1.0/np.sqrt(nt)
@@ -281,6 +280,7 @@ class CoBRAS(Basic):
           tout=tout
         )
         if (Yi is not None):
+          w_meas = 1.0/np.sqrt(conv)
           Yi = w_mu * w_t[i] * w_meas * Yi
           Y.append(Yi)
         conv_adj.append(conv)

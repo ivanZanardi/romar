@@ -36,8 +36,8 @@ import matplotlib.pyplot as plt
 plt.style.use(inputs.get("mpl_style", "default"))
 
 from romar import utils
+from romar import systems
 from romar import postproc as pp
-from romar import systems as sys_mod
 
 _VALID_ROMS = {"cobras", "cobraslin", "pca"}
 
@@ -59,7 +59,7 @@ if (__name__ == "__main__"):
   # System
   # -----------------------------------
   system = utils.get_class(
-    modules=[sys_mod],
+    modules=[systems],
     name=inputs["system"]["name"]
   )(**inputs["system"]["init"])
 
@@ -92,7 +92,7 @@ if (__name__ == "__main__"):
   # ---------------
   for (name, model) in models.items():
     print("Evaluating accuracy of ROM '%s' ..." % model["name"])
-    rrange = np.sort(inputs["rom_range"])
+    rrange = inputs["rom_range"]
     if (model["error"] is None):
       t = None
       error, runtime, not_conv = {}, {}, {}
@@ -100,8 +100,7 @@ if (__name__ == "__main__"):
       for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
         system.rom.build(
-          phi=model["basis"]["phi"][r],
-          psi=model["basis"]["psi"][r],
+          **{k: model["basis"][k][r] for k in ("phi", "psi")},
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
         idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])

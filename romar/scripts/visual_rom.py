@@ -87,7 +87,7 @@ if (__name__ == "__main__"):
   for icase in inputs["data"]["cases"]:
     print(f"Evaluating case '{icase}' ...")
     # > Loop over ROM dimensions
-    rrange = np.sort(inputs["rom_range"])
+    rrange = inputs["rom_range"]
     for r in range(*rrange):
       # > Saving folder
       path_to_saving_i = path_to_saving + f"/case_{icase}/r{r}/"
@@ -98,14 +98,13 @@ if (__name__ == "__main__"):
       for (name, model) in models.items():
         print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
         system.rom.build(
-          phi=model["basis"]["phi"][r],
-          psi=model["basis"]["psi"][r],
+          **{k: model["basis"][k][r] for k in ("phi", "psi")},
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
         isol, _ = system.compute_sol_rom(
           filename=inputs["data"]["path"]+f"/case_{icase}.p",
           eps=inputs["data"].get("eps", 1e-8),
-          tout=inputs["data"].get("tout", 1e-2),
+          tout=inputs["data"].get("tout", 0.0),
           tlim=inputs["data"].get("tlim", None)
         )
         if (isol is not None):
@@ -115,7 +114,6 @@ if (__name__ == "__main__"):
             sols["FOM"] = isol.pop("FOM")
           sols[model["name"]] = isol.pop("ROM")
           errs[model["name"]] = isol.pop("err")
-
       # > Postprocessing
       print(f"> Postprocessing with {r} dimensions ...")
       plot_evol_kwargs = dict(

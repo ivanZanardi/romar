@@ -27,7 +27,7 @@ class PCA(Basic):
   # ===================================
   def __init__(
     self,
-    system: Any,
+    system: callable,
     path_to_data: str,
     scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
@@ -58,7 +58,7 @@ class PCA(Basic):
     irange: List[int],
     use_quad_w: bool = True,
     nb_workers: int = 1
-  ) -> Tuple[np.ndarray]:
+  ) -> Dict[str, np.ndarray]:
     """
     Compute state and gradient covariance matrices from system simulations.
 
@@ -188,7 +188,7 @@ class PCA(Basic):
     phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
     # Save results
     data = {
-      "s": np.ones_like(s),
+      "s": s,
       "phi": phi,
       "psi": phi,
       "mask": mask,

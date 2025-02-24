@@ -4,6 +4,6 @@ cd gen_data
 bash allrun.sh
 cd ../
 
-cd max_mom_2_v1
+cd max_mom_2
 bash allrun.sh
 cd ../

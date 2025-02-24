@@ -24,38 +24,39 @@
       "use_tables": false
     }
   },
-  "grids": {
-    "t": {
-      "start": 1e-9,
-      "stop": 1e-3,
-      "num": 500
+  "data": {
+    "grids": {
+      "t": {
+        "start": 1e-10,
+        "stop": 1e-2,
+        "num": 51
+      },
+      "mu": {
+        "rho": {
+          "start": 1e-3,
+          "stop": 1e-1,
+          "num": 3
+        },
+        "Th": {
+          "start": 2e4,
+          "stop": 5e4,
+           "num": 16
+        },
+        "Te": {
+          "start": 293.6,
+          "stop": 293.6,
+          "num": 1
+        }
+      }
+    },
+    "generate": {
+      "noise": true,
+      "sigma": 1e-1,
+      "fix_tmin": false,
+      "nb_workers": 10
     }
   },
-  "param_space": {
-    "defined": {
-      "cases": {
-        "lrho_lT": [1e-3, 2.0e4, 293.6],
-        "lrho_hT": [1e-3, 5.0e4, 293.6],
-        "hrho_lT": [1e-1, 2.0e4, 293.6],
-        "hrho_hT": [1e-1, 5.0e4, 293.6],
-        "mrho_mT": [1e-2, 3.5e4, 293.6]
-      }
-    },
-    "sampled": {
-      "mu": {
-        "limits": {
-          "rho": [1e-3, 1e-1],
-          "Th": [2.0e4, 5.0e4],
-          "Te": [293.6, 293.6]
-        },
-        "nb_samples": 100,
-        "log_vars": ["Te", "rho"],
-        "eps": 1e-8
-      }
-    },
-    "nb_workers": 10
-  },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run02/"
   }
 }

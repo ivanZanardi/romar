@@ -17,7 +17,7 @@ class Basic(abc.ABC):
   # ===================================
   def __init__(
     self,
-    system: Any,
+    system: callable,
     path_to_data: str,
     scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
@@ -37,7 +37,11 @@ class Basic(abc.ABC):
     # Path to solutions
     self.path_to_data = path_to_data
     # Set scaling if system equations are defined
-    self._set_scaling(self.system.nb_eqs, xref, xscale, active=scale)
+    self._set_scaling(
+      nb_feat=self.system.nb_eqs,
+      xref=xref,
+      xscale=xscale,
+      active=scale)
     # Saving options
     self.path_to_saving = path_to_saving
     os.makedirs(self.path_to_saving, exist_ok=True)

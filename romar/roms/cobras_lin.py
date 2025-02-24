@@ -26,7 +26,7 @@ class CoBRASLin(CoBRAS):
   # ===================================
   def __init__(
     self,
-    system: Any,
+    system: callable,
     path_to_data: str,
     scale: bool = False,
     xref: Optional[Union[str, np.ndarray]] = None,
@@ -74,7 +74,7 @@ class CoBRASLin(CoBRAS):
     nb_meas: int = 5,
     use_quad_w: bool = True,
     nb_workers: int = 1
-  ) -> Tuple[np.ndarray]:
+  ) -> Dict[str, np.ndarray]:
     """
     Compute state and gradient covariance matrices from system simulations.
 

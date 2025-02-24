@@ -229,7 +229,7 @@ class Basic(object):
     # Compute the error between nonlinear and linear solutions
     err = utils.mape(y[:nt], ylin, eps=0.0, axis=-1)
     # Find the last index where the error is within the threshold
-    idx = np.argmin(np.abs(err - err_max))
+    idx = np.argmin(np.abs(err - err_max))-1
     # Return the corresponding time value
     return t[:nt][idx]
 
@@ -340,7 +340,7 @@ class Basic(object):
     y0: np.ndarray,
     rho: float,
     linear: bool = False,
-    tout: float = 1e2,
+    tout: float = 0.0,
     decode: bool = True
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
@@ -368,7 +368,7 @@ class Basic(object):
     index: Optional[int] = None,
     filename: Optional[str] = None,
     eps: float = 1e-8,
-    tout: int = 1e2,
+    tout: float = 0.0,
     tlim: Optional[List[float]] = None
   ) -> Tuple[Optional[np.ndarray]]:
     # Load test case
@@ -380,7 +380,7 @@ class Basic(object):
       t = t[i]
       y_fom = y_fom[:,i]
     # Solve ROM
-    y_rom, runtime = self.solve_rom(t, y0, rho, tout)
+    y_rom, runtime = self.solve_rom(t, y0, rho, tout=tout)
     if ((y_rom is not None) and (y_rom.shape[1] == len(t))):
       # Converged
       prim_fom = self.get_prim(y_fom, clip=False)
@@ -449,7 +449,7 @@ class Basic(object):
     irange: List[int],
     nb_workers: int = 1,
     eps: float = 1e-8,
-    tout: int = 1e2,
+    tout: float = 0.0,
     tlim: Optional[List[float]] = None
   ) -> Tuple[Optional[np.ndarray]]:
     irange = np.sort(irange)
