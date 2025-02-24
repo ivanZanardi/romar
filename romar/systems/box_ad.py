@@ -31,7 +31,6 @@ class BoxAd(Basic):
   # Function/Jacobian
   # ===================================
   def _fun_pt(self, t, y):
-    print(float(t))
     # Extract primitive variables
     n, Th, Te = self._get_prim(y)
     # Compute sources
