@@ -2,9 +2,7 @@
 Evaluate accuracy of ROM model.
 """
 
-import os
 import sys
-import copy
 import json
 import argparse
 import importlib
@@ -30,183 +28,116 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
+import os
+import copy
 import numpy as np
-import joblib as jl
+import dill as pickle
 import matplotlib.pyplot as plt
-plt.style.use(inputs["plot"].get("style", None))
+plt.style.use(inputs.get("mpl_style", "default"))
 
-from tqdm import tqdm
 from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
-from romar.roms import CoarseGrainingM0
-from silx.io.dictdump import dicttoh5, h5todict
 
-_VALID_MODELS = ("cobras", "pod")
+_VALID_MODELS = {"cobras", "pca"}
 
 # Main
 # =====================================
-if (__name__ == '__main__'):
+if (__name__ == "__main__"):
 
   print("Initialization ...")
 
-  # Isothermal master equation model
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"] + "/error/"
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
+
+  # System
   # -----------------------------------
-  path_to_dtb = inputs["paths"]["dtb"]
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(
-    species={
-      k: path_to_dtb + f"/species/{k}.json" for k in ("atom", "molecule")
-    },
-    rates_coeff=path_to_dtb + "/kinetics.hdf5",
-    **inputs["system"]["kwargs"]
-  )
+  )(**inputs["system"]["init"])
 
   # Testing
   # -----------------------------------
   # Initialization
   # ---------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"]+"/error/"+inputs["eval_err"]
-  os.makedirs(path_to_saving, exist_ok=True)
-  # Time grid
-  t = utils.load_case(path=inputs["data"]["path"], index=0, key="t")
-
-  # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
-      model = copy.deepcopy(model)
-      if (name in ("cobras", "pod")):
-        model["basis"] = h5todict(model["basis"])
+      _model = copy.deepcopy(model)
+      if (name in _VALID_MODELS):
+        # Load basis
+        with open(model["basis"], "rb") as file:
+          _model["basis"] = pickle.load(file)
+        # Load error
         if (model.get("error", None) is not None):
-          model["error"] = h5todict(model["error"])
+          with open(model["error"], "rb") as file:
+            _model["error"] = pickle.load(file)
         else:
-          model["error"] = None
+          _model["error"] = None
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
         )
-      models[name] = model
+      models[name] = _model
+      del _model
 
-  # Util functions
-  # ---------------
-  def compute_err_parallel():
-    irange = np.sort(inputs["data"]["range"])
-    nb_samples = irange[1]-irange[0]
-    iterable = tqdm(
-      iterable=range(*irange),
-      ncols=80,
-      desc="  Cases",
-      file=sys.stdout
-    )
-    kwargs = dict(
-      update=True,
-      path=inputs["data"]["path"],
-      filename=None,
-      eval_err=inputs["eval_err"]
-    )
-    nb_workers = inputs["data"]["nb_workers"]
-    if (nb_workers > 1):
-      sol = jl.Parallel(inputs["data"]["nb_workers"])(
-        jl.delayed(system.compute_rom_sol)(index=i, **kwargs) for i in iterable
-      )
-    else:
-      sol = [system.compute_rom_sol(index=i, **kwargs) for i in iterable]
-    # Split error values and running times
-    err, runtime = list(zip(*sol))
-    err = [x for x in err if (x is not None)]
-    runtime = [x for x in runtime if (x is not None)]
-    converged = len(runtime)/nb_samples
-    print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
-    if (converged >= 0.8):
-      # Stack error values
-      if (inputs["eval_err"] == "mom"):
-        err = np.stack(err, axis=0)
-      else:
-        err = np.vstack(err)
-      # Compute statistics
-      err = compute_err_stats(err)
-      runtime = compute_runtime_stats(runtime)
-      return err, runtime
-    else:
-      return None, None
-
-  def compute_err_stats(err):
-    return {
-      "t": t,
-      "mean": np.mean(err, axis=0),
-      "std": np.std(err, axis=0)
-    }
-
-  def compute_runtime_stats(runtime):
-    return {
-      "mean": np.mean(runtime),
-      "std": np.std(runtime)
-    }
-
-  def save_err_stats(model, stats):
-    dicttoh5(
-      treedict=stats,
-      h5file=path_to_saving + f"/{model}_err.hdf5",
-      overwrite_data=True
-    )
-
-  def save_runtime_stats(model, stats):
-    filename = path_to_saving + f"/{model}_runtime.json"
-    with open(filename, "w") as file:
-      json.dump(stats, file, indent=2)
-
-  # Loop over models
+  # Loop over ROM models
   # ---------------
   for (name, model) in models.items():
     print("Evaluating accuracy of ROM '%s' ..." % model["name"])
+    rrange = inputs["rom_range"]
     if (model["error"] is None):
-      err, runtime = {}, {}
-      # Loop over dimensions
-      for r in range(*inputs["rom_range"]):
+      t = None
+      error, runtime, not_conv = {}, {}, {}
+      # Loop over ROM dimensions
+      for r in range(*rrange):
         print("> Solving with %i dimensions ..." % r)
-        system.set_basis(
-          phi=model["basis"]["phi"][:,:r],
-          psi=model["basis"]["psi"][:,:r]
+        system.rom.build(
+          phi=model["basis"]["phi"][r],
+          psi=model["basis"]["psi"][r],
+          **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
-        result = compute_err_parallel()
-        if (None not in result):
-          r = str(r)
-          err[r], runtime[r] = result
+        idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
+        if (idata is not None):
+          if (t is None):
+            t = idata["t"]
+          error[r], runtime[r] = idata["err"], iruntime
       # Save error statistics
       print("> Saving statistics ...")
-      save_err_stats(name, err)
-      save_runtime_stats(name, runtime)
+      # > Error
+      filename = path_to_saving + f"/{name}_err.p"
+      with open(filename, "wb") as file:
+        pickle.dump({"t": t, "data": error}, file)
+      # > Runtime and not converged cases
+      for (k, v) in (
+        ("runtime", runtime),
+        ("not_conv", not_conv)
+      ):
+        filename = path_to_saving + f"/{name}_{k}.json"
+        with open(filename, "w") as file:
+          json.dump(v, file, indent=2)
     else:
-      err = {}
-      for r in range(*inputs["rom_range"]):
-        k = str(r)
-        if (k in model["error"]):
-          err[k] = model["error"][k]
+      t = model["error"]["t"]
+      error = {}
+      for r in range(*rrange):
+        if (r in model["error"]["data"]):
+          error[r] = model["error"]["data"][r]
     # Plot error statistics
     print("> Plotting error evolution ...")
-    common_kwargs = dict(
-      eval_err=inputs["eval_err"],
-      hline=inputs["plot"].get("hline", None),
-      err_scale=inputs["plot"].get("err_scale", "linear"),
-      molecule_label=inputs["plot"]["molecule_label"],
-      ylim_err=inputs["plot"].get("ylim_err", None),
-      subscript=inputs["plot"].get("subscript", "i"),
-      max_mom=inputs["plot"].get("max_mom", 2)
-    )
     pp.plot_err_evolution(
       path=path_to_saving+f"/{name}/",
-      err=err,
-      **common_kwargs
+      t=t,
+      error=error,
+      species=system.mix.species,
+      rrange=rrange,
+      **inputs["plot"]
     )
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
 
   print("Done!")

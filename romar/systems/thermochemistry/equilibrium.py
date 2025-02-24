@@ -6,7 +6,7 @@ from ... import const
 from .mixture import Mixture
 from .species import Species
 from ... import backend as bkd
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 MU_VARS = ("rho", "Th", "Te")
 
@@ -82,7 +82,7 @@ class Equilibrium(object):
     self,
     mu: np.ndarray,
     noise: bool = False,
-    sigma: float = 1e-1,
+    sigma: float = 1e-1
   ) -> Tuple[np.ndarray, float]:
     """
     Generates an initial solution for heat bath simulations based on the input
@@ -119,8 +119,7 @@ class Equilibrium(object):
         sigma=sigma
       )
       y = self._compose_state_vector(
-        T=bkd.to_torch(Te).reshape(1),
-        ze=self.mix.species["em"].x
+        T=bkd.to_torch(Te).reshape(1)
       )
     # Replace the equilibrium temperature Te with Th for heat bath simulation
     y[-2] = Th
@@ -154,7 +153,8 @@ class Equilibrium(object):
     # Compute electron mass fraction
     we = self._we_from_prim(rho)
     # Compose state vector
-    y = self._compose_state_vector(T, we, by_mass=True)
+    self._update_composition(we, by_mass=True)
+    y = self._compose_state_vector(T)
     return bkd.to_numpy(y), float(rho)
 
   def _we_from_prim(
@@ -231,7 +231,8 @@ class Equilibrium(object):
     # Update species thermo
     self.mix.update_species_thermo(T)
     # Compose state vector
-    y = self._compose_state_vector(T, xe)
+    self._update_composition(xe)
+    y = self._compose_state_vector(T)
     return bkd.to_numpy(y), float(rho)
 
   def _from_cons_fun(
@@ -275,9 +276,7 @@ class Equilibrium(object):
   # ===================================
   def _compose_state_vector(
     self,
-    T: torch.Tensor,
-    ze: torch.Tensor,
-    by_mass: bool = False
+    T: torch.Tensor
   ) -> torch.Tensor:
     """
     Composes the state vector for the system's equilibrium state.
@@ -298,7 +297,6 @@ class Equilibrium(object):
              translational temperature, and electron pressure.
     :rtype: torch.Tensor
     """
-    self._update_composition(ze, by_mass=by_mass)
     pe = self.mix.get_pe(Te=T, ne=self.mix.species["em"].n)
     w = self.mix.get_qoi_vec("w")
     return torch.cat([w, T, pe])
@@ -306,10 +304,9 @@ class Equilibrium(object):
   def _update_composition(
     self,
     ze: torch.Tensor,
-    noise: bool = False,
-    sigma: float = 1e-2,
     by_mass: bool = False,
-    clipping: bool = True
+    noise: bool = False,
+    sigma: float = 1e-1
   ) -> None:
     """
     Updates the species composition based on the electron molar fraction
@@ -329,10 +326,8 @@ class Equilibrium(object):
     # Vector of molar/mass fractions
     z = torch.zeros(self.mix.nb_comp)
     # Electron
-    s = self.mix.species["em"]
-    if noise:
-      ze *= self._add_norm_noise(s, sigma, use_pf=False)
-    z[s.indices] = ze
+    sk = self.mix.species["em"]
+    z[sk.indices] = ze
     # Compute coefficient
     if by_mass:
       m = self._get_species_attr("m")
@@ -342,24 +337,37 @@ class Equilibrium(object):
     # Argon neutral/ion
     for k in ("Ar", "Arp"):
       sk = self.mix.species[k]
-      xk = r*ze if (k == "Arp") else 1.0-(1.0+r)*ze
-      fk = self._add_norm_noise(sk, sigma) if noise else sk.q / sk.Q
-      fk = (fk+const.XMIN) / torch.sum(fk+const.XMIN)
-      z[sk.indices] = xk * fk
+      zk = r*ze if (k == "Arp") else 1.0-(1.0+r)*ze
+      z[sk.indices] = zk * sk.q / sk.Q
     # Get molar fractions
     x = self.mix.get_x_from_w(z) if by_mass else z
+    # Conservation of elements
+    x = torch.clip(x, const.XMIN, 1.0)
+    x = self._enforce_elem_cons(x)
+    # Add noise
+    if noise:
+      x = self._add_noise(x, sigma)
+      x = self._enforce_elem_cons(x)
     # Update composition
     self.mix.update_composition_x(x)
-    if clipping:
-      xe = self.mix.species["em"].x
-      xe = torch.clip(xe, const.XMIN, 0.5)
-      self._update_composition(xe, clipping=False)
 
-  def _add_norm_noise(
+  def _enforce_elem_cons(self, x):
+    # Electron
+    sk = self.mix.species["em"]
+    xe = torch.clip(x[sk.indices], const.XMIN, 0.5)
+    x[sk.indices] = xe
+    # Argon neutral/ion
+    for k in ("Ar", "Arp"):
+      sk = self.mix.species[k]
+      xk = xe if (k == "Arp") else 1.0-2.0*xe
+      xi = x[sk.indices]
+      x[sk.indices] = xk * xi / torch.sum(xi)
+    return x
+
+  def _add_noise(
     self,
-    species: Species,
-    sigma: float = 1e-2,
-    use_pf: bool = True
+    x: torch.Tensor,
+    sigma: float = 1e-2
   ) -> torch.Tensor:
     """
     Adds unit norm random noise to the species composition.
@@ -378,11 +386,8 @@ class Equilibrium(object):
     :return: A tensor containing the noisy composition values.
     :rtype: torch.Tensor
     """
-    f = 1.0 + sigma * torch.rand(species.nb_comp)
-    if use_pf:
-      f *= species.q
-      f /= torch.sum(f)
-    return f
+    f = 1.0 + sigma * torch.rand(x.shape)
+    return f * x
 
   def _detailed_balance(self) -> torch.Tensor:
     r"""

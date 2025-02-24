@@ -26,19 +26,14 @@
   },
   "models": {
     "cobras": {
-      "active": false,
+      "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras/basis.p"
-    },
-    "cobraslin": {
-      "active": false,
-      "name": "CoBRAS Lin",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin/basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras_basis.p"
     },
     "pca": {
-      "active": true,
+      "active": false,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca/basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca_basis.p"
     }
   },
   "paths": {
@@ -46,14 +41,10 @@
   },
   "data": {
     "cases": [
-      "lrho_lT",
-      "lrho_hT",
-      "hrho_lT",
-      "hrho_hT",
       "mrho_mT"
     ],
     "path": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/test/",
-    "tlim": [0.0, 1.1e-3]
+    "tlim": [0.0, 1e-3]
   },
   "plot": {
     "labels": {

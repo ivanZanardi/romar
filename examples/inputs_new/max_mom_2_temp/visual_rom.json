@@ -26,18 +26,23 @@
   },
   "models": {
     "cobras": {
-      "active": true,
+      "active": false,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras/basis.p"
+    },
+    "cobraslin": {
+      "active": false,
+      "name": "CoBRAS Lin",
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin/basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca/basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/"
   },
   "data": {
     "cases": [
@@ -47,8 +52,8 @@
       "hrho_hT",
       "mrho_mT"
     ],
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
-    "tlim": [0.0, 1e-3]
+    "path": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/test/",
+    "tlim": [0.0, 1.1e-3]
   },
   "plot": {
     "labels": {
@@ -83,6 +88,6 @@
     "animate": false,
     "markersize": 6
   },
-  "rom_range": [5,12],
+  "rom_range": [5,6],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

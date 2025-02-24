@@ -33,6 +33,10 @@ class Mixture(object):
       self.species[k].indices = torch.arange(si, ei).tolist()
       si = ei
     self.nb_comp = ei
+    # Species names
+    self.species_names = []
+    for k in self.species_order:
+      self.species_names.extend(self.species[k].comp_names)
 
   # Build
   # ===================================

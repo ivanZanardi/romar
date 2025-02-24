@@ -1,278 +1,400 @@
 import abc
+import sys
 import time
+import torch
+import signal
 import numpy as np
 import scipy as sp
+import joblib as jl
 import pandas as pd
+import tensorflow as tf
 
-from pyDOE import lhs
+from tqdm import tqdm
+from pyDOE2 import lhs
+from typing import *
 
-from .. import const
+from .. import env
 from .. import utils
-from .mixture import Mixture
-from .kinetics import Kinetics
-from typing import Dict, List, Optional, Tuple
+from ..roms import ROM
+from .. import backend as bkd
+from .thermochemistry import *
+from .thermochemistry.equilibrium import MU_VARS
 
 
-class BasicSystem(object):
+class Basic(object):
 
   # Initialization
   # ===================================
   def __init__(
     self,
-    species: Dict[str, str],
-    rates_coeff: str,
-    use_einsum: bool = False,
-    use_factorial: bool = False,
-    use_arrhenius: bool = False
-  ) -> None:
-    # Thermochemistry database
+    species,
+    kin_dtb,
+    rad_dtb=None,
+    use_rad=False,
+    use_proj=False,
+    use_factorial=True,
+    use_tables=False,
+    species_order=("em", "Ar", "Arp")
+  ):
+    # Thermochemistry
     # -------------
-    self.T = 1.0
     # Mixture
-    self.mix = Mixture(species, use_factorial)
-    self.nb_eqs = self.mix.nb_eqs
-    # > Kinetics
-    self.kin = Kinetics(self.mix.species, rates_coeff, use_arrhenius)
-    # FOM
+    self.species_order = tuple(species_order)
+    self.mix = Mixture(
+      species,
+      species_order=self.species_order,
+      use_factorial=bool(use_factorial)
+    )
+    self.mix.build()
+    # Kinetics
+    self.kin = Kinetics(
+      mixture=self.mix,
+      processes=kin_dtb,
+      use_tables=use_tables
+    )
+    # Radiation
+    self.rad = Radiation(
+      processes=rad_dtb,
+      use_tables=use_tables,
+      active=use_rad
+    )
+    # Sources
     # -------------
-    # Solving
-    self.use_einsum = use_einsum
-    self.fun = None
-    self.jac = None
+    self.sources = Sources(
+      mixture=self.mix,
+      kinetics=self.kin,
+      radiation=self.rad
+    )
+    # Equilibrium
+    # -------------
+    self.equil = Equilibrium(
+      mixture=self.mix
+    )
+    # Dimensions
+    # -------------
+    self.nb_comp = self.mix.nb_comp
+    self.nb_temp = 2
+    self.nb_eqs = self.nb_temp + self.nb_comp
     # ROM
     # -------------
-    self.rom_ops = None
-    # Basis
-    self.phi = None
-    self.psi = None
-    self.runtime = 0.0
+    self.rom = ROM(
+      nb_eqs=self.nb_eqs,
+      use_proj=use_proj
+    )
+    self.use_rom = False
+    # Output
+    # -------------
+    self.C = None
+    # Methods
+    # -------------
+    self.get_init_sol = self.equil.get_init_sol
+    self.set_up = bkd.make_fun_np(self._set_up)
+    self.get_prim = bkd.make_fun_np(self._get_prim)
 
-  def _check_rom_ops(self) -> None:
-    if (self.rom_ops is None):
-      raise ValueError("Update ROM operators.")
-
-  def _is_einsum_used(self, identifier: str) -> None:
-    if self.use_einsum:
-      raise NotImplementedError(
-        "This functionality is not supported " \
-        f"when using 'einsum': '{identifier}'."
-      )
-
-  # Operators
+  # Function/Jacobian
   # ===================================
-  # FOM
-  # -----------------------------------
-  def update_fom_ops(self, T) -> None:
-    self.T = float(T)
-    # Update mixture
-    self.mix.update(self.T)
-    # Update kinetics
-    self.kin.update(self.T)
-    # Compose operators
-    if self.use_einsum:
-      self.fom_ops = self.kin.rates
-    else:
-      self.fom_ops = self._update_fom_ops(self.kin.rates)
-    self.fom_ops["m_ratio"] = self.mix.m_ratio
+  def set_fun_jac(self):
+    self._fun_np = self._fun = bkd.make_fun_np(self._fun_pt)
+    self._jac_np = bkd.make_fun_np(torch.func.jacrev(self._fun_pt, argnums=1))
+
+  def fun(self, t, y):
+    y = self.rom.decode(y, is_der=False) if self.use_rom else y
+    f = self._fun(t, y)
+    f = self.rom.encode(f, is_der=True) if self.use_rom else f
+    return f
 
   @abc.abstractmethod
-  def _update_fom_ops(self, rates: dict) -> dict:
+  def _fun_pt(self, t, y):
     pass
 
-  # Linearized FOM
-  # -----------------------------------
+  def jac(self, t, y):
+    y = self.rom.decode(y, is_der=False) if self.use_rom else y
+    j = self._jac(t, y)
+    j = self.rom.reduce_jac(j) if self.use_rom else j
+    return j
+
+  def _jac(self, t, y):
+    j = self._jac_np(t, y)
+    j_not = utils.is_nan_inf(j)
+    if j_not.any():
+      # Finite difference Jacobian
+      j_fd = sp.optimize.approx_fprime(
+        xk=y,
+        f=lambda z: self._fun_np(t, z),
+        epsilon=bkd.epsilon()
+      )
+      j[j_not] = j_fd[j_not]
+    return j
+
+  @abc.abstractmethod
+  def _get_prim(self, y, clip=True):
+    pass
+
+  # Linear Model
+  # ===================================
+  def fun_lin(self, t, y):
+    return self.A @ y + self.b
+
+  def jac_lin(self, t, y):
+    return self.A
+
   def compute_lin_fom_ops(
     self,
-    mu: np.ndarray,
+    y: np.ndarray
+  ) -> None:
+    """
+    Compute the linearized full-order model (FOM) operators.
+
+    This function computes and stores the Jacobian matrix `A` and the residual
+    vector `b` for the system evaluated at the given state `y`.
+
+    :param y: The state vector at which the Jacobian and residual are computed.
+    :type y: np.ndarray
+    """
+    # Compute Jacobian matrix
+    self.A = self.jac(0.0, y)
+    # Compute residual vector
+    self.b = self.fun(0.0, y)
+
+  def compute_timescale(
+    self,
+    y: np.ndarray,
     rho: float,
-    max_mom: int = 10
-  ) -> Dict[str, np.ndarray]:
-    self._is_einsum_used("compute_lin_fom_ops")
-    # Equilibrium
-    n_eq = self.mix.compute_eq_comp(rho)
-    w_eq = self.mix.get_w(n_eq, rho)
-    # A operator
-    A = self._compute_lin_fom_ops_a_full(n_eq[0])
-    # C operator
-    C = self._compute_lin_fom_ops_c(max_mom)
-    # Initial solutions
-    M = self._compute_lin_init_sols(mu, w_eq)
-    # Return data
-    return {"A": A, "C": C, "M": M, "x_eq": w_eq}
+    use_rom: bool = False
+  ) -> float:
+    """
+    Compute the characteristic timescale of a given species.
 
-  def _compute_lin_fom_ops_a_full(
-    self,
-    n_a_eq: np.ndarray,
-    phi: Optional[np.ndarray] = None,
-    psi: Optional[np.ndarray] = None,
-    by_mass: bool = True
-  ) -> np.ndarray:
-    A = self._compute_lin_fom_ops_a(n_a_eq)
-    b = self._compute_lin_fom_ops_b(n_a_eq)
-    m = self.mix.m_ratio
-    if (phi is not None):
-      A = psi.T @ A @ phi
-      b = psi.T @ b
-      m = self.mix.m_ratio @ phi
-    A = np.hstack([b.reshape(-1,1), A])
-    a = - m @ A
-    A = np.vstack([a.reshape(1,-1), A])
-    if by_mass:
-      A = self.mix.M @ A @ self.mix.Minv
-    return A
+    This function calculates the timescale by linearizing the system,
+    extracting the sub-Jacobian corresponding to the specified species,
+    and evaluating the eigenvalues of the sub-Jacobian.
 
-  @abc.abstractmethod
-  def _compute_lin_fom_ops_a(
-    self,
-    n_a_eq: np.ndarray
-  ) -> np.ndarray:
-    pass
+    :param y: The state vector at which the timescale is computed.
+    :type y: np.ndarray
+    :param species: The species for which the timescale is calculated.
+                    Defaults to "Ar".
+    :type species: str, optional
+    :param index: The index of the timescale to return (sorted by magnitude).
+                  Defaults to -2.
+    :type index: int, optional
+    :return: The computed timescale for the given species.
+    :rtype: float
+    """
+    # Setting up
+    self.use_rom = bool(use_rom)
+    y = self.set_up(y, rho)
+    # Compute linearized operators
+    self.compute_lin_fom_ops(y)
+    # Compute eigenvalues of the Jacobian
+    l = sp.linalg.eigvals(self.A)
+    # Compute and return the smallest timescale
+    t = np.amin(np.abs(1.0/l.real))
+    return float(t)
 
-  @abc.abstractmethod
-  def _compute_lin_fom_ops_b(
+  def compute_lin_tmax(
     self,
-    n_a_eq: np.ndarray
-  ) -> np.ndarray:
-    pass
+    t: np.ndarray,
+    y: np.ndarray,
+    rho: float,
+    err_max: float = 30.0
+  ) -> float:
+    """
+    Compute the maximum time validity for the linearized model.
 
-  def _compute_lin_fom_ops_c(
-    self,
-    max_mom: int
-  ) -> np.ndarray:
-    if (max_mom > 0):
-      C = np.zeros((max_mom,self.nb_eqs))
-      C[:,1:] = self.mix.species["molecule"].compute_mom_basis(max_mom)
-    else:
-      C = np.eye(self.nb_eqs)
-      C[0,0] = 0.0
-    return C
+    This function determines the time limit up to which the linear model
+    remains valid, either by using eigenvalues of the Jacobian or by
+    comparing the nonlinear with the linearized solution.
 
-  def _compute_lin_init_sols(
-    self,
-    mu: np.ndarray,
-    w_eq: np.ndarray,
-    noise: bool = True,
-    sigma: float = 1e-2
-  ) -> np.ndarray:
-    M = []
-    for mui in mu:
-      w0 = self.mix.get_init_sol(*mui, noise=noise, sigma=sigma)
-      M.append(w0 - w_eq)
-    M = np.vstack(M).T
-    return M
+    :param t: Time array over which the model is evaluated.
+    :type t: np.ndarray
+    :param y: Solution of the nonlinear model, used as the reference for
+              validation.
+    :type y: np.ndarray
+    :param use_eig: Flag to determine whether to use eigenvalue-based
+                    timescale computation. If False, the function will
+                    use error-based validation. Defaults to True.
+    :type use_eig: bool, optional
+    :param err_max: Maximum allowed percentage error between the nonlinear and
+                    the linearized model for validity. Only used if
+                    `use_eig` is False. Defaults to 30.0.
+    :type err_max: float, optional
+    :return: The maximum time (tmax) up to which the linearized model
+             remains valid.
+    :rtype: float
+    """
+    # Check solution matrix shape
+    if (len(t.reshape(-1)) != len(y)):
+      y = y.T
+    # Compute the linearized solution
+    ylin = self.solve_fom(t, y[0], rho, linear=True)[0].T
+    # Number of time instants actually solved
+    nt = len(ylin)
+    # Compute the error between nonlinear and linear solutions
+    err = utils.mape(y[:nt], ylin, eps=0.0, axis=-1)
+    # Find the last index where the error is within the threshold
+    idx = np.argmin(np.abs(err - err_max))
+    # Return the corresponding time value
+    return t[:nt][idx]
 
-  # ROM
-  # -----------------------------------
-  def update_rom_ops(
+  # Output
+  # ===================================
+  def compute_c_mat(
     self,
-    phi: Optional[np.ndarray] = None,
-    psi: Optional[np.ndarray] = None,
+    max_mom: int = 1,
+    state_specs: bool = False,
+    include_em: bool = True,
+    include_temp: bool = False
   ) -> None:
-    self._is_einsum_used("update_rom_ops")
-    # Set basis
-    if (phi is not None):
-      self.set_basis(phi, psi)
-    # Compose operators
-    self.rom_ops = self._update_rom_ops()
-    self.rom_ops["m_ratio"] = self.mix.m_ratio @ self.phi
+    """
+    Compute the observation matrix for a linear output model.
 
-  def set_basis(
-    self,
-    phi: np.ndarray,
-    psi: np.ndarray
-  ) -> None:
-    self.phi, self.psi = phi, psi
-    # Biorthogonalize
-    self.phi = self.phi @ sp.linalg.inv(self.psi.T @ self.phi)
+    This function constructs the `C` matrix that maps the state vector to
+    the output vector. It includes species contributions and their moments,
+    up to a specified maximum moment order.
 
-  @abc.abstractmethod
-  def _update_rom_ops(self) -> None:
-    pass
+    :param max_mom: The maximum number of moments to include for each species.
+    :type max_mom: int
+    """
+    max_mom = max(int(max_mom), 1)
+    # Compose C matrix for a linear output
+    self.C = np.zeros((self.nb_comp*max_mom, self.nb_eqs))
+    # Variables to track row indices in C
+    si, ei = 0, 0
+    # Loop over species in the defined order
+    for k in self.species_order:
+      if ((k == "em") and (not include_em)):
+        continue
+      # Get species object
+      s = self.mix.species[k]
+      # Compute the moment basis for the species and populate C
+      m = max_mom if (k != "em") else 1
+      basis = s.compute_mom_basis(m)
+      for b in basis:
+        ei += s.nb_comp if state_specs else 1
+        self.C[np.arange(si,ei),s.indices] = b
+        si = ei
+    # Temperatures
+    if include_temp:
+      for i in range(2):
+        ei += 1
+        self.C[np.arange(si,ei),-2+i] = 1.0
+        si = ei
+    # Remove not used rows from the C matrix
+    self.C = self.C[:ei]
 
   # Solving
   # ===================================
+  @abc.abstractmethod
+  def _set_up(self, y0, rho):
+    pass
+
   def _solve(
     self,
     t: np.ndarray,
-    n0: np.ndarray,
-    ops: dict
-  ) -> np.ndarray:
-    sol = sp.integrate.solve_ivp(
-      fun=self.fun,
+    y0: np.ndarray,
+    linear: bool = False
+  ) -> Tuple[np.ndarray]:
+    # Linear model
+    if linear:
+      self.compute_lin_fom_ops(y0)
+    # Solving
+    runtime = time.time()
+    y = sp.integrate.solve_ivp(
+      fun=self.fun_lin if linear else self.fun,
       t_span=[0.0,t[-1]],
-      y0=n0/const.UNA,
-      method="LSODA",
+      y0=np.zeros_like(y0) if linear else y0,
+      method="BDF",
       t_eval=t,
-      args=(ops,),
       first_step=1e-14,
       rtol=1e-6,
-      atol=0.0,
-      jac=self.jac
-    )
-    n = sol.y * const.UNA
-    nb_n = n.shape[1]
-    nb_t = len(t.reshape(-1))
-    if (nb_n != nb_t):
-      raise ValueError("Solution not converged!")
-    return n
+      atol=1e-15,
+      jac=self.jac_lin if linear else self.jac,
+    ).y
+    # Linear model
+    if linear:
+      y += y0.reshape(-1,1)
+    runtime = time.time()-runtime
+    runtime = np.array(runtime).reshape(1)
+    return y, runtime
+
+  def _solve_tout(
+    self,
+    t: np.ndarray,
+    y0: np.ndarray,
+    linear: bool = False,
+    tout: int = 1e2
+  ) -> Tuple[np.ndarray]:
+    """
+    Solve the system of equations with an optional timeout.
+
+    :param t: Time grid for the solver.
+    :type t: np.ndarray
+    :param y0: Initial condition for the system.
+    :type y0: np.ndarray
+    :param linear: Whether to use a linearized version of the model.
+    :type linear: bool
+    :param tout: Maximum allowed execution time in seconds.
+    :type tout: int, optional
+
+    :return: Tuple containing the solution `y` and runtime duration.
+    :rtype: Tuple[np.ndarray, np.ndarray]
+
+    :raises TimeoutException: If the solver exceeds the allowed execution time.
+    """
+    # Set signal alarm for timeout
+    signal.signal(signal.SIGALRM, utils.timeout_handler)
+    signal.alarm(int(tout))
+    try:
+      # Solve the system
+      y, runtime = self._solve(t, y0, linear)
+      # Disable alarm after successful execution
+      signal.alarm(0)
+    except utils.TimeoutException as e:
+      y, runtime = None, None
+    finally:
+      # Ensure alarm is disabled in case of early return
+      signal.alarm(0)
+    return y, runtime
 
   def solve_fom(
     self,
     t: np.ndarray,
-    n0: np.ndarray
+    y0: np.ndarray,
+    rho: float,
+    linear: bool = False
   ) -> Tuple[np.ndarray]:
     """Solve FOM."""
-    runtime = time.time()
-    n = self._solve(t=t, n0=n0, ops=self.fom_ops)
-    runtime = time.time()-runtime
-    runtime = np.array(runtime).reshape(1)
-    return n[:1], n[1:], runtime
-
-  def solve_lin_fom(
-    self,
-    t: np.ndarray,
-    n0: np.ndarray,
-    A: Optional[np.ndarray] = None
-  ) -> Tuple[np.ndarray]:
-    # Equilibrium composition
-    rho = self.mix.get_rho(n0)
-    n_eq = self.mix.compute_eq_comp(rho)
-    # Linear operator
-    if (A is None):
-      A = self._compute_lin_fom_ops_a_full(n_eq[0], by_mass=False)
-    # Eigendecomposition
-    l, v = [x.real for x in sp.linalg.eig(A)]
-    # Solution
-    n = sp.linalg.solve(v, n0-n_eq)
-    n = [n_eq + v @ (np.exp(l*ti) * n) for ti in t]
-    n = np.vstack(n).T
-    return n[:1], n[1:]
+    # Setting up
+    self.use_rom = False
+    y0 = self.set_up(y0, rho)
+    # Solving
+    return self._solve(t, y0, linear)
 
   def solve_rom(
     self,
     t: np.ndarray,
-    n0: np.ndarray
+    y0: np.ndarray,
+    rho: float,
+    linear: bool = False,
+    tout: int = 1e2,
+    decode: bool = True
   ) -> Tuple[np.ndarray]:
     """Solve ROM."""
-    self._check_rom_ops()
-    self._is_einsum_used("solve_rom")
-    # Encode initial condition
-    z_m = self._encode(n0[1:])
-    z0 = np.concatenate([n0[:1], z_m])
-    # Solve
-    runtime = time.time()
-    z = self._solve(t=t, n0=z0, ops=self.rom_ops)
-    runtime = time.time()-runtime
-    runtime = np.array(runtime).reshape(1)
-    # Decode solution
-    n_m = self._decode(z[1:].T).T
-    return z[:1], n_m, runtime
-
-  def _encode(self, x: np.ndarray) -> np.ndarray:
-    return x @ self.psi
-
-  def _decode(self, z: np.ndarray) -> np.ndarray:
-    return z @ self.phi.T
+    # Setting up
+    self.use_rom = True
+    y0 = self.set_up(y0, rho)
+    # Encode initial conditions
+    z0 = self.rom.encode(y0, is_der=False)
+    # Solving
+    z, runtime = self._solve_tout(t, z0, linear, tout)
+    if decode:
+      # Decode solution
+      y = None
+      if (runtime is not None):
+        y = self.rom.decode(z.T, is_der=False).T
+      return y, runtime
+    else:
+      return z, runtime
 
   def get_tgrid(
     self,
@@ -286,130 +408,234 @@ class BasicSystem(object):
 
   # Data generation and testing
   # ===================================
-  def construct_design_mat_temp(
-    self,
-    limits: List[float],
-    nb_samples: int
-  ) -> Tuple[pd.DataFrame]:
-    # Construct
-    dmat = lhs(1, int(nb_samples))
-    # Rescale
-    amin, amax = np.sort(limits)
-    T = dmat * (amax - amin) + amin
-    # Convert to dataframe
-    T = pd.DataFrame(data=np.sort(T.reshape(-1)), columns=["T"])
-    return T
-
   def construct_design_mat_mu(
     self,
     limits: Dict[str, List[float]],
     nb_samples: int,
-    log_vars: List[str] = ["T0", "rho"],
-    eps: float = 1e-7
+    log_vars: Tuple[str] = ("Te", "rho"),
+    eps: float = 1e-8
   ) -> Tuple[pd.DataFrame]:
-    _mu_keys = ("T0", "w0_a", "rho")
     # Sample remaining parameters
-    design_space = [np.sort(limits[k]) for k in _mu_keys]
+    design_space = [np.sort(limits[k]) for k in MU_VARS]
     design_space = np.array(design_space).T
     # Log-scale
-    ilog = [i for (i, k) in enumerate(_mu_keys) if (k in log_vars)]
+    ilog = [i for (i, k) in enumerate(MU_VARS) if (k in log_vars)]
     design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
     # Construct
     ddim = design_space.shape[1]
-    dmat = lhs(ddim, int(nb_samples))
+    dmat = lhs(ddim, samples=int(nb_samples))
     # Rescale
     amin, amax = design_space
     mu = dmat * (amax - amin) + amin
     mu[:,ilog] = np.exp(mu[:,ilog]) - eps
     # Convert to dataframe
-    mu = pd.DataFrame(data=mu, columns=_mu_keys)
+    mu = pd.DataFrame(data=mu, columns=MU_VARS)
     return mu
 
-  def compute_fom_sol(
+  def compute_sol_fom(
     self,
-    T: float,
     t: np.ndarray,
     mu: np.ndarray,
-    mu_type: str = "mass",
-    update: bool = False,
+    noise: bool = False,
     path: Optional[str] = None,
     index: Optional[int] = None,
     shift: int = 0,
     filename: Optional[str] = None
-  ) -> np.ndarray:
-    try:
-      if update:
-        self.update_fom_ops(T)
-      mui = mu[index] if (index is not None) else mu
-      n0 = self.mix.get_init_sol(*mui, mu_type=mu_type)
-      *n, runtime = self.solve_fom(t, n0)
-      data = {"index": index, "mu": mui, "T": T, "t": t, "n0": n0, "n": n}
+  ) -> Optional[np.ndarray]:
+    mui = mu[index] if (index is not None) else mu
+    y0, rho = self.get_init_sol(mui, noise)
+    y, runtime = self.solve_fom(t, y0, rho)
+    if (y.shape[1] == len(t)):
+      # Converged
+      data = {"index": index, "mu": mui, "t": t, "y0": y0, "rho": rho, "y": y}
       if (index is not None):
         index += shift
       utils.save_case(path=path, index=index, data=data, filename=filename)
-    except:
+    else:
+      # Not converged
       runtime = None
     return runtime
 
-  def compute_rom_sol(
+  def compute_sol_rom(
     self,
-    update: bool = False,
     path: Optional[str] = None,
     index: Optional[int] = None,
     filename: Optional[str] = None,
-    eval_err: Optional[str] = None,
-    eps: float = 1e-7
-  ) -> Tuple[np.ndarray]:
+    eps: float = 1e-8,
+    tout: int = 1e2,
+    tlim: Optional[List[float]] = None
+  ) -> Tuple[Optional[np.ndarray]]:
+    result = (None, None)
     try:
       # Load test case
       icase = utils.load_case(path=path, index=index, filename=filename)
-      T, t, n0, n_fom = [icase[k] for k in ("T", "t", "n0", "n")]
-      if update:
-        self.update_fom_ops(T)
-        self.update_rom_ops()
+      t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
+      # Time window
+      if (tlim is not None):
+        i = (t >= np.amin(tlim)) * (t <= np.amax(tlim))
+        t = t[i]
+        y_fom = y_fom[:,i]
       # Solve ROM
-      *n_rom, runtime = self.solve_rom(t, n0)
-      # Evaluate error
-      if (eval_err == "mom"):
-        # > Moments
-        return self.compute_mom_err(n_fom[1], n_rom[1], eps), runtime
-      elif (eval_err == "dist"):
-        # > Distribution
-        rho = self.mix.get_rho(n0)
-        return self.compute_dist_err(n_fom[1], n_rom[1], rho, eps), runtime
-      else:
-        # > None: return the solution
-        return t, n_fom, n_rom, runtime
+      y_rom, runtime = self.solve_rom(t, y0, rho, tout=tout)
+      if ((runtime is not None) and (y_rom.shape[1] == len(t))):
+        # Converged
+        prim_fom = self.get_prim(y_fom, clip=False)
+        prim_rom = self.get_prim(y_rom, clip=False)
+        data = {
+          "t": t,
+          "FOM": self.postproc_sol(*prim_fom),
+          "ROM": self.postproc_sol(*prim_rom),
+          "err": {
+            "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
+            "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
+            "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
+          }
+        }
+        result = (data, runtime)
     except:
-      nb_none = 2 if (eval_err is not None) else 4
-      return [None for _ in range(nb_none)]
+      pass
+    return result
 
-  def compute_mom_err(
+  # Postprocessing
+  # -----------------------------------
+  def postproc_sol(self, n, Th, Te):
+    return {
+      "mom": self.compute_mom(n),
+      "dist": self.compute_dist(n),
+      "temp": {"Th": Th, "Te": Te}
+    }
+
+  def compute_mom(
     self,
-    n_true: np.ndarray,
-    n_pred: np.ndarray,
-    eps: float = 1e-7
-  ) -> np.ndarray:
-    error = []
+    n: np.ndarray
+  ) -> Dict[str, Dict[str, np.ndarray]]:
+    moms = {}
+    for (name, s) in self.mix.species.items():
+      moms[name] = self._compute_mom(n=n[s.indices], species=s)
+    return moms
+
+  def _compute_mom(
+    self,
+    n: np.ndarray,
+    species: Species
+  ) -> Dict[str, np.ndarray]:
+    moms = {}
     for m in range(2):
-      m_true = self.mix.species["molecule"].compute_mom(n=n_true, m=m)
-      m_pred = self.mix.species["molecule"].compute_mom(n=n_pred, m=m)
+      mom = species.compute_mom(n=n, m=m)
       if (m == 0):
-        m0_true = m_true
-        m0_pred = m_pred
+        mom0 = mom
       else:
-        m_true /= m0_true
-        m_pred /= m0_pred
-      error.append(utils.absolute_percentage_error(m_true, m_pred, eps))
-    return np.vstack(error)
+        mom /= mom0
+      moms[f"m{m}"] = mom
+    return moms
 
-  def compute_dist_err(
+  def compute_dist(
+    self,
+    n: np.ndarray
+  ) -> Dict[str, np.ndarray]:
+    dist = {}
+    for (name, s) in self.mix.species.items():
+      gi = bkd.to_numpy(s.lev["g"])
+      ni = n[s.indices]
+      dist[name] = (ni.T/gi).T
+    return dist
+
+  # Error computation
+  # -----------------------------------
+  def compute_err(
+    self,
+    path: str,
+    irange: List[int],
+    nb_workers: int = 1,
+    eps: float = 1e-8,
+    tout: int = 1e2,
+    tlim: Optional[List[float]] = None
+  ) -> Tuple[Optional[np.ndarray]]:
+    irange = np.sort(irange)
+    nb_samples = irange[1]-irange[0]
+    iterable = tqdm(
+      iterable=range(*irange),
+      ncols=80,
+      desc="  Cases",
+      file=sys.stdout
+    )
+    kwargs = dict(
+      path=path,
+      eps=eps,
+      tout=tout,
+      tlim=tlim
+    )
+    if (nb_workers > 1):
+      sols = jl.Parallel(nb_workers)(
+        jl.delayed(
+          env.make_fun_parallel(self.compute_sol_rom)
+        )(index=i, **kwargs) for i in iterable
+      )
+    else:
+      sols = [self.compute_sol_rom(index=i, **kwargs) for i in iterable]
+    # Split error values and running times
+    error, runtime = list(zip(*sols))
+    not_conv = [i for i in range(*irange) if (runtime[i-irange[0]] is None)]
+    error = [x for x in error if (x is not None)]
+    runtime = [x for x in runtime if (x is not None)]
+    converged = len(runtime)/nb_samples
+    print(f"  Total converged cases: {len(runtime)}/{nb_samples}")
+    if (converged >= 0.5):
+      # Stack error values
+      t = error[0]["t"]
+      _error = error[0]
+      for ierror in error[1:]:
+        _error = tf.nest.map_structure(
+          lambda e1, e2: np.vstack([e1, e2]), _error, ierror
+        )
+      # Compute statistics
+      error = tf.nest.map_structure(
+        lambda e: {
+          "mean": np.mean(e, axis=0),
+          "std": np.std(e, axis=0)
+        },
+        _error
+      )
+      error["t"] = t
+      runtime = {
+        "mean": float(np.mean(runtime, 0)),
+        "std": float(np.std(runtime, 0))
+      }
+      return error, runtime, not_conv
+    else:
+      return None, None, not_conv
+
+  def compute_err_dist(
     self,
     n_true: np.ndarray,
     n_pred: np.ndarray,
-    rho: float,
-    eps: float = 1e-7
+    eps: float = 1e-8
   ) -> np.ndarray:
-    y_true = n_true * self.mix.species["molecule"].m / rho
-    y_pred = n_pred * self.mix.species["molecule"].m / rho
-    return utils.absolute_percentage_error(y_true, y_pred, eps)
+    return utils.absolute_percentage_error(
+      y_true=bkd.to_numpy(self.mix.get_w(bkd.to_torch(n_true))),
+      y_pred=bkd.to_numpy(self.mix.get_w(bkd.to_torch(n_pred))),
+      eps=eps
+    )
+
+  def compute_err_temp(
+    self,
+    Ti_true: np.ndarray,
+    Ti_pred: np.ndarray,
+    eps: float = 1e-8
+  ) -> Dict[str, np.ndarray]:
+    return {
+      "Th": utils.absolute_percentage_error(Ti_true[0], Ti_pred[0], eps),
+      "Te": utils.absolute_percentage_error(Ti_true[1], Ti_pred[1], eps)
+    }
+
+  def compute_err_mom(
+    self,
+    n_true: np.ndarray,
+    n_pred: np.ndarray,
+    eps: float = 1e-8
+  ) -> Dict[str, Dict[str, np.ndarray]]:
+    return tf.nest.map_structure(
+      lambda m1, m2: utils.absolute_percentage_error(m1, m2, eps),
+      self.compute_mom(n_true),
+      self.compute_mom(n_pred)
+    )

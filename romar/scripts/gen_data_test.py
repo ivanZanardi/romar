@@ -74,7 +74,6 @@ if (__name__ == "__main__"):
     runtime = data.compute_sol(
       mu=muk,
       t=t,
-      noise=False,
       filename=path_to_saving + f"/case_{k}.p"
     )
     if (runtime is None):

@@ -304,28 +304,6 @@ class TimeoutException(Exception):
 def timeout_handler(signum, frame):
   raise TimeoutException("Solver exceeded the allowed execution time.")
 
-# def make_fun_tout(
-#   fun: callable,
-#   tout: float = 1e2
-# ) -> callable:
-#   def fun_tout(*args, **kwargs):
-#     active = tout > 0.0:
-#       # Set signal alarm for timeout
-#       signal.signal(signal.SIGALRM, timeout_handler)
-#       signal.alarm(int(tout))
-#     try:
-#       # Call function
-#       output = fun(*args, **kwargs)
-#       # Disable alarm after successful execution
-#       signal.alarm(0)
-#     except:
-#       output = None
-#     finally:
-#       # Ensure alarm is disabled in case of early return
-#       signal.alarm(0)
-#     return output
-#   return fun_tout
-
 def make_solve_ivp(
   tout: float = 0.0
 ) -> callable:

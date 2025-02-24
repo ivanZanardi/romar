@@ -198,7 +198,7 @@ class Kinetics(object):
     # Electron and ion number densities
     ne = self.mix.species["em"].n.reshape(1)
     ni = torch.sum(self.mix.species["Arp"].n).reshape(1)
-    ne, ni = map(torch.abs, (ne, ni))
+    ne, ni = list(map(torch.abs, (ne, ni)))
     if self.use_tables:
       # Look-up table
       return 2.0 * ve * self._compute_ei_Q11_kapper(ne, Te)

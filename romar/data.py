@@ -41,19 +41,24 @@ class Data(object):
   # ===================================
   def generate_data_train(
     self,
+    init_sols: Optional[Union[str,np.ndarray]] = None,
     noise: bool = False,
     sigma: float = 1e-1,
     fix_tmin: bool = False,
     nb_workers: int = 1
   ) -> Tuple[np.ndarray]:
-    # Get initial conditions quadrature points and weights
-    mu, w_mu = self._get_quad_mu()
+    if (init_sols is None):
+      # Get initial conditions quadrature points and weights
+      mu, w_mu = self._get_quad_mu()
+      # Get initial solutions
+      init_sols = self._get_init_sols(mu, w_mu, noise, sigma)
+    else:
+      if isinstance(init_sols, str):
+        init_sols = pd.read_csv(init_sols).values
     # Compute solutions
     return self.compute_sols(
-      mu=mu,
-      w_mu=w_mu,
-      noise=noise,
-      sigma=sigma,
+      y0=init_sols[:,:-1],
+      w_mu=init_sols[:,-1],
       fix_tmin=fix_tmin,
       nb_workers=nb_workers
     )
@@ -76,30 +81,43 @@ class Data(object):
     )
     w = np.sqrt(w)
     # Save quadrature points/weights
-    with open(self.path_to_saving+"/quad_mu.p", "wb") as file:
-      pickle.dump({"x": x, "w": w}, file)
+    pd.DataFrame(
+      data=np.vstack([x.T, w]).T,
+      columns=list(MU_VARS)+["w"]
+    ).to_csv(
+      path_or_buf=self.path_to_saving + "/quad_mu.csv",
+      float_format="%.10e",
+      index=False
+    )
     return x, w
 
   # Testing data
   # ===================================
   def generate_data_test(
     self,
-    limits: Dict[str, List[float]],
-    nb_samples: int,
+    init_sols: Optional[Union[str,np.ndarray]] = None,
+    limits: Optional[Dict[str, List[float]]] = None,
+    nb_samples: Optional[int] = None,
     log_vars: Tuple[str] = ("Te", "rho"),
     eps: float = 1e-8,
     nb_workers: int = 1
   ) -> Tuple[np.ndarray]:
-    # Get sampled initial conditions
-    mu = self._get_samples_mu(
-      limits=limits,
-      nb_samples=nb_samples,
-      log_vars=log_vars,
-      eps=eps
-    )
+    if (init_sols is None):
+      # Get sampled initial conditions
+      mu = self._get_samples_mu(
+        limits=limits,
+        nb_samples=nb_samples,
+        log_vars=log_vars,
+        eps=eps
+      )
+      # Get initial solutions
+      init_sols = self._get_init_sols(mu)
+    else:
+      if isinstance(init_sols, str):
+        init_sols = pd.read_csv(init_sols).values
     # Compute solutions
     return self.compute_sols(
-      mu=mu,
+      y0=init_sols,
       t=self.tvec,
       nb_workers=nb_workers
     )
@@ -128,7 +146,7 @@ class Data(object):
     pd.DataFrame(data=mu, columns=MU_VARS).to_csv(
       path_or_buf=self.path_to_saving + "/samples_mu.csv",
       float_format="%.10e",
-      index=True
+      index=False
     )
     return mu
 
@@ -136,16 +154,14 @@ class Data(object):
   # ===================================
   def compute_sols(
     self,
-    mu: np.ndarray,
+    y0: np.ndarray,
     w_mu: Optional[np.ndarray] = None,
     t: Optional[np.ndarray] = None,
-    noise: bool = False,
-    sigma: float = 1e-1,
     fix_tmin: bool = False,
     nb_workers: int = 1
   ) -> List[Optional[float]]:
     # Loop over initial conditions quadrature points
-    nb_samples = len(mu)
+    nb_samples = len(y0)
     iterable = tqdm(
       iterable=range(nb_samples),
       ncols=80,
@@ -155,8 +171,6 @@ class Data(object):
     # Define input arguments
     kwargs = dict(
       t=t,
-      noise=noise,
-      sigma=sigma,
       fix_tmin=fix_tmin
     )
     if (nb_workers > 1):
@@ -164,7 +178,7 @@ class Data(object):
       runtime = jl.Parallel(nb_workers)(
         jl.delayed(env.make_fun_parallel(self.compute_sol))(
           index=i,
-          mu=mu[i],
+          y0=y0[i],
           w_mu=w_mu[i] if (w_mu is not None) else None,
           **kwargs
         ) for i in iterable
@@ -173,7 +187,7 @@ class Data(object):
       # Run jobs in series
       runtime = [self.compute_sol(
         index=i,
-        mu=mu[i],
+        y0=y0[i],
         w_mu=w_mu[i] if (w_mu is not None) else None,
         **kwargs
       ) for i in iterable]
@@ -183,17 +197,19 @@ class Data(object):
 
   def compute_sol(
     self,
-    mu: np.ndarray,
+    mu: Optional[np.ndarray] = None,
+    y0: Optional[np.ndarray] = None,
     index: Optional[int] = None,
     w_mu: Optional[float] = None,
     t: Optional[np.ndarray] = None,
-    noise: bool = False,
-    sigma: float = 1e-1,
     fix_tmin: bool = False,
     filename: Optional[str] = None
   ) -> Optional[float]:
-    # Compute the initial solution for the system
-    y0, rho = self.system.get_init_sol(mu, noise=noise, sigma=sigma)
+    # Unpack initial solution for the system
+    if (y0 is not None):
+      y0, rho = y0[:-1], y0[-1]
+    else:
+      y0, rho = self.system.get_init_sol(mu)
     # Set time grid
     if (t is None):
       # > Determine the smallest time scale for resolving system dynamics
@@ -211,7 +227,6 @@ class Data(object):
     if ((y is not None) and (y.shape[1] == len(t))):
       sol = {
         "index": index,
-        "mu": mu,
         "w_mu": w_mu,
         "t": t,
         "w_t": w_t,
@@ -271,3 +286,31 @@ class Data(object):
     # Save scalings
     with open(self.path_to_saving+"/scalings.p", "wb") as file:
       pickle.dump(scalings, file)
+
+  def _get_init_sols(
+    self,
+    mu: np.ndarray,
+    w_mu: Optional[np.ndarray] = None,
+    noise: bool = False,
+    sigma: float = 1e-1
+  ) -> np.ndarray:
+    sols = []
+    for i in range(len(mu)):
+      sol = self.system.get_init_sol(mu[i], noise=noise, sigma=sigma)
+      print("SOL:", sol[0])
+      sol = list(sol)
+      if (w_mu is not None):
+        sol.append(w_mu[i])
+      sol = np.concatenate(list(map(np.atleast_1d, sol)))
+      sols.append(sol)
+    sols = np.vstack(sols)
+    # Save
+    columns = self.system.var_names + ["rho"]
+    if (w_mu is not None):
+      columns.append("weight")
+    pd.DataFrame(data=sols, columns=columns).to_csv(
+      path_or_buf=self.path_to_saving + "/init_sols.csv",
+      float_format="%.10e",
+      index=False
+    )
+    return sols

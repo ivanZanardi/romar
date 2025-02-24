@@ -28,23 +28,28 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/cobras_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobras/basis.p"
+    },
+    "cobraslin": {
+      "active": true,
+      "name": "CoBRAS Lin",
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/cobraslin/basis.p"
     },
     "pca": {
       "active": true,
       "name": "PCA",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/run_old2/rad_on_test10/max_mom_2a/pca_basis.p"
+      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/pca/basis.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/run/test1/max_mom_2_Tfull/temp2/"
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/run/test1/data/",
+    "path": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/test/",
     "irange": [0,500],
     "nb_workers": 10,
     "eps": 1e-8,
-    "tlim": [0.0, 1e-3]
+    "tlim": [0.0, 1.1e-3]
   },
   "plot": {
     "labels": {

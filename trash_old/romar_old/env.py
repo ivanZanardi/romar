@@ -12,8 +12,7 @@ def set(
   nb_threads = int(nb_threads)
   _set_cpu_threads(nb_threads)
   from . import backend as bkd
-  global _ENV_OPTS
-  _ENV_OPTS = dict(
+  bkd.set(
     backend=backend,
     device=device,
     device_idx=device_idx,
@@ -21,16 +20,6 @@ def set(
     epsilon=epsilon,
     floatx=floatx
   )
-  bkd.set(**_ENV_OPTS)
-
-def get():
-  return _ENV_OPTS
-
-def make_fun_parallel(fun):
-  def fun_parallel(*args, **kwargs):
-    set(**_ENV_OPTS)
-    return fun(*args, **kwargs)
-  return fun_parallel
 
 def _set_cpu_threads(nb_threads):
   keys = (

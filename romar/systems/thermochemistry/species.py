@@ -21,9 +21,14 @@ class Species(object):
     # Set properties
     for (k, v) in properties.items():
       setattr(self, k, v)
+    # Levels
     for (k, v) in self.lev.items():
       self.lev[k] = bkd.to_torch(v).reshape(-1)
     self.nb_comp = len(self.lev["E"])
+    if (self.nb_comp > 1):
+      self.comp_names = [self.name + f"_{i+1}" for i in range(self.nb_comp)]
+    else:
+      self.comp_names = [self.name]
     # Control variables
     self.use_factorial = bool(use_factorial)
     # Indexing

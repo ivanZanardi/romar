@@ -7,8 +7,9 @@ import numpy as np
 import joblib as jl
 import dill as pickle
 
+from romar import env
 from tqdm import tqdm
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 # Classes
@@ -100,7 +101,8 @@ def save_case(
   """
   if (filename is None):
     filename = path + f"/case_{str(index).zfill(4)}.p"
-  pickle.dump(data, open(filename, "wb"))
+  with open(filename, "wb") as file:
+    pickle.dump(data, file)
 
 def load_case(
   path: Union[str, None] = None,
@@ -128,7 +130,8 @@ def load_case(
   if (filename is None):
     filename = path + f"/case_{str(index).zfill(4)}.p"
   if os.path.exists(filename):
-    data = pickle.load(open(filename, "rb"))
+    with open(filename, "rb") as file:
+      data = pickle.load(file)
     if (key is None):
       return data
     else:
@@ -136,9 +139,11 @@ def load_case(
 
 def load_case_parallel(
   path: str,
-  range: List[int],
+  irange: List[int],
   key: Union[str, None] = None,
-  nb_workers: int = 1
+  nb_workers: int = 1,
+  desc: Optional[str] = "Cases",
+  delimiter: str = "  "
 ) -> List[Any]:
   """
   Load simluated cases in parallel or sequentially based on the number
@@ -159,11 +164,11 @@ def load_case_parallel(
   :return: A list of loaded cases.
   :rtype: List[Any]
   """
-  range = np.sort(range)
+  irange = np.sort(irange)
   iterable = tqdm(
-    iterable=range(*range),
+    iterable=range(*irange),
     ncols=80,
-    desc="Cases",
+    desc=delimiter+desc if (desc is not None) else None,
     file=sys.stdout
   )
   if (nb_workers > 1):
@@ -178,7 +183,7 @@ def generate_case_parallel(
   irange: List[int],
   sol_kwargs: Dict[str, Any] = {},
   nb_workers: int = 1,
-  desc: str = "Cases",
+  desc: Optional[str] = "Cases",
   verbose: bool = True,
   delimiter: str = "  "
 ) -> None:
@@ -214,10 +219,13 @@ def generate_case_parallel(
   iterable = tqdm(
     iterable=range(*irange),
     ncols=80,
-    desc=delimiter+desc,
+    desc=delimiter+desc if (desc is not None) else None,
     file=sys.stdout
   )
   if (nb_workers > 1):
+    # Define parallel function
+    sol_fun = env.make_fun_parallel(sol_fun)
+    # Run parallel jobs
     runtime = jl.Parallel(nb_workers)(
       jl.delayed(sol_fun)(index=i, **sol_kwargs) for i in iterable
     )
@@ -229,21 +237,11 @@ def generate_case_parallel(
     print(delimiter + f"Total converged cases: {len(runtime)}/{nb_samples}")
   return np.mean(runtime)
 
-# Statistics
-# =====================================
-def absolute_percentage_error(y_true, y_pred, eps=1e-7):
-  return 100*np.abs(y_true-y_pred)/(np.abs(y_true)+eps)
-
-def l2_relative_error(y_true, y_pred, axis=-1, eps=1e-7):
-  err = np.linalg.norm(y_true-y_pred, axis=axis)
-  err /= (np.linalg.norm(y_true, axis=axis) + eps)
-  return err
-
 # Operations
 # =====================================
 def map_nested_dict(
-  obj: Any,
-  fun: callable
+  fun: callable,
+  obj: Any
 ) -> Any:
   """
   Recursively apply a function to all values in a nested dictionary.
@@ -251,18 +249,53 @@ def map_nested_dict(
   This function traverses a nested dictionary and applies the given
   function to each value. It supports dictionaries, lists, and tuples.
 
-  :param obj: The nested dictionary or other container to map.
-  :type obj: dict or list or tuple or Any
   :param fun: The function to apply to each value.
   :type fun: Callable[[Any], Any]
+  :param obj: The nested dictionary or other container to map.
+  :type obj: dict or list or tuple or Any
 
   :return: A new nested structure with the function applied to all values.
   :rtype: Any
   """
   if isinstance(obj, collections.Mapping):
-    return {k: map_nested_dict(v, fun) for (k, v) in obj.items()}
+    return {k: map_nested_dict(fun, v) for (k, v) in obj.items()}
   else:
     if isinstance(obj, (list, tuple)):
       return [fun(x) for x in obj]
     else:
       return fun(obj)
+
+def is_nan_inf(x):
+  return (np.isnan(x)+np.isinf(x)).astype(bool)
+
+def replace_keys(d: dict, key_map: Dict[str, str]) -> dict:
+  new_d = {}
+  for (k, v) in d.items():
+    if isinstance(v, dict):
+      v = replace_keys(v, key_map)
+    new_key = key_map.get(k, k)
+    new_d[new_key] = v
+  return new_d
+
+# Statistics
+# =====================================
+def absolute_percentage_error(y_true, y_pred, eps=1e-7):
+  return 100*np.abs(y_true-y_pred)/(np.abs(y_true)+eps)
+
+def mape(y_true, y_pred, eps=1e-7, axis=0):
+  err = absolute_percentage_error(y_true, y_pred, eps)
+  return np.mean(err, axis=axis)
+
+def l2_relative_error(y_true, y_pred, axis=-1, eps=1e-7):
+  err = np.linalg.norm(y_true-y_pred, axis=axis)
+  err /= (np.linalg.norm(y_true, axis=axis) + eps)
+  return err
+
+# Timeout
+# =====================================
+class TimeoutException(Exception):
+    """Custom exception for timeout handling."""
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutException("Solver exceeded the allowed execution time.")

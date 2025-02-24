@@ -2,9 +2,7 @@
 Visualize ROM vs FOM trajectories.
 """
 
-import os
 import sys
-import copy
 import json
 import argparse
 import importlib
@@ -30,146 +28,127 @@ env.set(**inputs["env"])
 
 # Libraries
 # =====================================
+import os
+import copy
+import numpy as np
+import dill as pickle
 import matplotlib.pyplot as plt
-plt.style.use(inputs["plot"].get("style", None))
+plt.style.use(inputs.get("mpl_style", "default"))
 
-from romar import roms
 from romar import utils
 from romar import postproc as pp
 from romar import systems as sys_mod
-from silx.io.dictdump import h5todict
 
-_VALID_MODELS = ("cobras", "pod", "cg", "mt")
+_VALID_MODELS = {"cobras", "pca"}
 
 # Main
 # =====================================
-if (__name__ == '__main__'):
+if (__name__ == "__main__"):
 
   print("Initialization ...")
 
-  # Isothermal master equation model
+  # Path to saving
+  path_to_saving = inputs["paths"]["saving"] + "/visual/"
+  os.makedirs(path_to_saving, exist_ok=True)
+
+  # Copy input file
+  filename = path_to_saving + "/inputs.json"
+  with open(filename, "w") as file:
+    json.dump(inputs, file, indent=2)
+
+  # System
   # -----------------------------------
-  path_to_dtb = inputs["paths"]["dtb"]
   system = utils.get_class(
     modules=[sys_mod],
     name=inputs["system"]["name"]
-  )(
-    species={
-      k: path_to_dtb + f"/species/{k}.json" for k in ("atom", "molecule")
-    },
-    rates_coeff=path_to_dtb + "/kinetics.hdf5",
-    **inputs["system"]["kwargs"]
-  )
+  )(**inputs["system"]["init"])
 
   # Testing
   # -----------------------------------
   # Initialization
   # ---------------
-  # Path to saving
-  path_to_saving = inputs["paths"]["saving"] + "/visual/"
-  os.makedirs(path_to_saving, exist_ok=True)
-
-  # ROM models
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
-      model = copy.deepcopy(model)
-      if (name in ("cobras", "pod")):
-        model["basis"] = h5todict(model["basis"])
-      elif (name == "cg"):
-        model["class"] = roms.CoarseGrainingM1(
-          molecule=path_to_dtb+"/species/molecule.json"
-        )
-      elif (name == "mt"):
-        model["class"] = roms.MultiTemperature(
-          molecule=path_to_dtb+"/species/molecule.json"
-        )
+      _model = copy.deepcopy(model)
+      if (name in _VALID_MODELS):
+        # Load basis
+        with open(model["basis"], "rb") as file:
+          _model["basis"] = pickle.load(file)
       else:
         raise ValueError(
           f"Name '{name}' not valid! Valid ROM models are {_VALID_MODELS}."
         )
-      models[name] = model
+      models[name] = _model
+      del _model
 
   # Loop over test cases
   # ---------------
   for icase in inputs["data"]["cases"]:
     print(f"Evaluating case '{icase}' ...")
-    # > Load test case
-    filename = inputs["data"]["path"]+f"/case_{icase}.p"
-    data = utils.load_case(filename=filename)
-    T, t, n0, n_fom = [data[k] for k in ("T", "t", "n0", "n")]
-    # > Update FOM operators
-    system.update_fom_ops(T)
     # > Loop over ROM dimensions
-    for r in range(*inputs["rom_range"]):
-      # > Solutions container
-      sols = {"FOM": n_fom[1]}
+    rrange = np.sort(inputs["rom_range"])
+    for r in range(*rrange):
       # > Saving folder
       path_to_saving_i = path_to_saving + f"/case_{icase}/r{r}/"
       os.makedirs(path_to_saving_i, exist_ok=True)
       # > Loop over ROM models
+      t = None
+      sols, errs = {}, {}
       for (name, model) in models.items():
-        if (name in ("cobras", "pod")):
-          pdata = (model["name"], r)
-          print("> Solving ROM '%s' with %i dimensions ..." % pdata)
-          system.update_rom_ops(
-            phi=model["basis"]["phi"][:,:r],
-            psi=model["basis"]["psi"][:,:r]
-          )
-          sols[model["name"]] = system.solve_rom(t, n0)[1]
-        # elif ((name == "cg") and (2*int(model["nb_bins"]) == r)):
-        elif (name == "cg"):
-          if (model["cases"].get(icase, None) is not None):
-            pdata = (model["name"], int(model["nb_bins"]))
-            print("> Reading ROM '%s' solution with %i bins ..." % pdata)
-            sols[model["name"]] = model["class"](
-              T=T,
-              filename=model["cases"][icase],
-              teval=t,
-              mapping=model["mapping"],
-              nb_bins=int(model["nb_bins"])
-            )
-        elif (name == "mt"):
-          if (model["cases"].get(icase, None) is not None):
-            pdata = (model["name"], 2)
-            print("> Reading ROM '%s' solution with %i dimensions ..." % pdata)
-            sols[model["name"]] = model["class"](
-              filename=model["cases"][icase],
-              teval=t
-            )
+        print("> Solving ROM '%s' with %i dimensions ..." % (model["name"], r))
+        system.rom.build(
+          phi=model["basis"]["phi"][r],
+          psi=model["basis"]["psi"][r],
+          **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
+        )
+        isol, _ = system.compute_sol_rom(
+          filename=inputs["data"]["path"]+f"/case_{icase}.p",
+          eps=inputs["data"].get("eps", 1e-8),
+          tout=inputs["data"].get("tout", 1e-2),
+          tlim=inputs["data"].get("tlim", None)
+        )
+        if (isol is not None):
+          if (t is None):
+            t = isol.pop("t").squeeze()
+          if ("FOM" not in sols):
+            sols["FOM"] = isol.pop("FOM")
+          sols[model["name"]] = isol.pop("ROM")
+          errs[model["name"]] = isol.pop("err")
+
       # > Postprocessing
       print(f"> Postprocessing with {r} dimensions ...")
-      common_kwargs = dict(
+      plot_evol_kwargs = dict(
         path=path_to_saving_i,
         t=t,
-        n_m=sols,
-        molecule=system.mix.species["molecule"]
+        y=sols,
+        err=errs,
+        err_scale=inputs["plot"].get("err_scale", "log"),
+        tlim=inputs["plot"]["tlim"][icase],
+        hline=inputs["plot"].get("hline", None),
+        ylim_err=inputs["plot"].get("ylim_err", None)
+      )
+      pp.plot_temp_evolution(
+        **plot_evol_kwargs
       )
       pp.plot_mom_evolution(
-        max_mom=inputs["plot"].get("max_mom", 2),
-        molecule_label=inputs["plot"]["molecule_label"],
-        ylim_err=inputs["plot"].get("ylim_err", None),
-        err_scale=inputs["plot"].get("err_scale", "linear"),
-        hline=inputs["plot"].get("hline", None),
-        tlim=inputs["data"]["tlim"][icase],
-        **common_kwargs
+        **plot_evol_kwargs,
+        species=system.mix.species,
+        labels=inputs["plot"]["labels"],
+        max_mom=inputs["plot"].get("max_mom", 2)
+      )
+      plot_dist_kwargs = dict(
+        path=path_to_saving_i,
+        t=t,
+        y=sols,
+        species=system.mix.species,
+        markersize=inputs["plot"].get("markersize", 1)
       )
       pp.plot_multi_dist_2d(
-        teval=inputs["data"]["teval"][icase],
-        markersize=inputs["plot"].get("markersize", 1),
-        subscript=inputs["plot"].get("subscript", "i"),
-        **common_kwargs
+        **plot_dist_kwargs,
+        teval=inputs["plot"]["teval"][icase]
       )
       if inputs["plot"]["animate"]:
-        pp.animate_dist(
-          markersize=inputs["plot"]["markersize"],
-          **common_kwargs
-        )
-
-  # Copy input file
-  # ---------------
-  filename = path_to_saving + "/inputs.json"
-  with open(filename, "w") as file:
-    json.dump(inputs, file, indent=2)
+        pp.animate_dist(**plot_dist_kwargs)
 
   print("Done!")

@@ -71,6 +71,7 @@ class Basic(object):
     self.nb_comp = self.mix.nb_comp
     self.nb_temp = 2
     self.nb_eqs = self.nb_temp + self.nb_comp
+    self.var_names = self.mix.species_names + ["T", "pe"]
     # ROM
     # -------------
     self.rom = ROM(
@@ -375,7 +376,7 @@ class Basic(object):
     t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
     # Time window
     if (tlim is not None):
-      i = (t >= tlim.min()) * (t <= tlim.max())
+      i = (t >= np.amin(tlim)) * (t <= np.amax(tlim))
       t = t[i]
       y_fom = y_fom[:,i]
     # Solve ROM
@@ -479,7 +480,7 @@ class Basic(object):
     i_conv = np.where([(i is not None) for i in data])[0]
     i_not_conv = np.setdiff1d(np.arange(nb_samples), i_conv)
     # Get not converged solutions identifiers
-    not_conv = np.arange(*irange)[i_not_conv]
+    not_conv = np.arange(*irange)[i_not_conv].tolist()
     # Extract converged solutions
     data = [data[i] for i in i_conv]
     runtime = [runtime[i] for i in i_conv]

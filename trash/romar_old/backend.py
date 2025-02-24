@@ -1,5 +1,7 @@
 import torch
+import functools
 import numpy as np
+import tensorflow as tf
 
 
 # Global
@@ -41,7 +43,7 @@ def to_numpy(x):
     if (torch.is_tensor(x)):
       return x.numpy(force=True)
     elif isinstance(x, (int, float, list, tuple)):
-      return np.array(x, dtype=floatx("numpy"))
+      return np.asarray(x, dtype=floatx("numpy"))
     else:
       return x
 
@@ -58,6 +60,26 @@ def to_torch(x):
 def to_backend(x):
   if (x is not None):
     return to_torch(x) if (_BKD == "torch") else to_numpy(x)
+
+def make_fun_np(fun_torch):
+  """
+  Decorator to convert function inputs from NumPy to PyTorch tensors and
+  convert function outputs from PyTorch tensors to NumPy arrays.
+
+  :param fun_torch: Function that operates on PyTorch tensors.
+  :type fun_torch: callable
+  :return: A wrapped function that accepts NumPy arrays and returns NumPy
+           arrays.
+  :type fun_torch: callable
+  """
+  @functools.wraps(fun_torch)
+  def wrapper(*args, **kwargs):
+    args   = [to_torch(x) for x in args]
+    kwargs = {k: to_torch(x) for (k, x) in kwargs.items()}
+    output = tf.nest.flatten(fun_torch(*args, **kwargs))
+    output = [to_numpy(y) for y in output]
+    return output if len(output) > 1 else output[0]
+  return wrapper
 
 # Device
 # -------------------------------------

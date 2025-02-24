@@ -1,4 +1,3 @@
-import os
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -44,8 +43,7 @@ def _init_lines(
   ax.legend(
     [ax.semilogy([], [], c=c, markersize=6, **style)[0] for c in colors],
     labels=labels,
-    fancybox=True,
-    framealpha=0.9
+    loc="lower left"
   )
   return ax, lines
 
@@ -62,7 +60,7 @@ def _create_animation(
   # Initialize levels distribution lines objects
   ax, lines = _init_lines(list(y.keys()), ax, markersize)
   # Initialize text in ax
-  txt = ax.text(0.05, 0.05, "", transform=ax.transAxes, fontsize=25)
+  txt = ax.text(0.7, 0.92, "", transform=ax.transAxes, fontsize=25)
   # Tight layout
   plt.tight_layout()
 
@@ -110,34 +108,23 @@ def animate(
 def animate_dist(
   path,
   t,
-  y,
-  species,
+  n_m,
+  molecule,
   markersize=6
 ):
-  for s in species.keys():
-    if (species[s].nb_comp > 1):
-      # Path to saving
-      spath = path + f"/dist/{s}/"
-      os.makedirs(spath, exist_ok=True)
-      # Number densities
-      n = {k: yk["dist"][s] for (k, yk) in y.items()}
-      for (k, nk) in n.items():
-        if (nk.shape[0] != len(t)):
-          if (s == "Ar"):
-            nk = nk[1:]
-          n[k] = nk.T
-      x = species[s].lev["E"]/const.eV_to_J
-      if (s == "Ar"):
-        x = x[1:]
-      animate(
-        t=t,
-        x=x,
-        y=n,
-        markersize=markersize,
-        frames=100,
-        fps=10,
-        filename=spath + "/video.mp4",
-        dpi=600,
-        save=True,
-        show=False
-      )
+  for (k, nk) in n_m.items():
+    if (nk.shape[-1] != molecule.nb_comp):
+      nk = nk.T
+    n_m[k] = nk / molecule.lev["g"]
+  animate(
+    t=t,
+    x=molecule.lev['e'] / const.eV_to_J,
+    y=n_m,
+    markersize=markersize,
+    frames=100,
+    fps=10,
+    filename=path + "/dist.mp4",
+    dpi=600,
+    save=True,
+    show=False
+  )

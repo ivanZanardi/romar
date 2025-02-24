@@ -42,7 +42,7 @@ if (__name__ == "__main__"):
   print("Initialization ...")
 
   # Path to saving
-  path_to_saving = inputs["paths"]["saving"]
+  path_to_saving = inputs["paths"]["saving"] + "/models/"
   os.makedirs(path_to_saving, exist_ok=True)
 
   # Copy input file

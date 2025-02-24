@@ -34,3 +34,9 @@ eV_to_J   = constants.eV                           # [eV]   -> [J]  Electronvolt
 Ha_to_J   = pc["Hartree energy"][0]                # [Ha]   -> [J]  Hartree to Joule
 Ha_to_eV  = pc["Hartree energy in eV"][0]          # [Ha]   -> [eV] Hartree to Electronvolt
 cm3_to_m3 = 1e-6                                   # [cm^3] -> [m^3]
+
+# Limits
+# -------------------------------------
+TMIN      = 3e2                                    # Minimum temperature [K]
+TMAX      = 1e5                                    # Maximum temperature [K]
+XMIN      = 1e-15                                  # Minimum molar fraction

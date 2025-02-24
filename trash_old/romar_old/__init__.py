@@ -14,20 +14,14 @@ __all__ = [
   "backend",
   "const",
   "env",
-  "ops",
   "postproc",
   "roms",
-  "systems",
-  "utils"
+  "systems"
 ]
 
 # Ignore all warnings
 import warnings
 warnings.filterwarnings("ignore")
-
-# Ignore all warnings from R
-import rpy2.robjects as ro
-ro.r('options(warn=-1)')
 
 # Logging
 from absl import logging
