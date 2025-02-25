@@ -36,7 +36,7 @@
       "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/cobraslin/basis.p"
     },
     "pca": {
-      "active": true,
+      "active": false,
       "name": "PCA",
       "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/pca/basis.p"
     }
@@ -55,7 +55,7 @@
     "path": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/test/",
     "eps": 1e-8,
     "tout": 2e2,
-    "tlim": [0.0]
+    "tlim": [0.0, 1e-3]
   },
   "plot": {
     "labels": {
@@ -90,6 +90,6 @@
     "animate": false,
     "markersize": 6
   },
-  "rom_range": [5,12],
+  "rom_range": [7,11],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

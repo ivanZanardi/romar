@@ -107,11 +107,14 @@ def plot_evolution(
 
 def plot_temp_evolution(
   path,
-  t,
+  x,
   y,
   err,
-  tlim=None,
+  xlim=None,
+  xlabel=r"$t$ [s]",
   ylim_err=None,
+  xscale="log",
+  legend_loc="best",
   err_scale="linear",
   hline=None
 ):
@@ -119,26 +122,26 @@ def plot_temp_evolution(
   os.makedirs(path, exist_ok=True)
   # Temperatures
   plot_evolution(
-    x=t,
+    x=x,
     y={k: yk["temp"] for (k, yk) in y.items()},
-    xlim=tlim,
-    labels=[r"$t$ [s]", "$T$ [K]"],
-    legend_loc="center left",
-    scales=["log", "linear"],
+    xlim=xlim,
+    labels=[xlabel, "$T$ [K]"],
+    legend_loc=legend_loc,
+    scales=[xscale, "linear"],
     figname=path + "/sol",
     save=True,
     show=False
   )
   # Temperatures error
   plot_evolution(
-    x=t,
+    x=x,
     y={k: ek["temp"] for (k, ek) in err.items()},
-    xlim=tlim,
+    xlim=xlim,
     ylim=ylim_err,
     hline=hline["temp"],
-    labels=[r"$t$ [s]", "$T$ error [\%]"],
-    legend_loc="best",
-    scales=["log", err_scale],
+    labels=[xlabel, "$T$ error [\%]"],
+    legend_loc=legend_loc,
+    scales=[xscale, err_scale],
     figname=path + "/err",
     save=True,
     show=False
@@ -147,12 +150,13 @@ def plot_temp_evolution(
 # Moments
 def plot_mom_evolution(
   path,
-  t,
+  x,
   y,
   err,
   species,
   labels,
-  tlim=None,
+  xlabel=r"$t$ [s]",
+  xlim=None,
   ylim_err=None,
   err_scale="linear",
   hline=None,
@@ -177,10 +181,10 @@ def plot_mom_evolution(
           label_err = fr"$\gamma_{m}$ error [\%]"
       # > Moment
       plot_evolution(
-        x=t,
+        x=x,
         y={k: yk["mom"][s][f"m{m}"] for (k, yk) in y.items()},
-        xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
-        labels=[r"$t$ [s]", label_sol],
+        xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
+        labels=[xlabel, label_sol],
         legend_loc="best",
         scales=["log", yscale],
         figname=path + f"/m{m}_{s}",
@@ -189,12 +193,12 @@ def plot_mom_evolution(
       )
       # > Moment error
       plot_evolution(
-        x=t,
+        x=x,
         y={k: ek["mom"][s][f"m{m}"] for (k, ek) in err.items()},
-        xlim=tlim[f"m{m}"] if isinstance(tlim, dict) else tlim,
+        xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
         ylim=ylim_err,
         hline=hline["mom"],
-        labels=[r"$t$ [s]", label_err],
+        labels=[xlabel, label_err],
         legend_loc="best",
         scales=["log", err_scale],
         figname=path + f"/m{m}_{s}_err",
@@ -264,12 +268,13 @@ def plot_err_ci_evolution(
 
 def plot_err_evolution(
   path,
-  t,
+  x,
   error,
   species,
   labels,
   rrange=None,
-  tlim=None,
+  xlim=None,
+  xlabel=r"$t$ [s]",
   ylim_err=None,
   err_scale="linear",
   hline=None,
@@ -283,15 +288,15 @@ def plot_err_evolution(
   # Temperatures
   for k in ("Th", "Te"):
     plot_evolution(
-      x=t,
+      x=x,
       y={f"$r={r}$": error[r]["temp"][k] for r in rlist},
       colors=colors,
-      xlim=tlim,
+      xlim=xlim,
       ylim=ylim_err["temp"][k] if (ylim_err is not None) else None,
       ls="-",
       hline=hline["temp"],
       legend_loc="best",
-      labels=[r"$t$ [s]", fr"$T_{k[1]}$ error [\%]"],
+      labels=[xlabel, fr"$T_{k[1]}$ error [\%]"],
       scales=["log", err_scale],
       figname=path + f"/err_temp_{k}",
       save=True,
@@ -308,15 +313,15 @@ def plot_err_evolution(
         else:
           label = fr"$\gamma_{m}$ error [\%]"
       plot_evolution(
-        x=t,
+        x=x,
         y={f"$r={r}$": error[r]["mom"][s][f"m{m}"] for r in rlist},
         colors=colors,
-        xlim=tlim,
+        xlim=xlim,
         ylim=ylim_err["mom"][s][f"m{m}"] if (ylim_err is not None) else None,
         ls="-",
         hline=hline["mom"],
         legend_loc="best",
-        labels=[r"$t$ [s]", label],
+        labels=[xlabel, label],
         scales=["log", err_scale],
         figname=path + f"/err_mom_{s}_m{m}",
         save=True,
@@ -324,15 +329,15 @@ def plot_err_evolution(
       )
   # Distribution
   plot_evolution(
-    x=t,
+    x=x,
     y={f"$r={r}$": error[r]["dist"] for r in rlist},
     colors=colors,
-    xlim=tlim,
+    xlim=xlim,
     ylim=ylim_err["dist"] if (ylim_err is not None) else None,
     ls="-",
     hline=hline["dist"],
     legend_loc="best",
-    labels=[r"$t$ [s]", fr"$w_i$ error [\%]"],
+    labels=[xlabel, fr"$w_i$ error [\%]"],
     scales=["log", err_scale],
     figname=path + "/err_dist",
     save=True,

@@ -144,7 +144,7 @@ if (__name__ == "__main__"):
     print("> Plotting error evolution ...")
     pp.plot_err_evolution(
       path=ipath_to_saving+"/figs/",
-      t=t,
+      x=t,
       error=err_time,
       species=system.mix.species,
       rrange=inputs["rom_range"],

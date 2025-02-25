@@ -523,8 +523,8 @@ class Basic(object):
 
   def compute_err_temp(
     self,
-    Ti_true: np.ndarray,
-    Ti_pred: np.ndarray,
+    Ti_true: List[np.ndarray],
+    Ti_pred: List[np.ndarray],
     eps: float = 1e-8
   ) -> Dict[str, np.ndarray]:
     return {

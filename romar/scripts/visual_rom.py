@@ -118,7 +118,7 @@ if (__name__ == "__main__"):
       print(f"> Postprocessing with {r} dimensions ...")
       plot_evol_kwargs = dict(
         path=path_to_saving_i,
-        t=t,
+        x=t,
         y=sols,
         err=errs,
         err_scale=inputs["plot"].get("err_scale", "log"),
