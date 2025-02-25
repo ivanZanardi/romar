@@ -488,27 +488,24 @@ class Basic(object):
     nb_conv = len(i_conv)
     print(f"  Total converged cases: {nb_conv}/{nb_samples}")
     if (nb_conv/nb_samples >= 0.8):
-      # Stack data values
-      t = data[0]["t"]
-      _data = data[0]
+      # Stack error values
+      error = data[0]["err"]
       for idata in data[1:]:
-        _data = tf.nest.map_structure(
-          lambda e1, e2: np.vstack([e1, e2]), _data, idata
+        error = tf.nest.map_structure(
+          lambda e1, e2: np.vstack([e1, e2]), error, idata["err"]
         )
-      # Compute statistics
-      data = tf.nest.map_structure(
-        lambda e: {
-          "mean": np.mean(e, axis=0),
-          "std": np.std(e, axis=0)
-        },
-        _data
-      )
-      data["t"] = t
-      runtime = {
-        "mean": float(np.mean(runtime, 0)),
-        "std": float(np.std(runtime, 0))
+      # Compute error statistics
+      error = {
+        "t": data[0]["t"],
+        "err_mean": tf.nest.map_structure(np.mean, error),
+        "err_time": tf.nest.map_structure(lambda e: np.mean(e, axis=0), error)
       }
-      return data, runtime, not_conv
+      # Compute runtime statistics
+      runtime = {
+        "mean": float(np.mean(runtime)),
+        "std": float(np.std(runtime))
+      }
+      return error, runtime, not_conv
     else:
       return None, None, not_conv
 

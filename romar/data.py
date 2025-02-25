@@ -297,7 +297,6 @@ class Data(object):
     sols = []
     for i in range(len(mu)):
       sol = self.system.get_init_sol(mu[i], noise=noise, sigma=sigma)
-      print("SOL:", sol[0])
       sol = list(sol)
       if (w_mu is not None):
         sol.append(w_mu[i])

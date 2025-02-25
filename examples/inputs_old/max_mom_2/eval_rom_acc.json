@@ -49,8 +49,8 @@
     "irange": [0,100],
     "nb_workers": 10,
     "eps": 1e-8,
-    "tout": 0.0,
-    "tlim": [0.0, 1.1e-3]
+    "tout": 1e3,
+    "tlim": [0.0, 1e-3]
   },
   "plot": {
     "labels": {
@@ -61,27 +61,7 @@
       "em": "\\text{e$^-$}"
     },
     "tlim": null,
-    "ylim_err": {
-      "dist": [8e-2, 2e2],
-      "temp": {
-        "Th": [1e-6, 2e0],
-        "Te": [1e-3, 2e1]
-      },
-      "mom": {
-        "Ar": {
-          "m0": [1e-6, 2e0],
-          "m1": [1e-2, 1e1]
-        },
-        "Arp": {
-          "m0": [1e-2, 2e2],
-          "m1": [1e-3, 1e1]
-        },
-        "em": {
-          "m0": [1e-2, 2e2],
-          "m1": [1e-1, 1e1]
-        }
-      }
-    },
+    "ylim_err": null,
     "err_scale": "log",
     "hline": {
       "temp": 1.0,
@@ -90,6 +70,6 @@
     },
     "max_mom": 2
   },
-  "rom_range": [5,12,2],
+  "rom_range": [7,12],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle"
 }

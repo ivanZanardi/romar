@@ -31,7 +31,9 @@ env.set(**inputs["env"])
 import os
 import copy
 import numpy as np
+import pandas as pd
 import dill as pickle
+import tensorflow as tf
 import matplotlib.pyplot as plt
 plt.style.use(inputs.get("mpl_style", "default"))
 
@@ -92,50 +94,60 @@ if (__name__ == "__main__"):
   # ---------------
   for (name, model) in models.items():
     print("Evaluating accuracy of ROM '%s' ..." % model["name"])
-    rrange = inputs["rom_range"]
+    ipath_to_saving = path_to_saving + f"/{name}/"
+    os.makedirs(ipath_to_saving, exist_ok=True)
     if (model["error"] is None):
       t = None
-      error, runtime, not_conv = {}, {}, {}
+      err_time, err_mean, runtime, not_conv = {}, {}, {}, {}
       # Loop over ROM dimensions
-      for r in range(*rrange):
-        print("> Solving with %i dimensions ..." % r)
+      for i in range(*inputs["rom_range"]):
+        print("> Solving with %i dimensions ..." % i)
         system.rom.build(
-          **{k: model["basis"][k][r] for k in ("phi", "psi")},
+          **{k: model["basis"][k][i] for k in ("phi", "psi")},
           **{k: model["basis"][k] for k in ("mask", "xref", "xscale")}
         )
-        idata, iruntime, not_conv[r] = system.compute_err(**inputs["data"])
-        if (idata is not None):
+        ierr, iruntime, not_conv[i] = system.compute_err(**inputs["data"])
+        if (ierr is not None):
           if (t is None):
-            t = idata["t"]
-          error[r], runtime[r] = idata["err"], iruntime
-      # Save error statistics
+            t = ierr["t"]
+          runtime[i] = iruntime
+          err_time[i] = ierr["err_time"]
+          err_mean[i] = pd.json_normalize(
+            ierr["err_mean"], sep='_'
+          ).to_dict(orient='records')[0]
+      # Save statistics
       print("> Saving statistics ...")
-      # > Error
-      filename = path_to_saving + f"/{name}_err.p"
+      # > Error over time
+      filename = ipath_to_saving + "/err_time.p"
       with open(filename, "wb") as file:
-        pickle.dump({"t": t, "data": error}, file)
+        pickle.dump({"t": t, "data": err_time}, file)
+      # > Mean error
+      pd.DataFrame.from_dict(data=err_mean, orient="columns").to_csv(
+        path_or_buf=ipath_to_saving + "/err_mean.csv",
+        float_format='%.3f'
+      )
       # > Runtime and not converged cases
       for (k, v) in (
         ("runtime", runtime),
         ("not_conv", not_conv)
       ):
-        filename = path_to_saving + f"/{name}_{k}.json"
+        filename = ipath_to_saving + f"/{k}.json"
         with open(filename, "w") as file:
           json.dump(v, file, indent=2)
     else:
       t = model["error"]["t"]
-      error = {}
-      for r in range(*rrange):
-        if (r in model["error"]["data"]):
-          error[r] = model["error"]["data"][r]
+      err_time = {}
+      for i in range(*inputs["rom_range"]):
+        if (i in model["error"]["data"]):
+          err_time[i] = model["error"]["data"][i]
     # Plot error statistics
     print("> Plotting error evolution ...")
     pp.plot_err_evolution(
-      path=path_to_saving+f"/{name}/",
+      path=ipath_to_saving+"/figs/",
       t=t,
-      error=error,
+      error=err_time,
       species=system.mix.species,
-      rrange=rrange,
+      rrange=inputs["rom_range"],
       **inputs["plot"]
     )
 

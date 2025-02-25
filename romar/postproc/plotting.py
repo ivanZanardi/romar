@@ -284,7 +284,7 @@ def plot_err_evolution(
   for k in ("Th", "Te"):
     plot_evolution(
       x=t,
-      y={f"$r={r}$": error[r]["temp"][k]["mean"] for r in rlist},
+      y={f"$r={r}$": error[r]["temp"][k] for r in rlist},
       colors=colors,
       xlim=tlim,
       ylim=ylim_err["temp"][k] if (ylim_err is not None) else None,
@@ -309,7 +309,7 @@ def plot_err_evolution(
           label = fr"$\gamma_{m}$ error [\%]"
       plot_evolution(
         x=t,
-        y={f"$r={r}$": error[r]["mom"][s][f"m{m}"]["mean"] for r in rlist},
+        y={f"$r={r}$": error[r]["mom"][s][f"m{m}"] for r in rlist},
         colors=colors,
         xlim=tlim,
         ylim=ylim_err["mom"][s][f"m{m}"] if (ylim_err is not None) else None,
@@ -325,7 +325,7 @@ def plot_err_evolution(
   # Distribution
   plot_evolution(
     x=t,
-    y={f"$r={r}$": error[r]["dist"]["mean"] for r in rlist},
+    y={f"$r={r}$": error[r]["dist"] for r in rlist},
     colors=colors,
     xlim=tlim,
     ylim=ylim_err["dist"] if (ylim_err is not None) else None,
