@@ -72,7 +72,9 @@ class CoBRAS(Basic):
     super(CoBRAS, self).__init__(
       system, path_to_data, scale, xref, xscale, path_to_saving
     )
-    # Output matrix
+    self.set_output()
+
+  def set_output(self):
     self.C = self.system.C @ self.xscale_mat
     self.nb_out = self.C.shape[0]
 
@@ -181,11 +183,11 @@ class CoBRAS(Basic):
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Unpacking
-      t = data["t"].reshape(-1)
+      # Extract solution
       y = data["y"].T
+      t = data["t"].reshape(-1)
       tmin = float(data["tmin"])
-      # Setting up
+      # Setting up system
       self.system.use_rom = False
       _ = self.system.set_up(
         y0=data["y0"].reshape(-1),
@@ -203,18 +205,16 @@ class CoBRAS(Basic):
           size=int(t0_perc * (nt-1)),
           replace=False
         )
-      # Set weights
-      w_t = 1.0/np.sqrt(nt)
-      w_mu = float(data["w_mu"])
-      w_meas = 1.0/np.sqrt(nb_meas)
+        t0_indices = np.sort(t0_indices)
       # State covariance matrix
-      Xi = w_mu * w_t * self._apply_scaling(y)
-      X.append(Xi)
+      w_t = data["w_t"].reshape(-1,1)
+      w_mu = data["w_mu"].reshape(1)
+      X.append(w_mu * w_t * self._apply_scaling(y))
       # Gradient covariance matrix
-      Yi = []
+      Yi, ti = [], []
       for j in t0_indices:
         # > Set initial/final times
-        t0 = max(t[j], tmin)
+        t0 = t[j] + tmin
         dt = np.random.choice(dt_logs)
         tf = t0 * np.power(10, dt)
         tf = min(max(tf, 1e-7), t[-1])
@@ -230,11 +230,18 @@ class CoBRAS(Basic):
         )
         if (gradj is not None):
           Yi.append(gradj)
+          ti.append(t0)
         conv.append(convj)
       # > Weight and store adjoint solutions
-      w_t = 1.0/np.sqrt(len(Yi))
-      Yi = w_mu * w_t * w_meas * np.vstack(Yi)
-      Y.append(Yi)
+      w_meas = 1.0/np.sqrt(nb_meas)
+      _, w_t = ops.get_quad_1d(
+        x=np.asarray(ti),
+        quad="trapz",
+        dist="uniform"
+      )
+      w_t = np.sqrt(w_t)
+      Yi = [w_mu * w_t[j] * w_meas * Yij for (j, Yij) in enumerate(Yi)]
+      Y.append(np.vstack(Yi))
 
   def _solve_adj(
     self,
@@ -345,7 +352,10 @@ class CoBRAS(Basic):
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
-    mask = self._make_mask(X.shape[0], xnot)
+    mask = self._make_mask(
+      nb_feat=X.shape[0],
+      xnot=xnot
+    )
     X, Y = X[mask], Y[mask]
     # Balance covariance matrices
     rank = min(rank, X.shape[0])

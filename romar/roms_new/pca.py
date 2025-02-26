@@ -120,14 +120,12 @@ class PCA(Basic):
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Unpacking
+      # Extract solution
       y = data["y"].T
-      # Set weights
-      w_t = 1.0/np.sqrt(len(y))
-      w_mu = float(data["w_mu"])
       # State covariance matrix
-      Xi = w_mu * w_t * self._apply_scaling(y)
-      X.append(Xi)
+      w_t = data["w_t"].reshape(-1,1)
+      w_mu = data["w_mu"].reshape(1)
+      X.append(w_mu * w_t * self._apply_scaling(y))
 
   # Compute principal components
   # ===================================
@@ -161,7 +159,10 @@ class PCA(Basic):
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
-    mask = self._make_mask(X.shape[0], xnot)
+    mask = self._make_mask(
+      nb_feat=X.shape[0],
+      xnot=xnot
+    )
     X = X[mask]
     # Compute SVD
     rank = min(rank, X.shape[0])
