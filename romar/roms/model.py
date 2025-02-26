@@ -150,8 +150,8 @@ class ROM(object):
       raise ValueError("ROM model not built.")
     # Ensure correct dimensions
     if (x.shape[-1] != self.nb_eqs):
-      raise ValueError("Input state shape mismatch: Expected " \
-                      f"last dimension {self.nb_eqs}, got {x.shape[-1]}.")
+      raise ValueError("Input state shape mismatch: expected last " \
+                      f"dimension {self.nb_eqs}, got {x.shape[-1]}.")
     # Encode
     if (not is_der):
       x = x - self.xref

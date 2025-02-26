@@ -56,7 +56,6 @@ class PCA(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    use_quad_w: bool = True,
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
@@ -74,7 +73,6 @@ class PCA(Basic):
     :rtype: Tuple[np.ndarray]
     """
     # Loop over computed solutions
-    irange = np.sort(irange)
     iterable = tqdm(
       iterable=range(*irange),
       ncols=80,
@@ -84,9 +82,7 @@ class PCA(Basic):
     with multiprocessing.Manager() as manager:
       # Define input arguments for covariance matrices calculation
       kwargs = dict(
-        X=manager.list(),
-        nb_mu=irange[1]-irange[0],
-        use_quad_w=use_quad_w
+        X=manager.list()
       )
       if (nb_workers > 1):
         # Run jobs in parallel
@@ -105,9 +101,7 @@ class PCA(Basic):
   def _compute_cov_mats(
     self,
     index: int,
-    X: List[np.ndarray],
-    nb_mu: int,
-    use_quad_w: bool = True
+    X: List[np.ndarray]
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -126,15 +120,12 @@ class PCA(Basic):
     # Load solution
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Unpack
-      t, y, w_t, w_mu = [data[k] for k in ("t", "y", "w_t", "w_mu")]
-      # Set weights
-      if (not use_quad_w):
-        w_mu = 1.0/np.sqrt(nb_mu)
-        w_t[:] = 1.0/np.sqrt(len(t))
-      w_t = w_t.reshape(-1,1)
-      # Scale
-      X.append(w_mu * w_t * self._apply_scaling(y.T))
+      # Extract solution
+      y = data["y"].T
+      # State covariance matrix
+      w_t = data["w_t"].reshape(-1,1)
+      w_mu = data["w_mu"].reshape(1)
+      X.append(w_mu * w_t * self._apply_scaling(y))
 
   # Compute principal components
   # ===================================
@@ -168,7 +159,10 @@ class PCA(Basic):
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
-    mask = self._make_mask(X.shape[0], xnot)
+    mask = self._make_mask(
+      nb_feat=X.shape[0],
+      xnot=xnot
+    )
     X = X[mask]
     # Compute SVD
     rank = min(rank, X.shape[0])
