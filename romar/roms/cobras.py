@@ -189,10 +189,7 @@ class CoBRAS(Basic):
       tmin = float(data["tmin"])
       # Setting up system
       self.system.use_rom = False
-      _ = self.system.set_up(
-        y0=data["y0"].reshape(-1),
-        rho=float(data["rho"])
-      )
+      self.system.mix.set_rho(rho=data["rho"])
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # Sample initial times
