@@ -63,7 +63,7 @@
           "atol": 1e-6,
           "tout": 30.0,
           "nb_meas": 5,
-          "nb_workers": 20
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
