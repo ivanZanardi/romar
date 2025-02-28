@@ -72,9 +72,10 @@ class CoBRAS(Basic):
     super(CoBRAS, self).__init__(
       system, path_to_data, scale, xref, xscale, path_to_saving
     )
-    self.set_output()
-
-  def set_output(self):
+    # Setting up system
+    self.system.use_rom = False
+    self.system.set_fun_jac()
+    # Setting output
     self.C = self.system.C @ self.xscale_mat
     self.nb_out = self.C.shape[0]
 
@@ -186,9 +187,8 @@ class CoBRAS(Basic):
       # Extract solution
       y = data["y"].T
       t = data["t"].reshape(-1)
-      tmin = float(data["tmin"])
-      # Setting up system
-      self.system.use_rom = False
+      tmin = data["tmin"]
+      # Set density
       self.system.mix.set_rho(rho=data["rho"])
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
@@ -230,15 +230,16 @@ class CoBRAS(Basic):
           ti.append(t0)
         conv.append(convj)
       # > Weight and store adjoint solutions
-      w_meas = 1.0/np.sqrt(nb_meas)
-      _, w_t = ops.get_quad_1d(
-        x=np.asarray(ti),
-        quad="trapz",
-        dist="uniform"
-      )
-      w_t = np.sqrt(w_t)
-      Yi = [w_mu * w_t[j] * w_meas * Yij for (j, Yij) in enumerate(Yi)]
-      Y.append(np.vstack(Yi))
+      if (len(ti) > 0):
+        w_meas = 1.0/np.sqrt(nb_meas)
+        _, w_t = ops.get_quad_1d(
+          x=np.asarray(ti),
+          quad="trapz",
+          dist="uniform"
+        )
+        w_t = np.sqrt(w_t)
+        Yi = [w_mu * w_t[j] * w_meas * Yij for (j, Yij) in enumerate(Yi)]
+        Y.append(np.vstack(Yi))
 
   def _solve_adj(
     self,
