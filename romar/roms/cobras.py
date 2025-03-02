@@ -226,7 +226,7 @@ class CoBRAS(Basic):
         )
         if (gradj is not None):
           Yi.append(gradj)
-          ti.append(t0)
+          ti.append(t[j])
         conv.append(convj)
       # > Weight and store adjoint solutions
       if (len(ti) > 0):
