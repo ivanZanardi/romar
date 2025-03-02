@@ -32,19 +32,19 @@
   },
   "scaling": {
     "active": true,
-    "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run03/data/train/scalings.p",
+    "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run04/data/train/scalings.p",
     "method": "pareto"
   },
   "models": {
     "PCA": {
       "cov_mats": {
         "compute": {
-          "irange": [0,120],
+          "irange": [0,500],
           "nb_workers": 20
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run03/max_mom_2/models/pca/cov_mats.p"
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run04/max_mom_2/models/pca/cov_mats.p"
       },
       "modes": {
         "rotation": "varimax",
@@ -56,9 +56,9 @@
     "CoBRAS": {
       "cov_mats": {
         "compute": {
-          "irange": [0,120],
-          "dt_list": [1e-7, 1e-6, 1e-5],
-          "t0_perc": 0.666,
+          "irange": [0,500],
+          "dt_logs": [1, 1.5, 2],
+          "t0_perc": 0.333,
           "rtol": 1e-3,
           "atol": 1e-6,
           "tout": 30.0,
@@ -67,7 +67,7 @@
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run03/max_mom_2/models/cobras/cov_mats.p"
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run04/max_mom_2/models/cobras/cov_mats.p"
       },
       "modes": {
         "xnot": [-2,-1],
@@ -77,7 +77,7 @@
     }
   },
   "paths": {
-    "data": "/home/zanardi/Codes/ML/ROMAr/runs/run03/data/train/",
-    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run03/max_mom_2/"
+    "data": "/home/zanardi/Codes/ML/ROMAr/runs/run04/data/train/",
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run04/max_mom_2/"
   }
 }

@@ -84,7 +84,7 @@ class CoBRAS(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    dt_list: List[float],
+    dt_logs: List[float],
     t0_perc: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-6,
@@ -123,7 +123,7 @@ class CoBRAS(Basic):
         X=manager.list(),
         Y=manager.list(),
         conv=manager.list(),
-        dt_list=dt_list,
+        dt_logs=dt_logs,
         t0_perc=t0_perc,
         rtol=rtol,
         atol=atol,
@@ -155,7 +155,7 @@ class CoBRAS(Basic):
     X: List[np.ndarray],
     Y: List[np.ndarray],
     conv: List[int],
-    dt_list: List[float],
+    dt_logs: List[float],
     t0_perc: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-6,
@@ -211,9 +211,10 @@ class CoBRAS(Basic):
       Yi, ti = [], []
       for j in t0_indices:
         # > Set initial/final times
-        t0 = max(t[j], tmin)
-        tf = t0 + np.random.choice(dt_list)
-        tf = min(tf, t[-1])
+        t0 = t[j] + tmin
+        dt = np.random.choice(dt_logs)
+        tf = t0 * np.power(10, dt)
+        tf = min(max(tf, 1e-7), t[-1])
         # > Solve the j-th adjoint problem and store samples
         gradj, convj = self._solve_adj(
           t0=t0,
