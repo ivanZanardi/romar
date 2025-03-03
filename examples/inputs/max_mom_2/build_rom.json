@@ -61,7 +61,7 @@
           "t0_perc": 0.333,
           "rtol": 1e-3,
           "atol": 1e-6,
-          "tout": 60.0,
+          "tout": 30.0,
           "nb_meas": 5,
           "nb_workers": 20
         },
