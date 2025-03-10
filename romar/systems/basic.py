@@ -306,8 +306,8 @@ class Basic(object):
       method="BDF",
       t_eval=t,
       first_step=1e-14,
-      rtol=1e-6,
-      atol=1e-15,
+      rtol=1e-4,
+      atol=0.0,
       jac=self.jac_lin if linear else self.jac,
     )
     runtime = time.time()-runtime

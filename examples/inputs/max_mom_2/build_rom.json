@@ -48,7 +48,7 @@
       },
       "modes": {
         "rotation": "varimax",
-        "xnot": [0,-4,-3,-2,-1],
+        "xnot": [0,-2,-1],
         "rank": 50,
         "niter": 50
       }
@@ -70,7 +70,7 @@
         "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2_GOOD/models_all/cobras/cov_mats.p"
       },
       "modes": {
-        "xnot": [0,-4,-3,-2,-1],
+        "xnot": [0,-2,-1],
         "rank": 50,
         "niter": 50
       }
