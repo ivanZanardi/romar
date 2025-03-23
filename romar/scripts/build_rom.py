@@ -73,16 +73,17 @@ if (__name__ == "__main__"):
 
   # ROMs
   # ---------------
-  for (name, opts) in inputs["models"].items():
+  for (identifier, opts) in inputs["models"].items():
     # Model checking
+    name = opts["name"]
     if (name not in roms.VALID_ROMS):
       raise ValueError(
         f"Unsupported ROM model: '{name}'. Valid options: {roms.VALID_ROMS}"
       )
     # Model initialization
-    print("-"*20)
-    print(f"'{name}' model")
-    print("-"*20)
+    print("-"*30)
+    print(f"Model: '{identifier}'")
+    print("-"*30)
     model = utils.get_class(
       modules=[roms],
       name=name
@@ -90,7 +91,7 @@ if (__name__ == "__main__"):
       system=system,
       path_to_data=inputs["paths"]["data"],
       scale=scale,
-      path_to_saving=path_to_saving + f"/{name.lower()}/",
+      path_to_saving=path_to_saving + f"/{identifier.lower()}/",
       **scaling
     )
     # Covariance matrices

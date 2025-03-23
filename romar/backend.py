@@ -1,7 +1,11 @@
+import os
 import torch
+import random
 import functools
 import numpy as np
 import tensorflow as tf
+
+from typing import *
 
 
 # Global
@@ -18,12 +22,14 @@ def set(
   device_idx=1,
   nb_threads=4,
   epsilon=None,
-  floatx="float64"
+  floatx="float64",
+  seed=None
 ):
   set_backend(backend)
   set_device(device, device_idx, nb_threads)
   set_floatx(floatx)
   set_epsilon(epsilon)
+  set_seed(seed)
 
 def get_backend():
   return _BKD
@@ -154,3 +160,40 @@ def set_floatx(value):
     torch.set_default_dtype(floatx())
   except:
     pass
+
+# Seed
+# -------------------------------------
+def seed() -> Union[int, None]:
+  """
+  Retrieve the current seed value.
+
+  :return: The current seed value if set, otherwise None.
+  :rtype: Union[int, None]
+  """
+  return _SEED
+
+def set_seed(
+  value: Union[int, None] = None
+) -> None:
+  """
+  Set random number generator seeds for reproducibility.
+
+  This function sets the seed for Python"s built-in random module, NumPy, 
+  and PyTorch, ensuring deterministic operations. It"s essential for 
+  achieving reproducible results in data processing and machine learning 
+  tasks. If `value` is provided, all random generators will use the same seed.
+
+  :param value: An integer seed for random number generators.
+  :type value: int or None
+
+  :return: None
+  :rtype: None
+  """
+  global _SEED
+  _SEED = value
+  if (value is not None):
+    random.seed(value)
+    np.random.seed(value)
+    torch.manual_seed(value)
+    # torch.use_deterministic_algorithms(True)
+    os.environ["PYTHONHASHSEED"] = str(value)

@@ -7,7 +7,8 @@ def set(
   device_idx=1,
   nb_threads=4,
   epsilon=None,
-  floatx="float64"
+  floatx="float64",
+  seed=None
 ):
   nb_threads = int(nb_threads)
   _set_cpu_threads(nb_threads)
@@ -19,7 +20,8 @@ def set(
     device_idx=device_idx,
     nb_threads=nb_threads,
     epsilon=epsilon,
-    floatx=floatx
+    floatx=floatx,
+    seed=seed
   )
   bkd.set(**_ENV_OPTS)
 

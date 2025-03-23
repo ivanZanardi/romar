@@ -56,7 +56,6 @@ class PCA(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    use_quad_w: bool = True,
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
@@ -83,9 +82,7 @@ class PCA(Basic):
     with multiprocessing.Manager() as manager:
       # Define input arguments for covariance matrices calculation
       kwargs = dict(
-        X=manager.list(),
-        nb_mu=irange[1]-irange[0],
-        use_quad_w=use_quad_w
+        X=manager.list()
       )
       if (nb_workers > 1):
         # Run jobs in parallel
@@ -104,9 +101,7 @@ class PCA(Basic):
   def _compute_cov_mats(
     self,
     index: int,
-    X: List[np.ndarray],
-    nb_mu: int,
-    use_quad_w: bool = True
+    X: List[np.ndarray]
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -127,14 +122,10 @@ class PCA(Basic):
     if (data is not None):
       # Extract solution
       y = data["y"].T
-      # Weights
-      if use_quad_w:
-        w = data["w_mu"] * data["w_t"].reshape(-1,1)
-      else:
-        nb_t = len(data["t"])
-        w = 1.0/np.sqrt(nb_mu*nb_t)
       # State covariance matrix
-      X.append(w * self._apply_scaling(y))
+      w_t = data["w_t"].reshape(-1,1)
+      w_mu = data["w_mu"].reshape(1)
+      X.append(w_mu * w_t * self._apply_scaling(y))
 
   # Compute principal components
   # ===================================
@@ -180,18 +171,15 @@ class PCA(Basic):
       q=rank,
       niter=niter
     ))
-    if (rotation is None):
-      phi = {r: phi[:,:r] for r in range(2,rank+1)}
-    else:
-      # Rotation method
-      rotation = check_method(
-        method="rotation",
-        name=rotation,
-        valid_names=POSSIBLE_ROTATIONS
-      )
-      # Apply rotation
-      rotator = Rotator(method=rotation)
-      phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
+    # Rotation method
+    rotation = check_method(
+      method="rotation",
+      name=rotation,
+      valid_names=POSSIBLE_ROTATIONS
+    )
+    # Apply rotation
+    rotator = Rotator(method=rotation)
+    phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
     # Save results
     data = {
       "s": s,

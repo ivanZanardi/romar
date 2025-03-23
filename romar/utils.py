@@ -11,7 +11,7 @@ import dill as pickle
 
 from romar import env
 from tqdm import tqdm
-from typing import Any, Dict, List, Optional, Union
+from typing import *
 
 
 # Classes
@@ -329,3 +329,15 @@ def make_solve_ivp(
         signal.alarm(0)
     return sol
   return solve_ivp
+
+# Sampling
+# =====================================
+def stratified_sampling(
+  x: np.ndarray,
+  nb_samples: int
+) -> np.ndarray:
+  """
+  Perform stratified sampling technique.
+  """
+  x_split = np.array_split(x, nb_samples)
+  return np.array([np.random.choice(xi) for xi in x_split])
