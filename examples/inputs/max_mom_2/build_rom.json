@@ -41,9 +41,9 @@
       "name": "PCA",
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
+          "irange": [0,500],
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
@@ -60,9 +60,9 @@
       "name": "PCA",
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
+          "irange": [0,500],
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
@@ -79,11 +79,11 @@
       "name": "CoBRASLin",
       "cov_mats": {
         "compute": {
-          "irange": [0,2],
+          "irange": [0,500],
           "err_max": 10.0,
           "nb_meas": 5,
           "use_quad_w": false,
-          "nb_workers": 2
+          "nb_workers": 10
         },
         "read": false,
         "save": true,
@@ -100,7 +100,7 @@
       "name": "CoBRAS",
       "cov_mats": {
         "compute": {
-          "irange": [0,10],
+          "irange": [0,500],
           "dt_list": [1e-7, 1e-6, 1e-5],
           "t0_perc": 0.1,
           "rtol": 1e-3,
