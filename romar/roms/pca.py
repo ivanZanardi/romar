@@ -11,9 +11,7 @@ from .. import env
 from .. import utils
 from .basic import Basic
 from .. import backend as bkd
-from .utils import check_method
 from typing import List, Optional, Union
-from factor_analyzer.rotator import Rotator, POSSIBLE_ROTATIONS
 
 
 class PCA(Basic):
@@ -180,19 +178,9 @@ class PCA(Basic):
       q=rank,
       niter=niter
     ))
-    if (rotation is None):
-      phi = {r: phi[:,:r] for r in range(2,rank+1)}
-    else:
-      # Rotation method
-      rotation = check_method(
-        method="rotation",
-        name=rotation,
-        valid_names=POSSIBLE_ROTATIONS
-      )
-      # Apply rotation
-      rotator = Rotator(method=rotation)
-      phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
-    # Save results
+    # Vanilla model
+    # -------------
+    phi = {r: phi[:,:r] for r in range(2,rank+1)}
     data = {
       "s": s,
       "phi": phi,
@@ -202,3 +190,11 @@ class PCA(Basic):
       "xscale": self.xscale
     }
     self._save(data)
+    # Rotated model
+    # -------------
+    if (rotation is not None):
+      rotator = self.get_rotator(rotation)
+      phi = {r: rotator.fit_transform(basis) for (r, basis) in phi.items()}
+      data["phi"] = phi
+      data["psi"] = phi
+      self._save(data, identifier=rotation)

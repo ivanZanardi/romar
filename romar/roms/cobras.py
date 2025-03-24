@@ -381,6 +381,7 @@ class CoBRAS(Basic):
     self,
     X: np.ndarray,
     Y: np.ndarray,
+    rotation: Optional[str] = None,
     xnot: Optional[List[int]] = None,
     max_y_norm: Optional[float] = None,
     rank: int = 100,
@@ -422,15 +423,36 @@ class CoBRAS(Basic):
     U, s, V = ops.svd_lowrank_xy(X=X, Y=Y, q=rank, niter=niter)
     # Compute balancing transformation
     sqrt_s = torch.diag(torch.sqrt(1.0/s))
-    phi = X @ V @ sqrt_s
-    psi = Y @ U @ sqrt_s
-    # Save results
-    data = utils.map_nested_dict(bkd.to_numpy, {
+    phi = bkd.to_numpy(X @ V @ sqrt_s)
+    psi = bkd.to_numpy(Y @ U @ sqrt_s)
+    # Vanilla model
+    # -------------
+    phi = {r: phi[:,:r] for r in range(2,rank+1)}
+    psi = {r: psi[:,:r] for r in range(2,rank+1)}
+    data = {
       "s": s,
-      "phi": {r: phi[:,:r] for r in range(2,rank+1)},
-      "psi": {r: psi[:,:r] for r in range(2,rank+1)},
+      "phi": phi,
+      "psi": psi,
       "mask": mask,
       "xref": self.xref,
       "xscale": self.xscale
-    })
+    }
     self._save(data)
+    # Rotated model
+    # -------------
+    if (rotation is not None):
+      rotator = self.get_rotator(rotation)
+      phi_rot = {r: rotator.fit_transform(basis) for (r, basis) in phi.items()}
+      psi_rot = {r: rotator.fit_transform(basis) for (r, basis) in psi.items()}
+      # Rotate only 'phi'
+      data["phi"] = phi_rot
+      data["psi"] = psi
+      self._save(data, identifier=f"{rotation}_phi")
+      # Rotate only 'psi'
+      data["phi"] = phi
+      data["psi"] = psi_rot
+      self._save(data, identifier=f"{rotation}_psi")
+      # Rotate both
+      data["phi"] = phi_rot
+      data["psi"] = psi_rot
+      self._save(data, identifier=rotation)

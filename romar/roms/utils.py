@@ -83,6 +83,9 @@ def compute_scaling(
     xscale = np.where(xmax == 0.0, 1.0, xmax)
   elif (scaling == "pareto"):
     xscale = np.sqrt(xstd)
+  elif (scaling == "pareto_nocenter"):
+    xref[::] = 0.0
+    xscale = np.sqrt(xref)
   elif (scaling == "vast"):
     xscale = xstd * xstd / (xref + bkd.epsilon()*np.sign(xref))
   elif (scaling == "0to1"):

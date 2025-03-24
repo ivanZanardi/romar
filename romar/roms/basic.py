@@ -3,8 +3,9 @@ import abc
 import numpy as np
 import dill as pickle
 
-from .utils import init_scaling_param
 from typing import *
+from .utils import init_scaling_param, check_method
+from factor_analyzer.rotator import Rotator, POSSIBLE_ROTATIONS
 
 
 class Basic(abc.ABC):
@@ -150,11 +151,24 @@ class Basic(abc.ABC):
                        "match the scaling dimensions.")
     return (x - self.xref) @ self.ov_xscale_mat
 
+  # Rotation
+  # ===================================
+  def get_rotator(self, rotation):
+    # Rotation method
+    rotation = check_method(
+      method="rotation",
+      name=rotation,
+      valid_names=POSSIBLE_ROTATIONS
+    )
+    # Build rotator
+    return Rotator(method=rotation)
+
   # Saving Data
   # ===================================
   def _save(
     self,
-    data: Dict[str, np.ndarray]
+    data: Dict[str, np.ndarray],
+    identifier: Optional[str] = None
   ) -> None:
     """
     Save data to a file using pickle.
@@ -167,7 +181,11 @@ class Basic(abc.ABC):
 
     :raises OSError: If there is an issue saving the file.
     """
-    filename = self.path_to_saving + "/basis.p"
+    if (identifier is None):
+      identifier = "basis"
+    else:
+      identifier = f"basis_{identifier}"
+    filename = self.path_to_saving + f"/{identifier}.p"
     try:
       with open(filename, "wb") as f:
         pickle.dump(data, f)
