@@ -141,14 +141,15 @@ if (__name__ == "__main__"):
         if (i in model["error"]["data"]):
           err_time[i] = model["error"]["data"][i]
     # Plot error statistics
-    print("> Plotting error evolution ...")
-    pp.plot_err_evolution(
-      path=ipath_to_saving+"/figs/",
-      x=t,
-      error=err_time,
-      species=system.mix.species,
-      rrange=inputs["rom_range"],
-      **inputs["plot"]
-    )
+    if inputs["plot"]["active"]:
+      print("> Plotting error evolution ...")
+      pp.plot_err_evolution(
+        path=ipath_to_saving+"/figs/",
+        x=t,
+        error=err_time,
+        species=system.mix.species,
+        rrange=inputs["rom_range"],
+        **inputs["plot"]["kwargs"]
+      )
 
   print("Done!")
