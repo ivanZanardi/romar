@@ -68,15 +68,16 @@ if (__name__ == "__main__"):
 
   # Defined cases
   # ---------------
-  t = np.geomspace(**data.grids["t"])
-  for (k, muk) in inputs["data"]["defined"]["cases"].items():
-    print(f"Running case '{k}' ...")
-    runtime = data.compute_sol(
-      mu=muk,
-      t=t,
-      filename=path_to_saving + f"/case_{k}.p"
-    )
-    if (runtime is None):
-      print(f"Case '{k}' not converged!")
+  if ("defined" in inputs["data"]):
+    t = np.geomspace(**data.grids["t"])
+    for (k, muk) in inputs["data"]["defined"]["cases"].items():
+      print(f"Running case '{k}' ...")
+      runtime = data.compute_sol(
+        mu=muk,
+        t=t,
+        filename=path_to_saving + f"/case_{k}.p"
+      )
+      if (runtime is None):
+        print(f"Case '{k}' not converged!")
 
-  print("Done!")
+    print("Done!")
