@@ -72,6 +72,9 @@ class CoBRAS(Basic):
     super(CoBRAS, self).__init__(
       system, path_to_data, scale, xref, xscale, path_to_saving
     )
+    # Setting up system
+    self.system.use_rom = False
+    self.system.set_fun_jac()
     # Setting output
     self.C = self.system.C @ self.xscale_mat
     self.nb_out = self.C.shape[0]
@@ -237,9 +240,8 @@ class CoBRAS(Basic):
       t = data["t"].reshape(-1)
       tmin = float(data["tmin"])
       nb_t = len(t)
-      # Set up system
-      self.system.use_rom = False
-      _ = self.system.set_up(y0=data["y0"], rho=data["rho"])
+      # Set density
+      self.system.mix.set_rho(rho=data["rho"])
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # Sample initial times
