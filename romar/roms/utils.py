@@ -4,7 +4,7 @@ from .. import backend as bkd
 from typing import Dict, List, Optional, Union
 
 POSSIBLE_SCALINGS = {
-  "std", "level", "range", "max", "pareto", "vast", "0to1", "-1to1"
+  "std", "level", "range", "max", "pareto", "pareto_nocenter", "vast", "0to1", "-1to1"
 }
 
 
@@ -84,8 +84,8 @@ def compute_scaling(
   elif (scaling == "pareto"):
     xscale = np.sqrt(xstd)
   elif (scaling == "pareto_nocenter"):
-    xref[::] = 0.0
     xscale = np.sqrt(xref)
+    xref[::] = 0.0
   elif (scaling == "vast"):
     xscale = xstd * xstd / (xref + bkd.epsilon()*np.sign(xref))
   elif (scaling == "0to1"):

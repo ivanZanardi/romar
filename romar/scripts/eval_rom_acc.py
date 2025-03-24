@@ -41,8 +41,6 @@ from romar import utils
 from romar import systems
 from romar import postproc as pp
 
-_VALID_ROMS = {"cobras", "cobraslin", "pca"}
-
 # Main
 # =====================================
 if (__name__ == "__main__"):
@@ -73,20 +71,15 @@ if (__name__ == "__main__"):
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
       _model = copy.deepcopy(model)
-      if (name in _VALID_ROMS):
-        # Load basis
-        with open(model["basis"], "rb") as file:
-          _model["basis"] = pickle.load(file)
-        # Load error
-        if (model.get("error", None) is not None):
-          with open(model["error"], "rb") as file:
-            _model["error"] = pickle.load(file)
-        else:
-          _model["error"] = None
+      # Load basis
+      with open(model["basis"], "rb") as file:
+        _model["basis"] = pickle.load(file)
+      # Load error
+      if (model.get("error", None) is not None):
+        with open(model["error"], "rb") as file:
+          _model["error"] = pickle.load(file)
       else:
-        raise ValueError(
-          f"Name '{name}' not valid! Valid ROM models are {_VALID_ROMS}."
-        )
+        _model["error"] = None
       models[name] = _model
       del _model
 
