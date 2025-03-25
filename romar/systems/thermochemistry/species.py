@@ -75,7 +75,7 @@ class Species(object):
   def _compute_mom(self, n, m=0):
     e = self.lev["E"] / const.UE
     if (n.shape[-1] != self.nb_comp):
-      n = n.T
+      n = torch.moveaxis(n, 0, -1)
     return torch.sum(n * e**m, dim=-1)
 
   def compute_mom_basis(self, max_mom):
