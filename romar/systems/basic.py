@@ -238,8 +238,10 @@ class Basic(object):
   def compute_c_mat(
     self,
     max_mom: int = 1,
+    all_together: bool = False,
     state_specs: bool = False,
-    include_em: bool = True,
+    ions_specs: bool = False,
+    include_em: bool = False,
     include_temp: bool = False
   ) -> None:
     """
@@ -263,18 +265,28 @@ class Basic(object):
         continue
       # Get species object
       s = self.mix.species[k]
-      # Compute the moment basis for the species and populate C
+      # Set moment order and number of indices
       m = max_mom if (k != "em") else 1
+      n = s.nb_comp if state_specs else 1
+      if ((s.Z == 1) and (ions_specs) and (not state_specs) and (not all_together)):
+        m = 1
+        n = s.nb_comp
+      # Compute the moment basis for the species and populate C
       basis = s.compute_mom_basis(m)
-      for b in basis:
-        ei += s.nb_comp if state_specs else 1
-        self.C[np.arange(si,ei),s.indices] = b
-        si = ei
+      if all_together:
+        indices = np.ix_(np.arange(0,m), s.indices)
+        self.C[indices] = basis
+        si, ei = max_mom, max_mom
+      else:
+        for b in basis:
+          ei += n
+          self.C[np.arange(si,ei),s.indices] = b
+          si = ei
     # Temperatures
     if include_temp:
       for i in range(2):
         ei += 1
-        self.C[np.arange(si,ei),-2+i] = 1.0
+        self.C[np.arange(si,ei),self.mix.nb_comp+i] = 1.0
         si = ei
     # Remove not used rows from the C matrix
     self.C = self.C[:ei]
