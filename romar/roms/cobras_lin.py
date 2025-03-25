@@ -143,10 +143,11 @@ class CoBRASLin(CoBRAS):
       # Extract solution
       y = data["y"].T
       t = data["t"].reshape(-1)
+      rho = float(data["rho"])
       tmin = float(data["tmin"])
       nb_t = len(t)
       # Set density
-      self.system.mix.set_rho(rho=data["rho"])
+      self.system.mix.set_rho(rho)
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # State covariance matrix
