@@ -151,10 +151,12 @@ class CoBRASLin(CoBRAS):
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # State covariance matrix
-      if use_quad_w:
-        w = data["w_mu"] * data["w_t"].reshape(-1,1)
-      else:
-        w = 1.0/np.sqrt(nb_mu*nb_t)
+      # if use_quad_w:
+      #   w = data["w_mu"] * data["w_t"].reshape(-1,1)
+      # else:
+      #   w = 1.0/np.sqrt(nb_mu*nb_t)
+      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
+      w = w_mu/np.sqrt(nb_t)
       X.append(w * self._apply_scaling(y))
       # Gradient covariance matrix
       Yi, ti = [], []
@@ -182,19 +184,24 @@ class CoBRASLin(CoBRAS):
       # > Weight and store adjoint solutions
       nb_ti = len(ti)
       if (nb_ti > 0):
-        w_meas = 1.0/np.sqrt(nb_meas)
-        if use_quad_w:
-          _, w_t = ops.get_quad_1d(
-            x=np.asarray(ti).reshape(-1),
-            quad="trapz",
-            dist="uniform"
-          )
-          w_t = np.sqrt(w_t)
-          w = w_meas * data["w_mu"] * w_t
-        else:
-          w = np.full(nb_ti, w_meas/np.sqrt(nb_mu*nb_ti))
-        Yi = [w[j]*Yij for (j, Yij) in enumerate(Yi)]
-        Y.append(np.vstack(Yi))
+        w = w_mu/np.sqrt(nb_meas*nb_ti)
+        Y.append(w * np.vstack(Yi))
+      # # > Weight and store adjoint solutions
+      # nb_ti = len(ti)
+      # if (nb_ti > 0):
+      #   w_meas = 1.0/np.sqrt(nb_meas)
+      #   if use_quad_w:
+      #     _, w_t = ops.get_quad_1d(
+      #       x=np.asarray(ti).reshape(-1),
+      #       quad="trapz",
+      #       dist="uniform"
+      #     )
+      #     w_t = np.sqrt(w_t)
+      #     w = w_meas * data["w_mu"] * w_t
+      #   else:
+      #     w = np.full(nb_ti, w_meas/np.sqrt(nb_mu*nb_ti))
+      #   Yi = [w[j]*Yij for (j, Yij) in enumerate(Yi)]
+      #   Y.append(np.vstack(Yi))
 
   def _solve_adj(
     self,

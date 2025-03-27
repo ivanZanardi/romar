@@ -125,12 +125,14 @@ class PCA(Basic):
     if (data is not None):
       # Extract solution
       y = data["y"].T
+      nb_t = len(data["t"])
       # Weights
-      if use_quad_w:
-        w = data["w_mu"] * data["w_t"].reshape(-1,1)
-      else:
-        nb_t = len(data["t"])
-        w = 1.0/np.sqrt(nb_mu*nb_t)
+      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
+      w = w_mu/np.sqrt(nb_t)
+      # if use_quad_w:
+      #   w = data["w_mu"] * data["w_t"].reshape(-1,1)
+      # else:
+      #   w = 1.0/np.sqrt(nb_mu*nb_t)
       # State covariance matrix
       X.append(w * self._apply_scaling(y))
 
