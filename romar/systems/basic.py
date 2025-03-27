@@ -26,7 +26,7 @@ class Basic(object):
     species,
     kin_dtb,
     rad_dtb=None,
-    use_rad=False,
+    use_rad=True,
     use_proj=False,
     use_factorial=True,
     use_tables=False,

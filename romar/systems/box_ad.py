@@ -13,10 +13,10 @@ class BoxAd(Basic):
     species,
     kin_dtb,
     rad_dtb=None,
-    use_rad=False,
+    use_rad=True,
     use_proj=False,
     use_factorial=True,
-    use_tables=True
+    use_tables=False
   ):
     super(BoxAd, self).__init__(
       species=species,
