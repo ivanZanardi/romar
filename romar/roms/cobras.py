@@ -443,6 +443,6 @@ class CoBRAS(Basic):
     # Rotated model
     # -------------
     if (rotation is not None):
-      rotator = self.get_rotator(rotation)
-      data["psi"] = {r: rotator.fit_transform(basis) for (r, basis) in psi.items()}
+      rot = self.get_rotator(rotation)
+      data["psi"] = {r: rot.fit_transform(basis) for (r, basis) in psi.items()}
       self._save(data, identifier=rotation)

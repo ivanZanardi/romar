@@ -180,13 +180,13 @@ class Basic(object):
     # Setting up
     self.use_rom = bool(use_rom)
     y = self.set_up(y, rho)
-    # Compute linearized operators
-    self.compute_lin_fom_ops(y)
+    # Compute Jacobian matrix
+    J = self.jac(0.0, y)
     # Compute eigenvalues of the Jacobian
-    l = sp.linalg.eigvals(self.A)
-    # Compute and return the smallest timescale
-    t = np.amin(np.abs(1.0/l.real))
-    return float(t)
+    l = sp.linalg.eigvals(J)
+    l = np.abs(l.real)
+    # Compute the smallest timescale
+    return 1.0/l.max()
 
   def compute_lin_tmax(
     self,

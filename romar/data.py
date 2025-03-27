@@ -12,6 +12,7 @@ from typing import *
 from . import env
 from . import ops
 from . import utils
+from . import backend as bkd
 from .systems.thermochemistry.equilibrium import MU_VARS
 from .roms.utils import compute_scaling, POSSIBLE_SCALINGS
 
@@ -137,7 +138,7 @@ class Data(object):
     design_space[:,ilog] = np.log(design_space[:,ilog] + eps)
     # Construct
     ddim = design_space.shape[1]
-    dmat = lhs(ddim, samples=int(nb_samples))
+    dmat = lhs(n=ddim, samples=int(nb_samples), random_state=bkd.seed())
     # Rescale
     amin, amax = design_space
     mu = dmat * (amax - amin) + amin

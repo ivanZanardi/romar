@@ -193,8 +193,8 @@ class PCA(Basic):
     # Rotated model
     # -------------
     if (rotation is not None):
-      rotator = self.get_rotator(rotation)
-      phi = {r: rotator.fit_transform(basis) for (r, basis) in phi.items()}
+      rot = self.get_rotator(rotation)
+      phi = {r: rot.fit_transform(basis) for (r, basis) in phi.items()}
       data["phi"] = phi
       data["psi"] = phi
       self._save(data, identifier=rotation)

@@ -2,11 +2,10 @@ import torch
 import numpy as np
 import scipy as sp
 
+from typing import *
 from ... import const
 from .mixture import Mixture
-from .species import Species
 from ... import backend as bkd
-from typing import Dict, Optional, Tuple
 
 MU_VARS = ("rho", "Th", "Te")
 
