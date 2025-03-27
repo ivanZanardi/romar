@@ -72,6 +72,11 @@ class ROM(object):
                       f"expected {self.nb_eqs}, got {len(mask)}.")
     # Biorthogonalize the basis
     phi = phi @ sp.linalg.inv(psi.T @ phi)
+    # Dimensions
+    # > Number of excluded states
+    self.size_xnot = np.sum(~self.mask)
+    # > Number of reduced states
+    self.size_zhat = phi.shape[1]
     # Construct full basis matrices
     self.phi = self._build_basis(phi)
     self.psi = self._build_basis(psi)
@@ -109,16 +114,13 @@ class ROM(object):
     :return: Full basis matrix.
     :rtype: np.ndarray
     """
-    # Compute sizes
-    size_xnot = np.sum(~self.mask)  # Number of excluded states
-    size_zhat = pxi.shape[1]        # Number of reduced states
     # Allocate full basis matrix
-    basis = np.zeros((self.nb_eqs, size_xnot + size_zhat))
+    basis = np.zeros((self.nb_eqs, self.size_xnot + self.size_zhat))
     # Insert basis for projection
-    basis[self.mask,:size_zhat] = pxi
+    basis[self.mask,:self.size_zhat] = pxi
     # Insert identity elements for not selected states
     ix = np.where(~self.mask)[0]
-    iy = size_zhat + np.arange(size_xnot)
+    iy = self.size_zhat + np.arange(self.size_xnot)
     basis[ix,iy] = 1.0
     return basis
 

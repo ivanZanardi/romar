@@ -214,8 +214,7 @@ def plot_err_ci_evolution(
   alpha=0.95,
   xlim=None,
   ylim=None,
-  hline=None,
-  labels=[r"$t$ [s]", r"$n$ [m$^{-3}$]"],
+  labels=[r"$t$ [s]", r"$\kappa$"],
   scales=["log", "linear"],
   legend_loc="best",
   figname=None,
@@ -231,32 +230,21 @@ def plot_err_ci_evolution(
   if (xlim is None):
     xlim = (np.amin(x), np.amax(x))
   ax.set_xlim(xlim)
-  xmin, xmax = xlim
   # y axis
   ax.set_ylabel(labels[1])
   ax.set_yscale(scales[1])
   if (ylim is not None):
     ax.set_ylim(ylim)
   # Plotting
-  y1, y2 = sp.stats.t.interval(
-    alpha=alpha,
-    df=size-1,
-    loc=mean,
-    scale=sem
-  )
-  # y1, y2 = [np.clip(z, 0, None) for z in (y1, y2)]
-  ci_lbl = "${}\\%$ CI".format(int(100*alpha))
-  ax.fill_between(x=x, y1=y1, y2=y2, alpha=0.2, label=ci_lbl)
-  ax.plot(x, mean)
-  if (hline is not None):
-    ax.text(
-      0.99, hline,
-      r"{:0.1f} \%".format(hline),
-      va="bottom", ha="right",
-      transform=ax.get_yaxis_transform(),
-      fontsize=20
-    )
-    ax.hlines(hline, xmin, xmax, colors="grey", lw=1.0)
+  for k in mean.keys():
+    y1, y2 = sp.stats.t.interval(
+			alpha=alpha,
+			df=size-1,
+			loc=mean[k],
+			scale=sem[k]
+		)
+    ax.fill_between(x=x, y1=y1, y2=y2, alpha=0.2)
+    ax.plot(x, mean[k], label=k)
   ax.legend(loc=legend_loc)
   # Tight layout
   plt.tight_layout()
