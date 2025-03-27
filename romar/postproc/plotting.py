@@ -236,6 +236,7 @@ def plot_err_ci_evolution(
   if (ylim is not None):
     ax.set_ylim(ylim)
   # Plotting
+  i = 0
   for k in mean.keys():
     y1, y2 = sp.stats.t.interval(
 			alpha=alpha,
@@ -243,8 +244,13 @@ def plot_err_ci_evolution(
 			loc=mean[k],
 			scale=sem[k]
 		)
-    ax.fill_between(x=x, y1=y1, y2=y2, alpha=0.2)
-    ax.plot(x, mean[k], label=k)
+    if (k.upper() == "FOM"):
+      c = "k"
+    else:
+      c = COLORS[i]
+      i += 1
+    ax.fill_between(x=x, y1=y1, y2=y2, alpha=0.2, color=c)
+    ax.plot(x, mean[k], label=k, color=c)
   ax.legend(loc=legend_loc)
   # Tight layout
   plt.tight_layout()

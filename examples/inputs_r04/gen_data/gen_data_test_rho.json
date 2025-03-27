@@ -1,0 +1,51 @@
+{
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_proj": false,
+      "use_factorial": true,
+      "use_tables": false
+    }
+  },
+  "data": {
+    "grids": {
+      "t": {
+        "start": 1e-9,
+        "stop": 1e-1,
+        "num": 500
+      }
+    },
+    "sampled": {
+      "limits": {
+        "rho": [1e-2, 1e-2],
+        "Th": [2.0e4, 5.0e4],
+        "Te": [293.6, 293.6]
+      },
+      "nb_samples": 100,
+      "log_vars": ["Te", "rho"],
+      "eps": 1e-8,
+      "nb_workers": 10
+    }
+  },
+  "paths": {
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/data/rho_fixed/"
+  }
+}

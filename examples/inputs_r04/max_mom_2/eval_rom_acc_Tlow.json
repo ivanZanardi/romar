@@ -1,0 +1,124 @@
+{
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_proj": false,
+      "use_factorial": true,
+      "use_tables": false
+    }
+  },
+  "models": {
+    "cobras": {
+      "active": true,
+      "name": "CoBRAS",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras/basis.p"
+    },
+    "cobras_varimax": {
+      "active": true,
+      "name": "CoBRAS-VARIMAX",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras/basis_varimax.p"
+    },
+    "cobras_varimax_psi": {
+      "active": true,
+      "name": "CoBRAS-VARIMAX-PSI",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras/basis_varimax_psi.p"
+    },
+    "cobras_lin": {
+      "active": false,
+      "name": "CoBRAS-LIN",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras_lin/basis.p"
+    },
+    "cobras_lin_varimax": {
+      "active": false,
+      "name": "CoBRAS-LIN-VARIMAX",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras_lin/basis_varimax.p"
+    },
+    "cobras_lin_varimax_psi": {
+      "active": false,
+      "name": "CoBRAS-LIN-VARIMAX-PSI",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/cobras_lin/basis_varimax_psi.p"
+    },
+    "pca": {
+      "active": true,
+      "name": "PCA",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/pca/basis.p"
+    },
+    "pca_varimax": {
+      "active": true,
+      "name": "PCA-VARIMAX",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/models/pca/basis_varimax.p"
+    }
+  },
+  "paths": {
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/max_mom_2/error_Tlow/"
+  },
+  "data": {
+    "path": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run04/data/Tlow/test/",
+    "irange": [0,50],
+    "nb_workers": 15,
+    "eps": 1e-8,
+    "tlim": [0.0, 1e-3],
+    "tout": 5e2
+  },
+  "rom_range": [5,13],
+  "mpl_style": "/u/zanardi3/scratch/Workspace/styles/matplotlib/paper_1column.mplstyle",
+  "plot": {
+    "active": false,
+    "kwargs": {
+      "labels": {
+        "Th": "T_h",
+        "Te": "T_e",
+        "Ar": "\\text{Ar}",
+        "Arp": "\\text{Ar$^+$}",
+        "em": "\\text{e$^-$}"
+      },
+      "tlim": null,
+      "ylim_err": {
+        "dist": [8e-2, 2e2],
+        "temp": {
+          "Th": [1e-6, 2e0],
+          "Te": [1e-3, 2e1]
+        },
+        "mom": {
+          "Ar": {
+            "m0": [1e-6, 2e0],
+            "m1": [1e-2, 1e1]
+          },
+          "Arp": {
+            "m0": [1e-2, 2e2],
+            "m1": [1e-3, 1e1]
+          },
+          "em": {
+            "m0": [1e-2, 2e2],
+            "m1": [1e-1, 1e1]
+          }
+        }
+      },
+      "err_scale": "log",
+      "hline": {
+        "temp": 1.0,
+        "mom": 1.0,
+        "dist": 10.0
+      },
+      "max_mom": 2
+    }
+  }
+}
