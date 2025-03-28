@@ -181,9 +181,9 @@ class Basic(object):
     self.use_rom = bool(use_rom)
     y = self.set_up(y, rho)
     # Compute Jacobian matrix
-    J = self.jac(0.0, y)
+    j = self.jac(0.0, y)
     # Compute eigenvalues of the Jacobian
-    l = sp.linalg.eigvals(J)
+    l = sp.linalg.eigvals(j)
     l = np.abs(l.real)
     # Compute the smallest timescale
     return 1.0/l.max()

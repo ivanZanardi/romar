@@ -84,7 +84,7 @@ class CoBRAS(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    dt: float,
+    dt_log: float,
     t0_perc: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-6,
@@ -114,7 +114,7 @@ class CoBRAS(Basic):
     # Loop over training cases
     return self._compute_cov_mats_loop(
       kwargs=dict(
-        dt=dt,
+        dt_log=dt_log,
         t0_perc=np.clip(t0_perc, 0.1, 1.0),
         rtol=rtol,
         atol=atol,
@@ -196,7 +196,7 @@ class CoBRAS(Basic):
     Y: List[np.ndarray],
     conv: List[int],
     nb_mu: int,
-    dt: float,
+    dt_log: float = 2.0,
     t0_perc: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-6,
@@ -223,24 +223,28 @@ class CoBRAS(Basic):
     :return: None (results are appended to `X` and `Y`).
     :rtype: None
     """
-    # Load solution
+    # Load data
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Extract solution
+      # Extract data
       y = data["y"].T
       t = data["t"].reshape(-1)
-      tmin = float(data["tmin"])
       nb_t = len(t)
+      tmin = data["tmin"]
+      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
       # Set density
-      self.system.mix.set_rho(rho=float(data["rho"]))
+      self.system.mix.set_rho(rho=data["rho"])
       # Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # Sample initial times uniformly
       freq = np.round(1.0/t0_perc)
-      t0_indices = np.arange(nb_t)
-      t0_indices = t0_indices[::freq] + int(freq/2)
+      t0_indices = np.arange(
+        start=np.round(freq/2.0),
+        stop=nb_t,
+        step=freq,
+        dtype=int
+      )
       # State covariance matrix
-      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
       w = w_mu/np.sqrt(nb_t)
       X.append(w*self._apply_scaling(y))
       # Gradient covariance matrix
@@ -248,7 +252,8 @@ class CoBRAS(Basic):
       for j in t0_indices:
         # > Set initial/final times
         t0 = max(t[j], tmin)
-        tf = min(t0+dt, t[-1])
+        tf = t0*np.power(1e1, dt_log)
+        tf = min(max(tf, 1e-7), t[-1])
         # > Solve the j-th adjoint problem and store samples
         gradj, convj = self._solve_adj(
           t0=t0,

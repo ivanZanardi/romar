@@ -120,21 +120,16 @@ class PCA(Basic):
     :return: None (results are appended to `X`).
     :rtype: None
     """
-    # Load solution
+    # Load data
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Extract solution
+      # Extract data
       y = data["y"].T
-      nb_t = len(data["t"])
-      # Weights
       w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
-      w = w_mu/np.sqrt(nb_t)
-      # if use_quad_w:
-      #   w = data["w_mu"] * data["w_t"].reshape(-1,1)
-      # else:
-      #   w = 1.0/np.sqrt(nb_mu*nb_t)
+      nb_t = len(data["t"])
       # State covariance matrix
-      X.append(w * self._apply_scaling(y))
+      w = w_mu/np.sqrt(nb_t)
+      X.append(w*self._apply_scaling(y))
 
   # Compute principal components
   # ===================================
