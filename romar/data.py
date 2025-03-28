@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import numpy as np
 import joblib as jl
 import pandas as pd
@@ -194,7 +195,11 @@ class Data(object):
       ) for i in iterable]
     # Compute scalings
     self._compute_scalings(nb_samples=nb_samples, nb_workers=nb_workers)
-    return runtime
+    # Save mean runtime
+    runtime = np.mean([rt for rt in runtime if (rt is not None)])
+    filename = self.path_to_saving + "/runtime.json"
+    with open(filename, "w") as file:
+      json.dump({"runtime": runtime}, file, indent=2)
 
   def compute_sol(
     self,

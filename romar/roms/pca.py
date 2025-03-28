@@ -54,7 +54,7 @@ class PCA(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    use_quad_w: bool = True,
+    use_quad_w: bool = False,
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
@@ -104,7 +104,7 @@ class PCA(Basic):
     index: int,
     X: List[np.ndarray],
     nb_mu: int,
-    use_quad_w: bool = True
+    use_quad_w: bool = False
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -123,13 +123,9 @@ class PCA(Basic):
     # Load data
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Extract data
-      y = data["y"].T
-      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
-      nb_t = len(data["t"])
       # State covariance matrix
-      w = w_mu/np.sqrt(nb_t)
-      X.append(w*self._apply_scaling(y))
+      Xi = self._compute_state_cov(data, nb_mu, use_quad_w)
+      X.append(Xi)
 
   # Compute principal components
   # ===================================

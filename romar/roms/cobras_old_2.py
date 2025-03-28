@@ -84,8 +84,7 @@ class CoBRAS(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
-    dt_log: float = 2.0,
-    tf_min: float = 1e-7,
+    dt_log: float,
     t0_perc: float = 1.0,
     rtol: float = 1e-3,
     atol: float = 1e-6,
@@ -116,7 +115,6 @@ class CoBRAS(Basic):
     return self._compute_cov_mats_loop(
       kwargs=dict(
         dt_log=dt_log,
-        tf_min=tf_min,
         t0_perc=np.clip(t0_perc, 0.1, 1.0),
         rtol=rtol,
         atol=atol,
@@ -133,7 +131,7 @@ class CoBRAS(Basic):
     kwargs: Dict[str, Any],
     indices_mu: np.ndarray,
     nb_meas: int = 5,
-    use_quad_w: bool = False,
+    use_quad_w: bool = True,
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
@@ -205,7 +203,7 @@ class CoBRAS(Basic):
     atol: float = 1e-6,
     tout: float = 30.0,
     nb_meas: int = 5,
-    use_quad_w: bool = False
+    use_quad_w: bool = True
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -229,25 +227,29 @@ class CoBRAS(Basic):
     # Load data
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # State covariance matrix
-      # -----------
-      Xi = self._compute_state_cov(data, nb_mu, use_quad_w)
-      X.append(Xi)
-      # Gradient covariance matrix
-      # -----------
-      # > Set density
-      self.system.mix.set_rho(rho=data["rho"])
-      # > Build an interpolator for the solution
+      # Extract data
       y = data["y"].T
       t = data["t"].reshape(-1)
+      nb_t = len(t)
+      tmin = data["tmin"]
+      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
+      # Set density
+      self.system.mix.set_rho(rho=data["rho"])
+      # State covariance matrix
+      # -----------
+      w = w_mu/np.sqrt(nb_t)
+      X.append(w*self._apply_scaling(y))
+      # Gradient covariance matrix
+      # -----------
+      # > Build an interpolator for the solution
       ysol = self._build_sol_interp(t, y)
       # > Sample initial times uniformly
-      ti, Yi = [], []
-      t0_indices = self._sample_t0_indices(size=len(t), perc=t0_perc)
+      Yi, ti = [], []
+      t0_indices = self._sample_t0_indices(nb_t, t0_perc)
       for j in t0_indices:
         # > Set initial/final times
-        t0 = max(t[j], data["tmin"])
-        tf = t0 * np.power(1e1, dt_log)
+        t0 = max(t[j], tmin)
+        tf = t0*np.power(1e1, dt_log)
         tf = min(max(tf, tf_min), t[-1])
         # > Solve the j-th adjoint problem and store samples
         gradj, convj = self._solve_adj(
@@ -266,18 +268,8 @@ class CoBRAS(Basic):
       # > Weight and store adjoint solutions
       nb_ti = len(ti)
       if (nb_ti > 0):
-        w_meas = 1.0/np.sqrt(nb_meas)
-        if use_quad_w:
-          _, w_t = ops.get_quad_1d(
-            x=np.asarray(ti).reshape(-1),
-            quad="trapz",
-            dist="uniform"
-          )
-          w = w_meas * data["w_mu"] * np.sqrt(w_t)
-        else:
-          w = np.full(nb_ti, w_meas/np.sqrt(nb_mu*nb_ti))
-        Yi = [w[j]*Yij for (j, Yij) in enumerate(Yi)]
-        Y.append(np.vstack(Yi))
+        w = w_mu/np.sqrt(nb_meas*nb_ti)
+        Y.append(w*np.vstack(Yi))
 
   def _sample_t0_indices(
     self,

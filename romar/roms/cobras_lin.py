@@ -71,7 +71,7 @@ class CoBRASLin(CoBRAS):
   def compute_cov_mats(
     self,
     irange: List[int],
-    err_max: float = 25.0,
+    err_max: float = 5.0,
     nb_meas: int = 5,
     use_quad_w: bool = False,
     nb_workers: int = 1
@@ -115,8 +115,8 @@ class CoBRASLin(CoBRAS):
     conv: List[int],
     nb_mu: int,
     nb_meas: int = 5,
-    use_quad_w: bool = True,
-    err_max: float = 25.0
+    use_quad_w: bool = False,
+    err_max: float = 5.0
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -145,16 +145,17 @@ class CoBRASLin(CoBRAS):
       t = data["t"].reshape(-1)
       nb_t = len(t)
       tmin = data["tmin"]
-      w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
       rho = float(data["rho"])
       # Set density
       self.system.mix.set_rho(rho)
-      # Build an interpolator for the solution
-      ysol = self._build_sol_interp(t, y)
       # State covariance matrix
-      w = w_mu/np.sqrt(nb_t)
-      X.append(w*self._apply_scaling(y))
+      # -----------
+      Xi = self._compute_state_cov(data, nb_mu, use_quad_w)
+      X.append(Xi)
       # Gradient covariance matrix
+      # -----------
+      # > Build an interpolator for the solution
+      ysol = self._build_sol_interp(t, y)
       Yi, ti = [], []
       for j in range(nb_t-1):
         # > Generate a time grid for the i-th linear model
@@ -180,8 +181,18 @@ class CoBRASLin(CoBRAS):
       # > Weight and store adjoint solutions
       nb_ti = len(ti)
       if (nb_ti > 0):
-        w = w_mu/np.sqrt(nb_meas*nb_ti)
-        Y.append(w*np.vstack(Yi))
+        w_meas = 1.0/np.sqrt(nb_meas)
+        if use_quad_w:
+          _, w_t = ops.get_quad_1d(
+            x=np.asarray(ti).reshape(-1),
+            quad="trapz",
+            dist="uniform"
+          )
+          w = w_meas * data["w_mu"] * np.sqrt(w_t)
+        else:
+          w = np.full(nb_ti, w_meas/np.sqrt(nb_mu*nb_ti))
+        Yi = [w[j]*Yij for (j, Yij) in enumerate(Yi)]
+        Y.append(np.vstack(Yi))
 
   def _solve_adj(
     self,

@@ -163,6 +163,24 @@ class Basic(abc.ABC):
     # Build rotator
     return Rotator(method=rotation)
 
+  # State covariance matrix
+  # ===================================
+  def _compute_state_cov(
+    self,
+    data: Dict[str, Any],
+    nb_mu: int,
+    use_quad_w: bool = False
+  ) -> None:
+    # Compute weights
+    if use_quad_w:
+      w = data["w_mu"] * data["w_t"].reshape(-1,1)
+    else:
+      nb_t = len(data["t"])
+      w = 1.0/np.sqrt(nb_mu*nb_t)
+    # Compute matrix
+    y = data["y"].T
+    return w * self._apply_scaling(y)
+
   # Saving Data
   # ===================================
   def _save(
