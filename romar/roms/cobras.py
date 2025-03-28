@@ -315,7 +315,7 @@ class CoBRAS(Basic):
         atol=atol,
         jac=self._jac_adj
       )
-      if ((sol is not None) and (sol.y.shape[1] == nb_meas)):
+      if ((sol is not None) and sol.success):
         grad.append(sol.y.T)
         conv += 1
     grad = np.vstack(grad) if (conv > 0) else None
