@@ -234,21 +234,17 @@ class CoBRAS(Basic):
       w_mu = data["w_mu"] if use_quad_w else 1.0/np.sqrt(nb_mu)
       # Set density
       self.system.mix.set_rho(rho=data["rho"])
-      # Build an interpolator for the solution
-      ysol = self._build_sol_interp(t, y)
-      # Sample initial times uniformly
-      freq = np.round(1.0/t0_perc)
-      t0_indices = np.arange(
-        start=np.round(freq/2.0),
-        stop=nb_t,
-        step=freq,
-        dtype=int
-      )
       # State covariance matrix
+      # -----------
       w = w_mu/np.sqrt(nb_t)
       X.append(w*self._apply_scaling(y))
       # Gradient covariance matrix
+      # -----------
+      # > Build an interpolator for the solution
+      ysol = self._build_sol_interp(t, y)
+      # > Sample initial times uniformly
       Yi, ti = [], []
+      t0_indices = self._sample_t0_indices(nb_t, t0_perc)
       for j in t0_indices:
         # > Set initial/final times
         t0 = max(t[j], tmin)
@@ -273,6 +269,19 @@ class CoBRAS(Basic):
       if (nb_ti > 0):
         w = w_mu/np.sqrt(nb_meas*nb_ti)
         Y.append(w*np.vstack(Yi))
+
+  def _sample_t0_indices(
+    self,
+    size: int,
+    perc: float
+  ) -> np.ndarray:
+    # Indices vector
+    i = np.arange(size)
+    # Number of samples
+    ns = np.round(perc * size)
+    # Sample uniformly
+    ii = np.array_split(i, ns)
+    return np.asarray([j[j.size//2] for j in ii])
 
   def _solve_adj(
     self,
