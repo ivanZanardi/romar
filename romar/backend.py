@@ -195,5 +195,4 @@ def set_seed(
     random.seed(value)
     np.random.seed(value)
     torch.manual_seed(value)
-    # torch.use_deterministic_algorithms(True)
     os.environ["PYTHONHASHSEED"] = str(value)

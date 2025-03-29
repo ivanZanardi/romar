@@ -1,10 +1,11 @@
 import numpy as np
 
+from typing import *
 from .. import backend as bkd
-from typing import Dict, List, Optional, Union
 
 POSSIBLE_SCALINGS = {
-  "std", "level", "range", "max", "pareto", "pareto_nocenter", "vast", "0to1", "-1to1"
+  "std", "level", "range", "max", "pareto", \
+  "pareto_nocenter", "vast", "0to1", "-1to1"
 }
 
 

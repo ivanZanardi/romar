@@ -30,7 +30,6 @@ env.set(**inputs["env"])
 # =====================================
 import os
 import copy
-import numpy as np
 import dill as pickle
 import matplotlib.pyplot as plt
 plt.style.use(inputs.get("mpl_style", "default"))
@@ -38,8 +37,6 @@ plt.style.use(inputs.get("mpl_style", "default"))
 from romar import utils
 from romar import systems
 from romar import postproc as pp
-
-_VALID_ROMS = {"cobras", "cobraslin", "pca"}
 
 # Main
 # =====================================
@@ -70,17 +67,10 @@ if (__name__ == "__main__"):
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
-      _model = copy.deepcopy(model)
-      if (name in _VALID_ROMS):
-        # Load basis
-        with open(model["basis"], "rb") as file:
-          _model["basis"] = pickle.load(file)
-      else:
-        raise ValueError(
-          f"Name '{name}' not valid! Valid ROM models are {_VALID_ROMS}."
-        )
-      models[name] = _model
-      del _model
+      models[name] = copy.deepcopy(model)
+      # Load basis
+      with open(model["basis"], "rb") as file:
+        models[name]["basis"] = pickle.load(file)
 
   # Loop over test cases
   # ---------------

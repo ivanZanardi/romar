@@ -11,17 +11,10 @@ from .. import env
 from .. import utils
 from .basic import Basic
 from .. import backend as bkd
-from .utils import check_method
 from typing import List, Optional, Union
-from factor_analyzer.rotator import Rotator, POSSIBLE_ROTATIONS
 
 
-class PCA(Basic):
-
-  """
-  Principal Component Analysis (PCA) with support for feature scaling,
-  rotation, and randomized Singular Value Decomposition (SVD).
-  """
+class POD(Basic):
 
   # Initialization
   # ===================================
@@ -35,19 +28,19 @@ class PCA(Basic):
     path_to_saving: str = "./"
   ) -> None:
     """
-    Initialize the PCA class.
+    Initialize the POD class.
 
     :param scaling: Scaling method for normalization.
     :type scaling: str, optional
     :param rotation: Rotation method for principal components.
     :type rotation: str, optional
-    :param path_to_saving: Directory path to save computed PCA results.
+    :param path_to_saving: Directory path to save computed POD results.
     :type path_to_saving: str
 
     :raises ValueError: If the specified rotation and scaling method are
                         invalid.
     """
-    super(PCA, self).__init__(
+    super(POD, self).__init__(
       system, path_to_data, scale, xref, xscale, path_to_saving
     )
 
@@ -56,6 +49,7 @@ class PCA(Basic):
   def compute_cov_mats(
     self,
     irange: List[int],
+    use_quad_w: bool = False,
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
@@ -82,7 +76,9 @@ class PCA(Basic):
     with multiprocessing.Manager() as manager:
       # Define input arguments for covariance matrices calculation
       kwargs = dict(
-        X=manager.list()
+        X=manager.list(),
+        nb_mu=irange[1]-irange[0],
+        use_quad_w=use_quad_w
       )
       if (nb_workers > 1):
         # Run jobs in parallel
@@ -101,7 +97,9 @@ class PCA(Basic):
   def _compute_cov_mats(
     self,
     index: int,
-    X: List[np.ndarray]
+    X: List[np.ndarray],
+    nb_mu: int,
+    use_quad_w: bool = False
   ) -> None:
     """
     Compute state and gradient covariance matrices using quadrature points
@@ -117,15 +115,12 @@ class PCA(Basic):
     :return: None (results are appended to `X`).
     :rtype: None
     """
-    # Load solution
+    # Load data
     data = utils.load_case(path=self.path_to_data, index=index)
     if (data is not None):
-      # Extract solution
-      y = data["y"].T
       # State covariance matrix
-      w_t = data["w_t"].reshape(-1,1)
-      w_mu = data["w_mu"].reshape(1)
-      X.append(w_mu * w_t * self._apply_scaling(y))
+      Xi = self._compute_state_cov(data, nb_mu, use_quad_w)
+      X.append(Xi)
 
   # Compute principal components
   # ===================================
@@ -138,7 +133,7 @@ class PCA(Basic):
     niter: int = 50
   ) -> None:
     """
-    Compute PCA modes for the given dataset using randomized SVD.
+    Compute POD modes for the given dataset using randomized SVD.
 
     :param X: Data matrix with shape (nb_features, nb_samples).
     :type X: np.ndarray
@@ -148,14 +143,14 @@ class PCA(Basic):
     :type xref: Optional[Union[str, np.ndarray]]
     :param xscale: Scaling factors (array or file path).
     :type xscale: Optional[Union[str, np.ndarray]]
-    :param xnot: List of feature indices to exclude from PCA computation.
+    :param xnot: List of feature indices to exclude from POD computation.
     :type xnot: Optional[List[int]]
     :param rank: Maximum rank for randomized SVD. Default is 100.
     :type rank: int
     :param niter: Number of iterations for randomized SVD. Default is 50.
     :type niter: int
 
-    :return: Dictionary containing computed PCA components.
+    :return: Dictionary containing computed POD components.
     :rtype: Dict[str, np.ndarray]
     """
     # Mask covariance matrices
@@ -171,16 +166,9 @@ class PCA(Basic):
       q=rank,
       niter=niter
     ))
-    # Rotation method
-    rotation = check_method(
-      method="rotation",
-      name=rotation,
-      valid_names=POSSIBLE_ROTATIONS
-    )
-    # Apply rotation
-    rotator = Rotator(method=rotation)
-    phi = {r: rotator.fit_transform(phi[:,:r]) for r in range(2,rank+1)}
-    # Save results
+    # Vanilla model
+    # -------------
+    phi = {r: phi[:,:r] for r in range(2,rank+1)}
     data = {
       "s": s,
       "phi": phi,
@@ -190,3 +178,11 @@ class PCA(Basic):
       "xscale": self.xscale
     }
     self._save(data)
+    # Rotated model
+    # -------------
+    if (rotation is not None):
+      rot = self.get_rotator(rotation)
+      phi = {r: rot.fit_transform(basis) for (r, basis) in phi.items()}
+      data["phi"] = phi
+      data["psi"] = phi
+      self._save(data, identifier=rotation)

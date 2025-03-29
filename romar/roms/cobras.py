@@ -112,50 +112,8 @@ class CoBRAS(Basic):
              - `Y` (np.ndarray): Weighted gradient covariance matrix.
     :rtype: Tuple[np.ndarray]
     """
-    # Loop over training cases
-    return self._compute_cov_mats_loop(
-      kwargs=dict(
-        dt_log=dt_log,
-        tf_min=tf_min,
-        t0_perc=np.clip(t0_perc, 0.1, 1.0),
-        rtol=rtol,
-        atol=atol,
-        tout=tout
-      ),
-      indices_mu=np.arange(*irange),
-      nb_meas=nb_meas,
-      use_quad_w=use_quad_w,
-      nb_workers=nb_workers
-    )
-
-  def _compute_cov_mats_loop(
-    self,
-    kwargs: Dict[str, Any],
-    indices_mu: np.ndarray,
-    nb_meas: int = 5,
-    use_quad_w: bool = False,
-    nb_workers: int = 1
-  ) -> Dict[str, np.ndarray]:
-    """
-    Compute state and gradient covariance matrices from system simulations.
-
-    This method computes covariance matrices using quadrature points
-    and system dynamics, with optional parallel execution.
-
-    :param nb_meas: Number of output measurements for adjoint simulations.
-                    Defaults to 5.
-    :type nb_meas: int
-    :param nb_workers: Number of parallel workers for computation.
-                       Defaults to 1 (sequential execution).
-    :type nb_workers: int, optional
-
-    :return: Tuple containing:
-            - `X` (np.ndarray): Unweighted state covariance matrix.
-            - `X` (np.ndarray): Weighted state covariance matrix.
-            - `Y` (np.ndarray): Weighted gradient covariance matrix.
-    :rtype: Tuple[np.ndarray]
-    """
     # Loop over computed solutions
+    indices_mu = np.arange(*irange)
     iterable = tqdm(
       iterable=indices_mu,
       ncols=80,
@@ -164,14 +122,20 @@ class CoBRAS(Basic):
     )
     with multiprocessing.Manager() as manager:
       # Define input arguments for covariance matrices calculation
-      kwargs.update(dict(
+      kwargs = dict(
         X=manager.list(),
         Y=manager.list(),
         conv=manager.list(),
         nb_mu=len(indices_mu),
+        dt_log=dt_log,
+        tf_min=tf_min,
+        t0_perc=np.clip(t0_perc, 0.1, 1.0),
+        rtol=rtol,
+        atol=atol,
+        tout=tout,
         nb_meas=nb_meas,
         use_quad_w=use_quad_w
-      ))
+      )
       if (nb_workers > 1):
         # Run jobs in parallel
         fun = env.make_fun_parallel(self._compute_cov_mats)
@@ -289,8 +253,8 @@ class CoBRAS(Basic):
     # Number of samples
     ns = np.round(perc * size)
     # Sample uniformly
-    ii = np.array_split(i, ns)
-    return np.asarray([j[j.size//2] for j in ii])
+    ij = np.array_split(i, ns)
+    return np.asarray([j[j.size//2] for j in ij])
 
   def _solve_adj(
     self,
@@ -380,7 +344,6 @@ class CoBRAS(Basic):
     Y: np.ndarray,
     rotation: Optional[str] = None,
     xnot: Optional[List[int]] = None,
-    max_y_norm: Optional[float] = None,
     rank: int = 100,
     niter: int = 50
   ) -> None:
@@ -408,12 +371,6 @@ class CoBRAS(Basic):
       xnot=xnot
     )
     X, Y = X[mask], Y[mask]
-    # Remove outliers adjoint snaphots with too high norm
-    # > Numerical instabilites in adjoint computation
-    if (max_y_norm is not None):
-      y_norm = np.linalg.norm(Y, axis=0)
-      i = np.where(y_norm <= max_y_norm)[0]
-      Y = Y[:,i]
     # Balance covariance matrices
     rank = min(rank, X.shape[0])
     X, Y = map(bkd.to_torch, (X, Y))

@@ -2,12 +2,11 @@ __all__ = [
   "ROM",
   "CoBRAS",
   "CoBRASLin",
-  "PCA"
+  "POD"
 ]
 
 from .model import ROM
 from .cobras import CoBRAS
-from .cobras_lin import CoBRASLin
-from .pca import PCA
+from .pod import POD
 
 VALID_ROMS = set(__all__[1:])

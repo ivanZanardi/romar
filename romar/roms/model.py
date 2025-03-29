@@ -33,7 +33,7 @@ class ROM(object):
     :type use_proj: bool
     """
     # Dimensions
-    self.nb_eqs = nb_eqs
+    self.nb_eqs = int(nb_eqs)
     self.use_proj = bool(use_proj)
     # Controlling variable
     self.built = False
@@ -56,7 +56,7 @@ class ROM(object):
     :type phi: np.ndarray
     :param psi: Test basis matrix.
     :type psi: np.ndarray
-    :param mask: Boolean mask indicating which states are retained.
+    :param mask: Boolean mask indicating which states are reduced.
     :type mask: np.ndarray
     :param xref: Reference values for state scaling (default: zeros).
     :type xref: Optional[np.ndarray], optional

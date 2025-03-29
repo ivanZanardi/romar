@@ -188,61 +188,13 @@ class Basic(object):
     # Compute the smallest timescale
     return 1.0/l.max()
 
-  def compute_lin_tmax(
-    self,
-    t: np.ndarray,
-    y: np.ndarray,
-    rho: float,
-    err_max: float = 30.0
-  ) -> float:
-    """
-    Compute the maximum time validity for the linearized model.
-
-    This function determines the time limit up to which the linear model
-    remains valid, either by using eigenvalues of the Jacobian or by
-    comparing the nonlinear with the linearized solution.
-
-    :param t: Time array over which the model is evaluated.
-    :type t: np.ndarray
-    :param y: Solution of the nonlinear model, used as the reference for
-              validation.
-    :type y: np.ndarray
-    :param use_eig: Flag to determine whether to use eigenvalue-based
-                    timescale computation. If False, the function will
-                    use error-based validation. Defaults to True.
-    :type use_eig: bool, optional
-    :param err_max: Maximum allowed percentage error between the nonlinear and
-                    the linearized model for validity. Only used if
-                    `use_eig` is False. Defaults to 30.0.
-    :type err_max: float, optional
-    :return: The maximum time (tmax) up to which the linearized model
-             remains valid.
-    :rtype: float
-    """
-    # Check solution matrix shape
-    if (len(t.reshape(-1)) != len(y)):
-      y = y.T
-    # Compute the linearized solution
-    ylin = self.solve_fom(t, y[0], rho, linear=True)[0].T
-    # Number of time instants actually solved
-    nt = len(ylin)
-    # Compute the error between nonlinear and linear solutions
-    err = utils.mape(y[:nt], ylin, eps=0.0, axis=-1)
-    # Find the last index where the error is within the threshold
-    idx = np.argmin(np.abs(err - err_max))-1
-    # Return the corresponding time value
-    return t[:nt][idx]
-
   # Output
   # ===================================
   def compute_c_mat(
     self,
     max_mom: int = 1,
-    all_together: bool = False,
     state_specs: bool = False,
-    ions_specs: bool = False,
-    include_em: bool = False,
-    include_temp: bool = False
+    include_em: bool = False
   ) -> None:
     """
     Compute the observation matrix for a linear output model.
@@ -268,25 +220,11 @@ class Basic(object):
       # Set moment order and number of indices
       m = max_mom if (k != "em") else 1
       n = s.nb_comp if state_specs else 1
-      if ((s.Z == 1) and (ions_specs) and (not state_specs) and (not all_together)):
-        m = 1
-        n = s.nb_comp
       # Compute the moment basis for the species and populate C
       basis = s.compute_mom_basis(m)
-      if all_together:
-        indices = np.ix_(np.arange(0,m), s.indices)
-        self.C[indices] = basis
-        si, ei = max_mom, max_mom
-      else:
-        for b in basis:
-          ei += n
-          self.C[np.arange(si,ei),s.indices] = b
-          si = ei
-    # Temperatures
-    if include_temp:
-      for i in range(2):
-        ei += 1
-        self.C[np.arange(si,ei),self.mix.nb_comp+i] = 1.0
+      for b in basis:
+        ei += n
+        self.C[np.arange(si,ei),s.indices] = b
         si = ei
     # Remove not used rows from the C matrix
     self.C = self.C[:ei]
@@ -326,7 +264,7 @@ class Basic(object):
     runtime = np.array(runtime).reshape(1)
     # Check convergence
     y = None
-    if (sol is not None):
+    if ((sol is not None) and sol.success):
       y = sol.y
       if linear:
         y += y0.reshape(-1,1)
@@ -393,7 +331,7 @@ class Basic(object):
       y_fom = y_fom[:,i]
     # Solve ROM
     y_rom, runtime = self.solve_rom(t, y0, rho, tout=tout)
-    if ((y_rom is not None) and (y_rom.shape[1] == len(t))):
+    if (y_rom is not None):
       # Converged
       prim_fom = self.get_prim(y_fom, clip=False)
       prim_rom = self.get_prim(y_rom, clip=False)
