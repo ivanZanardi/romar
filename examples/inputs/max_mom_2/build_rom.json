@@ -1,0 +1,84 @@
+{
+  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_factorial": true
+    },
+    "c_mat": {
+      "max_mom": 2
+    }
+  },
+  "scaling": {
+    "active": true,
+    "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/scalings.p",
+    "method": "pareto"
+  },
+  "models": {
+    "pod": {
+      "name": "POD",
+      "cov_mats": {
+        "compute": {
+          "irange": [0,320],
+          "use_quad_w": false,
+          "nb_workers": 15
+        },
+        "read": false,
+        "save": true,
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/pod/cov_mats.p"
+      },
+      "modes": {
+        "rotation": "varimax",
+        "xnot": [0,-2,-1],
+        "rank": 50,
+        "niter": 50
+      }
+    },
+    "cobras": {
+      "name": "CoBRAS",
+      "cov_mats": {
+        "compute": {
+          "irange": [0,320],
+          "dt_log": 2.0,
+          "t0_perc": 0.1,
+          "rtol": 5e-3,
+          "atol": 1e-6,
+          "tout": 30.0,
+          "nb_meas": 5,
+          "use_quad_w": false,
+          "nb_workers": 15
+        },
+        "read": false,
+        "save": true,
+        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/cobras/cov_mats.p"
+      },
+      "modes": {
+        "rotation": "varimax",
+        "xnot": [0,-2,-1],
+        "rank": 50,
+        "niter": 50
+      }
+    }
+  },
+  "paths": {
+    "data": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/",
+    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/"
+  }
+}
