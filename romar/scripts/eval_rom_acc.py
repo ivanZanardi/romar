@@ -68,18 +68,16 @@ if (__name__ == "__main__"):
   models = {}
   for (name, model) in inputs["models"].items():
     if model.get("active", False):
-      _model = copy.deepcopy(model)
+      models[name] = copy.deepcopy(model)
       # Load basis
       with open(model["basis"], "rb") as file:
-        _model["basis"] = pickle.load(file)
+        models[name]["basis"] = pickle.load(file)
       # Load error
       if (model.get("error", None) is not None):
         with open(model["error"], "rb") as file:
-          _model["error"] = pickle.load(file)
+          models[name]["error"] = pickle.load(file)
       else:
-        _model["error"] = None
-      models[name] = _model
-      del _model
+        models[name]["error"] = None
 
   # Loop over ROM models
   # ---------------

@@ -344,6 +344,7 @@ class CoBRAS(Basic):
     Y: np.ndarray,
     rotation: Optional[str] = None,
     xnot: Optional[List[int]] = None,
+    max_y_norm: Optional[float] = None,
     rank: int = 100,
     niter: int = 50
   ) -> None:
@@ -371,6 +372,12 @@ class CoBRAS(Basic):
       xnot=xnot
     )
     X, Y = X[mask], Y[mask]
+    # Remove outliers adjoint snaphots with too high norm
+    # > Numerical instabilites in adjoint computation
+    if (max_y_norm is not None):
+      y_norm = np.linalg.norm(Y, axis=0)
+      i = np.where(y_norm <= max_y_norm)[0]
+      Y = Y[:,i]
     # Balance covariance matrices
     rank = min(rank, X.shape[0])
     X, Y = map(bkd.to_torch, (X, Y))
@@ -395,6 +402,6 @@ class CoBRAS(Basic):
     # Rotated model
     # -------------
     if (rotation is not None):
-      rot = self.get_rotator(rotation)
+      rot = self._get_rotator(rotation)
       data["psi"] = {r: rot.fit_transform(basis) for (r, basis) in psi.items()}
       self._save(data, identifier=rotation)

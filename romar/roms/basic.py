@@ -153,7 +153,7 @@ class Basic(abc.ABC):
 
   # Rotation
   # ===================================
-  def get_rotator(self, rotation):
+  def _get_rotator(self, rotation):
     # Rotation method
     rotation = check_method(
       method="rotation",

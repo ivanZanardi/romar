@@ -1,7 +1,6 @@
 __all__ = [
   "ROM",
   "CoBRAS",
-  "CoBRASLin",
   "POD"
 ]
 
