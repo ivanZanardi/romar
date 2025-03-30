@@ -57,7 +57,7 @@ cd romar
 conda env create -f conda/env.yml
 conda activate romar
 ```
-> **Note:** If you encounter issues installing `pyharm`, download it manually from its [GitHub repository](https://github.com/) and install it locally.
+> **Note:** If you encounter issues installing `pyharm`, download it manually from its [GitHub repository](https://github.com/ivanZanardi/pyharm.git) and install it locally.
 
 1. Install the package:
 
