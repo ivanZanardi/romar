@@ -71,6 +71,22 @@ pip install romar
 conda activate romar
 ```
 
+## Citation
+
+If you use this code or find this work useful in your research, please cite us:
+
+```bibtex
+@misc{Zanardi_2024_ROMAr,
+  title={Petrov-Galerkin model reduction for thermochemical nonequilibrium gas mixtures}, 
+  author={Ivan Zanardi and Alberto Padovan and Daniel J. Bodony and Marco Panesi},
+  year={2025},
+  eprint={2411.01673},
+  archivePrefix={arXiv},
+  primaryClass={physics.comp-ph},
+  url={https://arxiv.org/abs/2411.01673}, 
+}
+```
+
 ## Explore
 
 Check out the [examples](https://github.com/ivanZanardi/romar/tree/main/examples) provided in the repository to see ROMAr in action.
