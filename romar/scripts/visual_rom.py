@@ -112,7 +112,7 @@ if (__name__ == "__main__"):
         y=sols,
         err=errs,
         err_scale=inputs["plot"].get("err_scale", "log"),
-        tlim=inputs["plot"]["tlim"][icase],
+        xlim=inputs["plot"]["tlim"][icase],
         hline=inputs["plot"].get("hline", None),
         ylim_err=inputs["plot"].get("ylim_err", None)
       )
