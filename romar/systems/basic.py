@@ -339,11 +339,12 @@ class Basic(object):
         "t": t,
         "FOM": self.postproc_sol(*prim_fom),
         "ROM": self.postproc_sol(*prim_rom),
-        "err": {
-          "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
-          "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
-          "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
-        }
+      }
+      data["err"] = {
+        "n": self.compute_err_n(data["FOM"]["n"], data["ROM"]["n"], eps),
+        "mom": self.compute_err_mom(prim_fom[0], prim_rom[0], eps),
+        "dist": self.compute_err_dist(prim_fom[0], prim_rom[0], eps),
+        "temp": self.compute_err_temp(prim_fom[1:], prim_rom[1:], eps)
       }
       return data, runtime
     else:
@@ -351,6 +352,7 @@ class Basic(object):
 
   def postproc_sol(self, n, Th, Te):
     return {
+      "n": np.sum(n, axis=0),
       "mom": self.compute_mom(n),
       "dist": self.compute_dist(n),
       "temp": {"Th": Th, "Te": Te}
@@ -360,9 +362,13 @@ class Basic(object):
     self,
     n: np.ndarray
   ) -> Dict[str, Dict[str, np.ndarray]]:
+    # Molar fractions
+    x = n/np.sum(n, axis=0)
+    # Moments
     moms = {}
     for (name, s) in self.mix.species.items():
-      moms[name] = self._compute_mom(n=n[s.indices], species=s)
+      moms[name+"_n"] = self._compute_mom(n=n[s.indices], species=s)
+      moms[name+"_x"] = self._compute_mom(n=x[s.indices], species=s)
     return moms
 
   def _compute_mom(
@@ -458,6 +464,16 @@ class Basic(object):
       return error, runtime, not_conv
     else:
       return None, None, not_conv
+
+  def compute_err_n(
+    self,
+    n_true: np.ndarray,
+    n_pred: np.ndarray,
+    eps: float = 1e-8
+  ) -> np.ndarray:
+    return utils.absolute_percentage_error(
+      y_true=n_true, y_pred=n_pred, eps=eps
+    )
 
   def compute_err_dist(
     self,
