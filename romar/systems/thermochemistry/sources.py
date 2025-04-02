@@ -159,13 +159,13 @@ class Sources(object):
 
   def omega_energy_t(self, omegas):
     f = torch.zeros(1)
-    for k in ("rad_bb",):
+    for k in ("rad_bb", "rad_ff"):
       f += omegas[k]
     return f
 
   def omega_energy_e(self, omegas):
     f = torch.zeros(1)
-    for k in ("kin_exc", "kin_ion", "kin_ela", "rad_ff", "rad_bf"):
+    for k in ("kin_exc", "kin_ion", "kin_ela", "rad_bf", "rad_ff"):
       f += omegas[k]
     return f
 

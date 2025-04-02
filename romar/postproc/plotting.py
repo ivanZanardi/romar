@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from .. import const
+from matplotlib.ticker import ScalarFormatter
 
 COLORS = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"]
 LINESTYLES = ('-', '--', '-.', '-', ':')
@@ -50,6 +51,7 @@ def plot_evolution(
   scales=["log", "linear"],
   legend_loc="best",
   figname=None,
+  use_sci=False,
   save=False,
   show=False
 ):
@@ -97,6 +99,11 @@ def plot_evolution(
       fontsize=20
     )
     ax.hlines(hline, xmin, xmax, colors="grey", lw=1.0)
+  # Scientific notation 
+  if use_sci:
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.yaxis.get_major_formatter().set_scientific(True)
+    ax.yaxis.get_major_formatter().set_powerlimits((0,0))
   # Tight layout
   plt.tight_layout()
   if save:
@@ -129,6 +136,7 @@ def plot_temp_evolution(
     legend_loc=legend_loc,
     scales=[xscale, "linear"],
     figname=path + "/sol",
+    use_sci=False,
     save=True,
     show=False
   )
@@ -143,6 +151,7 @@ def plot_temp_evolution(
     legend_loc=legend_loc,
     scales=[xscale, err_scale],
     figname=path + "/err",
+    use_sci=False,
     save=True,
     show=False
   )
@@ -165,46 +174,52 @@ def plot_mom_evolution(
   path = path + "/moments/"
   os.makedirs(path, exist_ok=True)
   # Plot moments
-  for m in range(max_mom):
-    for s in species.keys():
-      if (m == 0):
-        yscale = "log"
-        label_sol = f"$n_{labels[s]}$ [m$^{{-3}}$]"
-        label_err = f"$n_{labels[s]}$ error [\%]"
-      else:
-        yscale = "linear"
-        if (m == 1):
-          label_sol = f"$e_{labels[s]}$ [eV]"
-          label_err = f"$e_{labels[s]}$ error [\%]"
+  for name in ("x", "n"):
+    for m in range(max_mom):
+      for s in species.keys():
+        if (m == 0):
+          yscale = "log"
+          label_sol = f"${name}_{labels[s]}$"
+          if (name == "n"):
+            label_sol += f" [m$^{{-3}}$]"
+          label_err = f"${name}_{labels[s]}$ error [\%]"
         else:
-          label_sol = fr"$\gamma_{m}$ [eV$^{m}$]"
-          label_err = fr"$\gamma_{m}$ error [\%]"
-      # > Moment
-      plot_evolution(
-        x=x,
-        y={k: yk["mom"][s][f"m{m}"] for (k, yk) in y.items()},
-        xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
-        labels=[xlabel, label_sol],
-        legend_loc="best",
-        scales=["log", yscale],
-        figname=path + f"/m{m}_{s}",
-        save=True,
-        show=False
-      )
-      # > Moment error
-      plot_evolution(
-        x=x,
-        y={k: ek["mom"][s][f"m{m}"] for (k, ek) in err.items()},
-        xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
-        ylim=ylim_err,
-        hline=hline["mom"],
-        labels=[xlabel, label_err],
-        legend_loc="best",
-        scales=["log", err_scale],
-        figname=path + f"/m{m}_{s}_err",
-        save=True,
-        show=False
-      )
+          yscale = "linear"
+          if (m == 1):
+            label_sol = f"$e_{labels[s]}$ [eV]"
+            label_err = f"$e_{labels[s]}$ error [\%]"
+          else:
+            label_sol = fr"$\gamma_{m}$ [eV$^{m}$]"
+            label_err = fr"$\gamma_{m}$ error [\%]"
+        # > Moment
+        yscale = "linear" if (s == "Ar") else yscale
+        plot_evolution(
+          x=x,
+          y={k: yk["mom"][s+"_"+name][f"m{m}"] for (k, yk) in y.items()},
+          xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
+          labels=[xlabel, label_sol],
+          legend_loc="best",
+          scales=["log", yscale],
+          figname=path + f"/m{m}_{s}_{name}",
+          use_sci=False,
+          save=True,
+          show=False
+        )
+        # > Moment error
+        plot_evolution(
+          x=x,
+          y={k: ek["mom"][s+"_"+name][f"m{m}"] for (k, ek) in err.items()},
+          xlim=xlim[f"m{m}"] if isinstance(xlim, dict) else xlim,
+          ylim=ylim_err,
+          hline=hline["mom"],
+          labels=[xlabel, label_err],
+          legend_loc="best",
+          scales=["log", err_scale],
+          figname=path + f"/m{m}_{s}_{name}_err",
+          use_sci=False,
+          save=True,
+          show=False
+        )
 
 def plot_err_ci_evolution(
   x,
@@ -293,6 +308,7 @@ def plot_err_evolution(
       labels=[xlabel, fr"$T_{k[1]}$ error [\%]"],
       scales=["log", err_scale],
       figname=path + f"/err_temp_{k}",
+      use_sci=False,
       save=True,
       show=False
     )
@@ -318,6 +334,7 @@ def plot_err_evolution(
         labels=[xlabel, label],
         scales=["log", err_scale],
         figname=path + f"/err_mom_{s}_m{m}",
+        use_sci=False,
         save=True,
         show=False
       )
@@ -334,6 +351,7 @@ def plot_err_evolution(
     labels=[xlabel, fr"$w_i$ error [\%]"],
     scales=["log", err_scale],
     figname=path + "/err_dist",
+    use_sci=False,
     save=True,
     show=False
   )
