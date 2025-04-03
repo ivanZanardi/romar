@@ -1,13 +1,13 @@
 #!/bin/bash -i
 
-#SBATCH --time=6:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
 ##SBATCH --exclude=ccc[0370-0385]
 ##SBATCH --exclude=ccc[0400-0415]
 ##SBATCH --nodelist=ccc[0370-0385]
 ##SBATCH --nodelist=ccc[0400-0415]
-#SBATCH --job-name=run01
+#SBATCH --job-name=roms_run01
 #SBATCH --account=chess
 #SBATCH --partition=chess
 #SBATCH --output=log.output_%j

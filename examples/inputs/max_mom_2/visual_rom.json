@@ -51,7 +51,7 @@
     "tout": 0.0,
     "tlim": [0.0, 1e-3]
   },
-  "rom_range": [7,11],
+  "rom_range": [8,11],
   "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",
   "plot": {
     "labels": {

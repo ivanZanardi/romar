@@ -1,5 +1,5 @@
 {
-  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
   "env": {
     "backend": "numpy",
     "device": "cpu",
@@ -13,12 +13,12 @@
     "name": "BoxAd",
     "init": {
       "species": {
-        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
-        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
-        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
       },
-      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
-      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
       "use_rad": true,
       "use_factorial": true
     }
@@ -44,6 +44,6 @@
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/temp_high/"
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/data/temp_high/"
   }
 }

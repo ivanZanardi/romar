@@ -1,5 +1,5 @@
 {
-  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
   "env": {
     "backend": "numpy",
     "device": "cpu",
@@ -13,12 +13,12 @@
     "name": "BoxAd",
     "init": {
       "species": {
-        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
-        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
-        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
       },
-      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
-      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
       "use_rad": true,
       "use_factorial": true
     }
@@ -27,37 +27,37 @@
     "cobras": {
       "active": true,
       "name": "CoBRAS",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/cobras/basis.p"
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/cobras/basis.p"
     },
     "cobras_varimax": {
       "active": true,
       "name": "CoBRAS-Varimax",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/cobras/basis_varimax.p"
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/cobras/basis_varimax.p"
     },
     "pod": {
       "active": true,
       "name": "POD",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/pod/basis.p"
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/pod/basis.p"
     },
     "pod_varimax": {
       "active": true,
       "name": "POD-Varimax",
-      "basis": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/pod/basis_varimax.p"
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/pod/basis_varimax.p"
     }
   },
   "paths": {
-    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/error_temp_low/"
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/error_temp_low/"
   },
   "data": {
-    "path": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/temp_low/test/",
+    "path": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/data/temp_low/test/",
     "irange": [0,50],
     "nb_workers": 15,
     "eps": 1e-8,
     "tlim": [0.0, 1e-3],
     "tout": 1e2
   },
-  "rom_range": [7,11],
-  "mpl_style": "/home/zanardi/Workspace/Research/styles/matplotlib/paper_1column.mplstyle",
+  "rom_range": [8,11],
+  "mpl_style": "/u/zanardi3/scratch/Workspace/styles/matplotlib/paper_1column.mplstyle",
   "plot": {
     "active": false,
     "kwargs": {

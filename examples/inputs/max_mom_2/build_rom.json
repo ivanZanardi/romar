@@ -1,5 +1,5 @@
 {
-  "path_to_lib": "/home/zanardi/Codes/ML/ROMAr/romar/",
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
   "env": {
     "backend": "numpy",
     "device": "cpu",
@@ -13,12 +13,12 @@
     "name": "BoxAd",
     "init": {
       "species": {
-        "Ar": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
-        "Arp": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
-        "em": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
       },
-      "kin_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
-      "rad_dtb": "/home/zanardi/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
       "use_rad": true,
       "use_factorial": true
     },
@@ -28,7 +28,7 @@
   },
   "scaling": {
     "active": true,
-    "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/scalings.p",
+    "filename": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/data/train/scalings.p",
     "method": "pareto"
   },
   "models": {
@@ -42,7 +42,7 @@
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/pod/cov_mats.p"
+        "filename": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/pod/cov_mats.p"
       },
       "modes": {
         "rotation": "varimax",
@@ -67,18 +67,19 @@
         },
         "read": false,
         "save": true,
-        "filename": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/models/cobras/cov_mats.p"
+        "filename": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/models/cobras/cov_mats.p"
       },
       "modes": {
         "rotation": "varimax",
         "xnot": [0,-2,-1],
+        "max_y_norm": null,
         "rank": 50,
         "niter": 50
       }
     }
   },
   "paths": {
-    "data": "/home/zanardi/Codes/ML/ROMAr/runs/run01/data/train/",
-    "saving": "/home/zanardi/Codes/ML/ROMAr/runs/run01/max_mom_2/"
+    "data": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/data/train/",
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/run01/max_mom_2/"
   }
 }
