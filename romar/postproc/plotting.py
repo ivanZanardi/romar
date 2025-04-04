@@ -5,11 +5,33 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from .. import const
+from matplotlib import ticker
 from matplotlib.ticker import ScalarFormatter
 
 COLORS = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"]
 LINESTYLES = ('-', '--', '-.', '-', ':')
 
+
+# Formatter
+# =====================================
+class FixedScalarFormatter(ScalarFormatter):
+
+  def __init__(
+    self,
+    sigfigs=None,
+    useMathText=True,
+    **kwargs
+  ):
+    super().__init__(useMathText=useMathText, **kwargs)
+    self.sigfigs = sigfigs
+
+  def _set_format(self):
+    if (self.sigfigs is None):
+      super()._set_format()
+    else:
+      self.format = f'%1.{self.sigfigs}f'
+      if (self._usetex or self._useMathText):
+          self.format = r'$\mathdefault{%s}$' % self.format
 
 # Plotting
 # =====================================
@@ -52,6 +74,7 @@ def plot_evolution(
   legend_loc="best",
   figname=None,
   use_sci=False,
+  sigfigs=None,
   save=False,
   show=False
 ):
@@ -99,11 +122,12 @@ def plot_evolution(
       fontsize=20
     )
     ax.hlines(hline, xmin, xmax, colors="grey", lw=1.0)
-  # Scientific notation 
+  # Scientific notation
   if use_sci:
-    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.yaxis.set_major_formatter(FixedScalarFormatter(sigfigs=sigfigs))
     ax.yaxis.get_major_formatter().set_scientific(True)
     ax.yaxis.get_major_formatter().set_powerlimits((0,0))
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(5))
   # Tight layout
   plt.tight_layout()
   if save:
@@ -136,7 +160,8 @@ def plot_temp_evolution(
     legend_loc=legend_loc,
     scales=[xscale, "linear"],
     figname=path + "/sol",
-    use_sci=False,
+    use_sci=True,
+    sigfigs=2,
     save=True,
     show=False
   )
@@ -151,7 +176,6 @@ def plot_temp_evolution(
     legend_loc=legend_loc,
     scales=[xscale, err_scale],
     figname=path + "/err",
-    use_sci=False,
     save=True,
     show=False
   )
@@ -201,7 +225,8 @@ def plot_mom_evolution(
           legend_loc="best",
           scales=["log", yscale],
           figname=path + f"/m{m}_{s}_{name}",
-          use_sci=False,
+          use_sci=True if (m > 0) else False,
+          sigfigs=3 if (m > 0) else None,
           save=True,
           show=False
         )
@@ -216,7 +241,6 @@ def plot_mom_evolution(
           legend_loc="best",
           scales=["log", err_scale],
           figname=path + f"/m{m}_{s}_{name}_err",
-          use_sci=False,
           save=True,
           show=False
         )
