@@ -258,7 +258,7 @@ class Basic(object):
       first_step=1e-14,
       rtol=1e-4,
       atol=0.0,
-      jac=self.jac_lin if linear else self.jac,
+      jac=self.jac_lin if linear else self.jac
     )
     runtime = time.time()-runtime
     runtime = np.array(runtime).reshape(1)
