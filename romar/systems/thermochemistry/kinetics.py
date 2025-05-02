@@ -7,7 +7,7 @@ from . import chem_eq
 from ... import const
 from ... import utils
 from ... import backend as bkd
-from pyharm import PolyHarmInterpolator
+from pyharmx import PolyHarmInterpolator
 
 
 class Kinetics(object):
