@@ -93,4 +93,4 @@ Check out the [examples](https://github.com/ivanZanardi/romar/tree/main/examples
 
 ## License
 
-ROMAr is distributed under the [MIT license](https://github.com/ivanZanardi/romar/blob/main/LICENSE). You are welcome to utilize, modify, and contribute to this project in accordance with the terms outlined in the license.
+ROMAr is distributed under the [MIT License](https://github.com/ivanZanardi/romar/blob/main/LICENSE). You are welcome to utilize, modify, and contribute to this project in accordance with the terms outlined in the license.

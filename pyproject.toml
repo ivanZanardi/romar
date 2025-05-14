@@ -8,7 +8,7 @@ version = "0.0.1"
 dynamic = ["dependencies"]
 description = "Reduced Order Modeling for Argon plasma"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "MIT License"}
 authors = [
   {name = "Ivan Zanardi", email = "zanardi3@illinois.edu"}
 ]
