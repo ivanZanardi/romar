@@ -7,7 +7,7 @@ from __future__ import print_function
 __author__ = "Ivan Zanardi"
 __email__ = "zanardi3@illinois.edu"
 __url__ = "https://github.com/ivanZanardi/romar"
-__license__ = "Apache-2.0"
+__license__ = "MIT"
 __version__ = "0.0.1"
 
 __all__ = [
