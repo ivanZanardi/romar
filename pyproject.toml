@@ -8,7 +8,7 @@ version = "0.0.1"
 dynamic = ["dependencies"]
 description = "Reduced Order Modeling for Argon plasma"
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = {text = "MIT"}
 authors = [
   {name = "Ivan Zanardi", email = "zanardi3@illinois.edu"}
 ]
@@ -26,7 +26,7 @@ classifiers = [
   "Development Status :: 1 - Beta",
   "Intended Audience :: Education",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: Apache-2.0 License",
+  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Mathematics",
