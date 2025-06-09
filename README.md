@@ -4,41 +4,7 @@
 
 ---
 
-ROMAr is a Python library designed to implement model reduction techniques for collisional-radiative Argon plasma, leveraging the CoBRAS method.
-
-#### References:
-
-- Physical model:
-
-```bibtex
-@article{Kapper_2011_Argon,
-    author = {Kapper, M. G. and Cambier, J.-L.},
-    title = {Ionizing shocks in argon. Part I: Collisional-radiative model and steady-state structure},
-    journal = {Journal of Applied Physics},
-    volume = {109},
-    number = {11},
-    pages = {113308},
-    year = {2011},
-    month = {06},
-    issn = {0021-8979},
-    doi = {10.1063/1.3585688}
-}
-```
-
-- Model reduction:
-
-```bibtex
-@article{Otto_2023_CoBRAS,
-  author = {Otto, Samuel E. and Padovan, Alberto and Rowley, Clarence W.},
-  title = {Model Reduction for Nonlinear Systems by Balanced Truncation of State and Gradient Covariance},
-  journal = {SIAM Journal on Scientific Computing},
-  volume = {45},
-  number = {5},
-  pages = {A2325-A2355},
-  year = {2023},
-  doi = {10.1137/22M1513228}
-}
-```
+ROMAr is a Python library designed to implement model reduction techniques for collisional-radiative argon plasma [1], leveraging the CoBRAS method [2].
 
 ## Installation
 
@@ -57,7 +23,6 @@ cd romar
 conda env create -f conda/env.yml
 conda activate romar
 ```
-> **Note:** If you encounter issues installing `pyharm`, download it manually from its [GitHub repository](https://github.com/ivanZanardi/pyharm.git) and install it locally.
 
 1. Install the package:
 
@@ -76,14 +41,17 @@ conda activate romar
 If you use this code or find this work useful in your research, please cite us:
 
 ```bibtex
-@misc{Zanardi_2024_ROMAr,
-  title={Petrov-Galerkin model reduction for thermochemical nonequilibrium gas mixtures}, 
-  author={Ivan Zanardi and Alberto Padovan and Daniel J. Bodony and Marco Panesi},
+@misc{Zanardi_ROMAr_2025,
+  title={Petrov-Galerkin model reduction for collisional-radiative argon plasma},
+  author={Ivan Zanardi and Alessandro Meini and Alberto Padovan and Daniel J. Bodony and Marco Panesi},
+  month={06},
   year={2025},
-  eprint={2411.01673},
+  eprint={2506.05483},
   archivePrefix={arXiv},
   primaryClass={physics.comp-ph},
-  url={https://arxiv.org/abs/2411.01673}, 
+  url={https://arxiv.org/abs/2506.05483},
+  doi={10.48550/arXiv.2506.05483},
+  author+an={1=highlight}
 }
 ```
 
@@ -94,3 +62,9 @@ Check out the [examples](https://github.com/ivanZanardi/romar/tree/main/examples
 ## License
 
 ROMAr is distributed under the [MIT License](https://github.com/ivanZanardi/romar/blob/main/LICENSE). You are welcome to utilize, modify, and contribute to this project in accordance with the terms outlined in the license.
+
+## References
+
+1. Kapper, M. G., Cambier, J.-L. (2011). *Ionizing shocks in argon. Part I: Collisional-radiative model and steady-state structure*. Journal of Applied Physics, **109**(11), 113308. https://doi.org/10.1063/1.3585688
+
+2. Otto, S. E., Padovan, A., Rowley, C. W. (2023). *Model reduction for nonlinear systems by balanced truncation of state and gradient covariance*. SIAM Journal on Scientific Computing, **45**(5), A2325–A2355. https://doi.org/10.1137/22M1513228
