@@ -24,13 +24,13 @@ conda env create -f conda/env.yml
 conda activate romar
 ```
 
-1. Install the package:
+3. Install the package:
 
 ```bash
 pip install romar
 ```
 
-4. Activate the Conda environment whenever using ROMAr:
+Activate the Conda environment whenever using ROMAr:
 
 ```bash
 conda activate romar
