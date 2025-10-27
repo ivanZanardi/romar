@@ -109,6 +109,6 @@ if (__name__ == "__main__"):
         cov_mats = pickle.load(file)
     # Modes
     print("> Computing modes ...")
-    model.compute_modes(**cov_mats, **opts["modes"])
+    model.compute_basis(**cov_mats, **opts["modes"])
 
   print("Done!")

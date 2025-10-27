@@ -9,9 +9,8 @@ from factor_analyzer.rotator import Rotator, POSSIBLE_ROTATIONS
 
 
 class Basic(abc.ABC):
-
   """
-  Base class for model reduction.
+  Abstract base class for model reduction methods.
   """
 
   # Initialization
@@ -28,8 +27,24 @@ class Basic(abc.ABC):
     """
     Initialize the base class.
 
-    :param path_to_saving: Directory path to save computed results.
-    :type path_to_saving: str
+    :param system: System object containing the governing equations. Must
+                   define an attribute `nb_eqs` for the number of equations.
+    :type system: callable
+    :param path_to_data: Path to the dataset or simulation results used for
+                         model reduction.
+    :type path_to_data: str
+    :param scale: Whether to apply scaling to the system variables.
+                  Default is ``False``.
+    :type scale: bool, optional
+    :param xref: Reference values for centering (shape: (nb_feat,)).
+                 Can be a string identifier or an array.
+    :type xref: str or np.ndarray, optional
+    :param xscale: Scaling factors (shape: (nb_feat,)).
+                   Can be a string identifier or an array.
+    :type xscale: str or np.ndarray, optional
+    :param path_to_saving: Directory where results will be saved.
+                           Default is ``"./"``.
+    :type path_to_saving: str, optional
     """
     # Class name
     self.name = self.__class__.__name__.lower()
@@ -51,16 +66,27 @@ class Basic(abc.ABC):
   # ===================================
   @abc.abstractmethod
   def compute_cov_mats(self, *args, **kwargs) -> None:
+    """
+    Abstract method to compute covariance matrices.
+
+    This method must be implemented by subclasses. It should compute
+    and store the covariance matrices required for model reduction.
+
+    :raises NotImplementedError: If not implemented by a subclass.
+    """
     pass
 
-  # Compute modes
+  # Compute basis
   # ===================================
   @abc.abstractmethod
-  def compute_modes(self, *args, **kwargs) -> None:
+  def compute_basis(self, *args, **kwargs) -> None:
     """
     Abstract method for performing model reduction.
 
-    This method must be implemented in a subclass.
+    Subclasses must implement this method to compute the projection basis
+    for the system.
+
+    :raises NotImplementedError: If not implemented by a subclass.
     """
     pass
 
@@ -77,9 +103,11 @@ class Basic(abc.ABC):
     :param nb_feat: Total number of features.
     :type nb_feat: int
     :param xnot: List of feature indices to exclude.
-    :type xnot: list[int]
+                 Default is ``None`` (no exclusions).
+    :type xnot: list[int], optional
 
-    :return: Boolean mask of shape (nb_feat,).
+    :return: Boolean mask of shape (nb_feat,), where excluded features
+             are set to ``False``.
     :rtype: np.ndarray
     """
     mask = np.ones(nb_feat, dtype=bool)
@@ -100,19 +128,19 @@ class Basic(abc.ABC):
     """
     Set scaling parameters for feature normalization.
 
-    :param nb_feat: Number of features.
+    :param nb_feat: Number of features (system variables).
     :type nb_feat: int
-    :param xref: Mean reference values (shape: (nb_feat,)).
-    :type xref: np.ndarray, optional
-    :param xscale: Scaling factors (shape: (nb_feat,)).
-    :type xscale: np.ndarray, optional
-    :param active: Whether to apply scaling or use identity transformation.
+    :param xref: Reference values for centering (shape: (nb_feat,)).
+                 Default is zeros.
+    :type xref: str or np.ndarray, optional
+    :param xscale: Scaling factors for normalization (shape: (nb_feat,)).
+                   Default is ones.
+    :type xscale: str or np.ndarray, optional
+    :param active: Whether to apply scaling (True) or use identity scaling.
+                   Default is ``True``.
     :type active: bool, optional
 
-    :return: None
-    :rtype: None
-
-    :raises ValueError: If `xscale` has zero values or incorrect shape.
+    :raises ValueError: If any scaling factor is zero, causing division errors.
     """
     # Initialize scaling parameters
     xr = init_scaling_param(xref, nb_feat, ref_value=0.0)
@@ -136,15 +164,15 @@ class Basic(abc.ABC):
     x: np.ndarray
   ) -> np.ndarray:
     """
-    Apply the stored scaling transformation.
+    Apply the stored scaling transformation to the input data.
 
-    :param x: Input data of shape (nb_features,).
+    :param x: Input data array (shape: (..., nb_features)).
     :type x: np.ndarray
 
-    :return: Scaled data.
+    :return: Scaled data array of the same shape.
     :rtype: np.ndarray
 
-    :raises ValueError: If input dimensions do not match scaling dimensions.
+    :raises ValueError: If input dimensions do not match the scaling dimensions.
     """
     if (x.shape[-1] != len(self.xref)):
       raise ValueError("Input data dimensions do not " \
@@ -154,6 +182,18 @@ class Basic(abc.ABC):
   # Rotation
   # ===================================
   def _get_rotator(self, rotation):
+    """
+    Instantiate a rotation object for basis rotation.
+
+    :param rotation: Rotation method name. Must be one of
+                     ``factor_analyzer.rotator.POSSIBLE_ROTATIONS``.
+    :type rotation: str
+
+    :return: A configured rotation object.
+    :rtype: factor_analyzer.rotator.Rotator
+
+    :raises ValueError: If an invalid rotation method name is provided.
+    """
     # Rotation method
     rotation = check_method(
       method="rotation",
@@ -171,6 +211,22 @@ class Basic(abc.ABC):
     nb_mu: int,
     use_quad_w: bool = False
   ) -> None:
+    """
+    Compute the scaled state covariance matrix.
+
+    :param data: Dictionary containing simulation data.
+                 Must include keys ``"y"`` (state array),
+                 ``"t"`` (time), and optionally ``"w_mu"``, ``"w_t"``.
+    :type data: dict
+    :param nb_mu: Number of parameter samples.
+    :type nb_mu: int
+    :param use_quad_w: Whether to use quadrature weights.
+                       Default is ``False``.
+    :type use_quad_w: bool, optional
+
+    :return: Weighted and scaled state matrix.
+    :rtype: np.ndarray
+    """
     # Compute weights
     if use_quad_w:
       w = data["w_mu"] * data["w_t"].reshape(-1,1)
@@ -189,15 +245,18 @@ class Basic(abc.ABC):
     identifier: Optional[str] = None
   ) -> None:
     """
-    Save data to a file using pickle.
+    Save data to disk using pickle serialization.
 
-    :param data: Dictionary containing data arrays to save.
-    :type data: Dict[str, np.ndarray]
+    :param data: Dictionary containing arrays or data structures to save.
+    :type data: dict
+    :param identifier: Optional identifier appended to the saved filename.
+                       If None, defaults to ``basis``.
+    :type identifier: str, optional
 
-    :return: None
-    :rtype: None
+    :raises OSError: If an error occurs while writing the file.
 
-    :raises OSError: If there is an issue saving the file.
+    :notes:
+      The file is saved to ``{path_to_saving}/basis_{identifier}.p``.
     """
     if (identifier is None):
       identifier = "basis"

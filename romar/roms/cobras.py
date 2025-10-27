@@ -16,7 +16,6 @@ from .basic import Basic
 
 
 class CoBRAS(Basic):
-
   """
   CoBRAS: Model Reduction for Nonlinear Systems by Balanced Truncation of
   State and Gradient Covariance.
@@ -27,7 +26,9 @@ class CoBRAS(Basic):
   while preserving essential system dynamics.
 
   Reference:
-  - https://doi.org/10.1137/22M1513228
+  - Otto et al., "Model Reduction for Nonlinear Systems by Balanced Truncation
+    of State and Gradient Covariance", SIAM J. Sci. Comput. (2023)
+    DOI: https://doi.org/10.1137/22M1513228
   """
 
   # Initialization
@@ -42,32 +43,27 @@ class CoBRAS(Basic):
     path_to_saving: str = "./"
   ) -> None:
     """
-    Initialize the CoBRAS class with the specified system, quadrature points,
-    time grid, and saving configurations.
+    Initialize the base class.
 
-    :param system: Instance of the system to be reduced.
-    :type system: Any
-    :param tgrid: Dictionary specifying the time grid with required keys:
-                  - "start": Start time of the simulation.
-                  - "stop": End time of the simulation.
-                  - "num": Number of time points.
-    :type tgrid: Dict[str, float]
-    :param quad_mu: Dictionary containing quadrature points and weights for
-                    initial conditions. Must include:
-                    - "x": A 1D numpy array of quadrature points.
-                    - "w": A 1D numpy array of corresponding weights.
-    :type quad_mu: Dict[str, np.ndarray]
-    :param scale: Whether to apply scaling (default: False).
+    :param system: System object containing the governing equations. Must
+                   provide `nb_eqs`, `C`, `jac()`, and `set_fun_jac()` methods.
+    :type system: callable
+    :type system: callable
+    :param path_to_data: Path to the dataset or simulation results used for
+                         model reduction.
+    :type path_to_data: str
+    :param scale: Whether to apply scaling to the system variables.
+                  Default is ``False``.
     :type scale: bool, optional
-    :param xref: Mean reference values for scaling (array or file path).
-    :type xref: Union[str, np.ndarray], optional
-    :param xscale: Scaling factors (array or file path).
-    :type xscale: Union[str, np.ndarray], optional
-    :param path_to_saving: Directory path where the computed data and modes
-                           will be saved. Defaults to "./".
+    :param xref: Reference values for centering (shape: (nb_feat,)).
+                 Can be a string identifier or an array.
+    :type xref: str or np.ndarray, optional
+    :param xscale: Scaling factors (shape: (nb_feat,)).
+                   Can be a string identifier or an array.
+    :type xscale: str or np.ndarray, optional
+    :param path_to_saving: Directory where results will be saved.
+                           Default is ``"./"``.
     :type path_to_saving: str, optional
-
-    :raises ValueError: If `tgrid` does not contain the required keys.
     """
     super(CoBRAS, self).__init__(
       system, path_to_data, scale, xref, xscale, path_to_saving
@@ -95,22 +91,36 @@ class CoBRAS(Basic):
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
-    Compute state and gradient covariance matrices from system simulations.
+    Compute state and gradient covariance matrices over a set of simulations.
 
-    This method computes covariance matrices using quadrature points
-    and system dynamics, with optional parallel execution.
-
-    :param nb_meas: Number of output measurements for adjoint simulations.
-                    Defaults to 5.
-    :type nb_meas: int
-    :param nb_workers: Number of parallel workers for computation.
-                       Defaults to 1 (sequential execution).
+    :param irange: List specifying start and end indices [start, stop) of
+                   simulations.
+    :type irange: List[int]
+    :param dt_log: Logarithmic time expansion factor for adjoint simulations.
+    :type dt_log: float, optional
+    :param tf_min: Minimum final time for adjoint simulations.
+    :type tf_min: float, optional
+    :param t0_perc: Percentage of time points to sample for adjoint
+                    problems (0.1 to 1.0).
+    :type t0_perc: float, optional
+    :param rtol: Relative tolerance for ODE integrator.
+    :type rtol: float, optional
+    :param atol: Absolute tolerance for ODE integrator.
+    :type atol: float, optional
+    :param tout: Timeout (in seconds) for each adjoint simulation.
+    :type tout: float, optional
+    :param nb_meas: Number of time measurements per adjoint simulation.
+    :type nb_meas: int, optional
+    :param use_quad_w: Whether to apply quadrature weights over time and
+                       parameter samples.
+    :type use_quad_w: bool, optional
+    :param nb_workers: Number of parallel workers. Set to 1 for serial execution.
     :type nb_workers: int, optional
 
-    :return: Tuple containing:
-             - `X` (np.ndarray): Weighted state covariance matrix.
-             - `Y` (np.ndarray): Weighted gradient covariance matrix.
-    :rtype: Tuple[np.ndarray]
+    :return: Dictionary with:
+             - ``X``: state covariance matrix (np.ndarray)
+             - ``Y``: gradient covariance matrix (np.ndarray)
+    :rtype: Dict[str, np.ndarray]
     """
     # Loop over computed solutions
     indices_mu = np.arange(*irange)
@@ -177,17 +187,36 @@ class CoBRAS(Basic):
 
     This function evaluates state trajectories and their corresponding gradient
     adjoint solutions to construct weighted covariance matrices. The computed
-    matrices are stored in the provided lists (`X`, `X`, and `Y`).
+    matrices are stored in the provided lists (`X` and `Y`).
 
-    :param X: List to store weighted state covariance matrix contributions.
+    :param index: Index of the simulation case to process.
+    :type index: int
+    :param X: List to collect state covariance matrix contributions.
     :type X: List[np.ndarray]
-    :param Y: List to store weighted gradient covariance matrix contributions.
+    :param Y: List to collect gradient covariance matrix contributions.
     :type Y: List[np.ndarray]
-    :param nb_meas: Number of measurement points for adjoint simulations.
-                    Default is 5.
+    :param conv: List to record number of successfully converged adjoint solutions.
+    :type conv: List[int]
+    :param nb_mu: Total number of parameter samples.
+    :type nb_mu: int
+    :param dt_log: Logarithmic time factor for adjoint integration.
+    :type dt_log: float, optional
+    :param tf_min: Minimum final time for adjoint simulation.
+    :type tf_min: float, optional
+    :param t0_perc: Percentage of time points to sample for adjoints.
+    :type t0_perc: float, optional
+    :param rtol: Relative tolerance for ODE integrator.
+    :type rtol: float, optional
+    :param atol: Absolute tolerance for ODE integrator.
+    :type atol: float, optional
+    :param tout: Timeout (in seconds) for each adjoint simulation.
+    :type tout: float, optional
+    :param nb_meas: Number of adjoint output samples per simulation.
     :type nb_meas: int, optional
+    :param use_quad_w: Whether to apply quadrature weights.
+    :type use_quad_w: bool, optional
 
-    :return: None (results are appended to `X` and `Y`).
+    :return: None (results are appended to shared lists).
     :rtype: None
     """
     # Load data
@@ -248,6 +277,17 @@ class CoBRAS(Basic):
     size: int,
     perc: float
   ) -> np.ndarray:
+    """
+    Uniformly sample a subset of time indices.
+
+    :param size: Total number of time steps in the solution.
+    :type size: int
+    :param perc: Fraction (0 < perc ≤ 1) of time points to sample.
+    :type perc: float
+
+    :return: Array of sampled time indices.
+    :rtype: np.ndarray
+    """
     # Indices vector
     i = np.arange(size)
     # Number of samples
@@ -265,8 +305,30 @@ class CoBRAS(Basic):
     rtol: float = 1e-3,
     atol: float = 1e-6,
     tout: float = 30.0
-  ) -> np.ndarray:
-    """Solve the adjoint problem"""
+  ) -> Tuple[Optional[np.ndarray], int]:
+    """
+    Solve the adjoint system from tf to t0.
+
+    :param t0: Initial physical time.
+    :type t0: float
+    :param tf: Final physical time.
+    :type tf: float
+    :param nb_meas: Number of time points at which to evaluate gradients.
+    :type nb_meas: int
+    :param ysol: Interpolator of the primal solution.
+    :type ysol: sp.interpolate.interp1d
+    :param rtol: Relative tolerance for ODE solver.
+    :type rtol: float, optional
+    :param atol: Absolute tolerance for ODE solver.
+    :type atol: float, optional
+    :param tout: Timeout in seconds for solver.
+    :type tout: float, optional
+
+    :return: Tuple of:
+             - grad: gradient trajectory (np.ndarray) or None if failed.
+             - conv: number of successfully converged adjoint solves.
+    :rtype: Tuple[Optional[np.ndarray], int]
+    """
     # Generate a time grid
     t = np.geomspace(t0, tf, num=nb_meas+1)
     t = tf - np.flip(t)
@@ -300,7 +362,22 @@ class CoBRAS(Basic):
     g: np.ndarray,
     tf: float,
     ysol: sp.interpolate.interp1d
-  ) -> np.ndarray:
+) -> np.ndarray:
+    """
+    Evaluate the adjoint RHS function.
+
+    :param t: Current time.
+    :type t: np.ndarray
+    :param g: Adjoint vector at time t.
+    :type g: np.ndarray
+    :param tf: Final physical time.
+    :type tf: float
+    :param ysol: Primal solution interpolator.
+    :type ysol: sp.interpolate.interp1d
+
+    :return: Adjoint RHS vector.
+    :rtype: np.ndarray
+    """
     return self._jac_adj(t, g, tf, ysol) @ g
 
   def _jac_adj(
@@ -309,7 +386,22 @@ class CoBRAS(Basic):
     g: np.ndarray,
     tf: float,
     ysol: sp.interpolate.interp1d
-  ) -> np.ndarray:
+) -> np.ndarray:
+    """
+    Evaluate the adjoint Jacobian function.
+
+    :param t: Current time.
+    :type t: np.ndarray
+    :param g: Adjoint vector at time t.
+    :type g: np.ndarray
+    :param tf: Final physical time.
+    :type tf: float
+    :param ysol: Primal solution interpolator.
+    :type ysol: sp.interpolate.interp1d
+
+    :return: Adjoint Jacobian matrix.
+    :rtype: np.ndarray
+    """
     tau = tf-t
     j = self.system.jac(t=tau, y=ysol(tau))
     j = self.ov_xscale_mat @ j @ self.xscale_mat
@@ -323,22 +415,22 @@ class CoBRAS(Basic):
     x: np.ndarray
   ) -> sp.interpolate.interp1d:
     """
-    Build a cubic interpolation function for the given solution.
+    Construct a cubic interpolator for the given solution.
 
-    :param t: Time points.
+    :param t: Array of time points.
     :type t: np.ndarray
-    :param x: State trajectory or solution matrix.
+    :param x: Solution array (either shape [T, D] or [D, T]).
     :type x: np.ndarray
 
-    :return: Interpolation function.
+    :return: Cubic interpolation function over time.
     :rtype: sp.interpolate.interp1d
     """
     axis = 0 if (x.shape[0] == len(t)) else 1
     return sp.interpolate.interp1d(t, x, kind="cubic", axis=axis)
 
-  # Compute balanced modes
+  # Compute basis
   # ===================================
-  def compute_modes(
+  def compute_basis(
     self,
     X: np.ndarray,
     Y: np.ndarray,
@@ -349,22 +441,33 @@ class CoBRAS(Basic):
     niter: int = 50
   ) -> None:
     """
-    Compute balancing modes using covariance matrices.
+    Compute balancing modes from state and gradient covariance matrices.
 
-    :param X: Weighted state covariance matrix.
+    :param X: State covariance matrix (shape: [nb_features, nb_snapshots]).
     :type X: np.ndarray
-    :param Y: Weighted gradient covariance matrix.
+    :param Y: Gradient covariance matrix (shape: [nb_features, nb_snapshots]).
     :type Y: np.ndarray
-    :param xnot: List of feature indices to exclude (default: None).
-    :type xnot: Optional[List[int]]
-    :param rank: Maximum rank for randomized SVD (default: 100).
+    :param rotation: Optional rotation method to apply to the test basis.
+    :type rotation: str, optional
+    :param xnot: List of feature indices to exclude from the basis.
+    :type xnot: List[int], optional
+    :param max_y_norm: Optional clipping threshold for adjoint snapshot norm.
+    :type max_y_norm: float, optional
+    :param rank: Maximum number of basis vectors to compute. Default is 100.
     :type rank: int
-    :param niter: Number of iterations for randomized SVD (default: 50).
+    :param niter: Number of power iterations for randomized SVD. Default is 50.
     :type niter: int
 
-    :return: Dictionary containing computed ROM data including basis functions
-             and singular values.
-    :rtype: Dict[str, np.ndarray]
+    :return: None. Saves computed basis data to disk.
+    :rtype: None
+
+    :notes:
+      - Saves the following data to disk:
+        - ``s``: Singular values
+        - ``phi``: Trial basis (state space).
+        - ``psi``: Test basis (adjoint space).
+        - ``mask``: Feature inclusion mask
+        - ``xref``, ``xscale``: Scaling parameters
     """
     # Mask covariance matrices
     mask = self._make_mask(

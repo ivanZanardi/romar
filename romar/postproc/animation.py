@@ -10,8 +10,6 @@ from .. import const
 COLORS = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"]
 
 
-# Animation
-# =====================================
 # Initialize lines for levels distribution
 def _init_lines(
   labels,

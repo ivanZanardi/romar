@@ -11,32 +11,16 @@ MU_VARS = ("rho", "Th", "Te")
 
 
 class Equilibrium(object):
-
   """
   Class to compute the equilibrium state (mass fractions and temperature)
   of a system involving argon and its ionized species (Ar, Ar+, and e^-).
 
   The equilibrium state is determined by solving the following system of
   equations:
-  1) **Charge neutrality**:
-    \[
-    x_{e^-} = x_{\text{Ar}^+}
-    \]
-    where \( x_{e^-} \) is the electron molar fraction and
-    \( x_{\text{Ar}^+} \) is the argon ion molar fraction.
-  2) **Mole conservation**:
-    \[
-    x_{e^-} + x_{\text{Ar}^+} + x_{\text{Ar}} = 1
-    \]
-    where \( x_{\text{Ar}} \) is the molar fraction of neutral argon.
-  3) **Detailed balance**:
-    \[
-    \frac{n_{\text{Ar}^+} n_{e^-}}{n_{\text{Ar}}} =
-    \frac{Q_{\text{Ar}^+} Q_{e^-}}{Q_{\text{Ar}}}
-    \]
-    This describes the ionization equilibrium between neutral argon, argon
-    ions, and electrons in the system, where \( n \) represents the number
-    density and \( Q \) represents the charge.
+  1) Charge neutrality
+  2) Mole conservation
+  3) Detailed balance, describing the ionization equilibrium between neutral
+    argon, argon ions, and electrons in the system.
   """
 
   # Initialization
@@ -46,10 +30,11 @@ class Equilibrium(object):
     mixture: Mixture
   ) -> None:
     """
-    Initializes the equilibrium solver for a given mixture.
+    Initialize the equilibrium solver with a specified gas mixture.
 
-    :param mixture: The `Mixture` object representing the chemical mixture.
-    :type mixture: `Mixture`
+    :param mixture: Chemical mixture object containing species definitions
+                    and thermodynamic properties.
+    :type mixture: Mixture
     """
     self.mix = mixture
     self.lsq_opts = dict(
@@ -63,7 +48,7 @@ class Equilibrium(object):
 
   def set_fun_jac(self) -> None:
     """
-    Set up functions and their Jacobians for the least-squares optimization
+    Register functions and Jacobians for the least-squares optimization
     for both the primitive (`from_prim`) and conservative (`from_cons`)
     variable formulations.
     """
@@ -84,27 +69,21 @@ class Equilibrium(object):
     sigma: float = 1e-1
   ) -> Tuple[np.ndarray, float]:
     """
-    Generates an initial solution for heat bath simulations based on the input
-    parameters `mu`.
+    Generate an equilibrium initial condition from input primitive variables.
 
-    This method computes the equilibrium state of the system, including partial
-    densities, translational temperature, and electron pressure. It optionally
-    adds random noise to the equilibrium state and replaces the equilibrium
-    initial electron temperature with the translational temperature for heat
+    Optionally adds random perturbation for stochastic initial states, and
+    overrides the electron temperature with the translational one for heat
     bath simulations.
 
-    :param mu: A NumPy array containing density, translational temperature,
-               and electron temperature.
+    :param mu: Vector of primitive variables (rho, Th, Te).
     :type mu: np.ndarray
-    :param noise: Flag indicating whether to add random noise to the
-                  equilibrium state.
-    :type noise: bool, optional, default is False
-    :param sigma: Standard deviation for the noise (if `noise` is True).
-    :type sigma: float, optional, default is 1e-2
+    :param noise: Whether to apply random noise to composition.
+    :type noise: bool, optional
+    :param sigma: Standard deviation of random noise.
+    :type sigma: float, optional
 
-    :return: The equilibrium state vector, including partial densities,
-             translational temperature, and electron pressure.
-    :rtype: np.ndarray
+    :return: Tuple of (equilibrium state vector, mass density).
+    :rtype: Tuple[np.ndarray, float]
     """
     # Unpack the input array into individual parameters
     rho, Th, Te = mu
@@ -135,14 +114,13 @@ class Equilibrium(object):
     Compute the equilibrium state from primitive macroscopic variables
     such as density and temperature.
 
-    :param rho: Density of the system.
+    :param rho: Mass density.
     :type rho: float
-    :param T: Temperature of the system.
+    :param T: Translational temperature.
     :type T: float
 
-    :return: The equilibrium state vector, including partial densities,
-             translational temperature, and electron pressure.
-    :rtype: np.ndarray
+    :return: Tuple of (state vector, mass density).
+    :rtype: Tuple[np.ndarray, float]
     """
     # Convert to 'torch.Tensor'
     rho, T = [bkd.to_torch(z).reshape(1) for z in (rho, T)]
@@ -161,21 +139,16 @@ class Equilibrium(object):
     rho: float
   ) -> float:
     """
-    Compute the residuals of the detailed balance condition based on the
-    electron molar fraction.
+    Compute electron mass fraction at equilibrium using closed-form solution.
 
-    This method takes the electron molar fraction (as the logarithm of
-    the fraction), updates the species composition based on the value,
-    and enforces the detailed balance condition for the reaction:
-    \[
-    \text{Ar} \rightleftharpoons \text{Ar}^+ + e^-
-    \]
+    Solves a quadratic relation derived from detailed balance and mass
+    conservation for Ar ↔ Ar⁺ + e⁻.
 
-    :param x: Logarithm of the electron molar fraction.
-    :type x: torch.Tensor
+    :param rho: Mass density.
+    :type rho: float
 
-    :return: The residuals of the detailed balance condition.
-    :rtype: torch.Tensor
+    :return: Electron mass fraction.
+    :rtype: float
     """
     # Compute coefficients for quadratic system
     m, Q = [self._get_species_attr(k) for k in ("m", "Q")]
@@ -196,21 +169,19 @@ class Equilibrium(object):
     e: float
   ) -> Tuple[np.ndarray, float]:
     """
-    Computes the equilibrium state from conservative macroscopic variables
-    such as density and total energy.
+    Solve for equilibrium state using conservative variables (rho, e).
 
-    It determines the electron molar fraction (\(x_{\text{e}^-}\)) and
-    temperature (\(T\)) that satisfy the conservation equations and
-    detailed balance conditions.
+    Uses nonlinear least-squares optimization to satisfy:
+      - Energy conservation
+      - Detailed balance
 
-    :param rho: Mass density of the system.
+    :param rho: Mass density.
     :type rho: float
-    :param e: Total energy of the system (per unit volume).
+    :param e: Total energy per unit volume.
     :type e: float
 
-    :return: The equilibrium state vector, including partial densities,
-             translational temperature, and electron pressure.
-    :rtype: np.ndarray
+    :return: Tuple of (state vector, mass density).
+    :rtype: Tuple[np.ndarray, float]
     """
     # Convert to 'torch.Tensor'
     rho, e = [bkd.to_torch(z).reshape(1) for z in (rho, e)]
@@ -240,21 +211,14 @@ class Equilibrium(object):
     e: torch.Tensor
   ) -> torch.Tensor:
     """
-    This method compute the residuals of two key constraints:
-    1. **Detailed Balance**: Ensures equilibrium for the reaction
-       \(\text{Ar} \leftrightarrow \text{Ar}^+ + e^-\).
-    2. **Energy Conservation**: Ensures the total energy of the system matches
-       the specified input energy `e`.
+    Residuals for detailed balance and energy conservation.
 
-    :param x: Tensor containing logarithmic values of the electron molar
-              fraction and temperature \([ \ln(x_{\text{e}^-}), \ln(T) ]\).
+    :param x: Logarithmic variables: [log(xe), log(T)].
     :type x: torch.Tensor
-    :param e: Total energy of the system (per unit volume).
+    :param e: Target total energy.
     :type e: torch.Tensor
 
-    :return: Tensor of residuals from the conservation equations. The first
-             component corresponds to the detailed balance equation, and the
-             second component to energy conservation.
+    :return: Vector of residuals: [detailed_balance, energy_error].
     :rtype: torch.Tensor
     """
     # Extract variables
@@ -278,22 +242,12 @@ class Equilibrium(object):
     T: torch.Tensor
   ) -> torch.Tensor:
     """
-    Composes the state vector for the system's equilibrium state.
+    Construct full equilibrium state vector.
 
-    This method combines partial densities, translational temperature,
-    and electron pressure into a single vector. It updates the species
-    composition based on the electron molar fraction and computes
-    electron pressure and other quantities.
-
-    :param rho: Density of the system.
-    :type rho: torch.Tensor
-    :param T: Temperature of the system.
+    :param T: Translational/electron temperature.
     :type T: torch.Tensor
-    :param xe: Electron molar fraction of the species.
-    :type xe: torch.Tensor
 
-    :return: Equilibrium state vector, including partial densities,
-             translational temperature, and electron pressure.
+    :return: Vector including [mass fractions, T, pe].
     :rtype: torch.Tensor
     """
     pe = self.mix.get_pe(Te=T, ne=self.mix.species["em"].n)
@@ -308,19 +262,16 @@ class Equilibrium(object):
     sigma: float = 1e-1
   ) -> None:
     """
-    Updates the species composition based on the electron molar fraction
-    and optionally adds random noise to the composition.
+    Update molar or mass composition using electron fraction.
 
-    This method modifies the composition vector using the electron molar
-    fraction `xe`, applying noise if specified, and updates the species
-    states for various elements like "Ar" and "Arp".
-
-    :param xe: Electron molar fraction of the species.
-    :type xe: torch.Tensor
-    :param noise: Whether to add random noise to the composition.
-    :type noise: bool, optional, default is False
-    :param sigma: Standard deviation of the noise if `noise` is True.
-    :type sigma: float, optional, default is 1e-2
+    :param ze: Electron molar or mass fraction.
+    :type ze: torch.Tensor
+    :param by_mass: If True, interpret `ze` as mass fraction.
+    :type by_mass: bool, optional
+    :param noise: Whether to add random perturbation to composition.
+    :type noise: bool, optional
+    :param sigma: Standard deviation of added noise.
+    :type sigma: float, optional
     """
     # Vector of molar/mass fractions
     z = torch.zeros(self.mix.nb_comp)
@@ -350,7 +301,19 @@ class Equilibrium(object):
     # Update composition
     self.mix.update_composition_x(x)
 
-  def _enforce_elem_cons(self, x):
+  def _enforce_elem_cons(
+    self,
+    x: torch.Tensor
+  ) -> torch.Tensor:
+    """
+    Enforce elements conservation and renormalize electron and argon species.
+
+    :param x: Raw molar composition vector.
+    :type x: torch.Tensor
+
+    :return: Renormalized and clipped molar composition.
+    :rtype: torch.Tensor
+    """
     # Electron
     sk = self.mix.species["em"]
     xe = torch.clip(x[sk.indices], const.XMIN, 0.5)
@@ -369,20 +332,14 @@ class Equilibrium(object):
     sigma: float = 1e-2
   ) -> torch.Tensor:
     """
-    Adds unit norm random noise to the species composition.
+    Add multiplicative random noise to a vector.
 
-    The noise is generated according to the specified standard deviation
-    `sigma`, and optionally scaled by the partition function `q` for the
-    species.
-
-    :param species: The species for which the noise is applied.
-    :type species: `Species`
-    :param sigma: Standard deviation of the noise to be added.
+    :param x: Vector to perturb (e.g., composition).
+    :type x: torch.Tensor
+    :param sigma: Noise strength (as standard deviation).
     :type sigma: float
-    :param use_pf: Whether to scale the noise by the partition function `q`.
-    :type use_pf: bool, optional, default is True
 
-    :return: A tensor containing the noisy composition values.
+    :return: Noisy vector.
     :rtype: torch.Tensor
     """
     f = 1.0 + sigma * torch.rand(x.shape)
@@ -405,20 +362,17 @@ class Equilibrium(object):
     f = l/r - 1.0
     return f.reshape(1)
 
-  def _get_species_attr(self, attr: str) -> Dict[str, torch.Tensor]:
+  def _get_species_attr(
+    self,
+    attr: str
+  ) -> Dict[str, torch.Tensor]:
     """
-    Retrieve the specified attribute for all species in the mixture.
+    Retrieve a species-level attribute across the mixture.
 
-    This method fetches the requested attribute (e.g., number density,
-    partition function) for each species in the mixture and returns a
-    dictionary mapping species names to their corresponding attribute values.
-
-    :param attr: The name of the attribute to retrieve (e.g., "n" for
-                 number density, "Q" for partition function).
+    :param attr: Attribute name (e.g., 'n', 'Q', 'm').
     :type attr: str
 
-    :return: A dictionary where the keys are species names and the values are
-             the corresponding attribute tensors.
+    :return: Mapping from species names to attribute tensors.
     :rtype: Dict[str, torch.Tensor]
     """
     return {k: getattr(s, attr) for (k, s) in self.mix.species.items()}

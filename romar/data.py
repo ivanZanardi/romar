@@ -257,19 +257,6 @@ class Data(object):
     tmin: float,
     deg: int = 2
   ) -> Tuple[np.ndarray]:
-    """
-    Generate time quadrature points and weights.
-
-    :param tmin: Minimum time to resolve system dynamics.
-    :type tmin: float
-    :param deg: Degree of the quadrature rule. Defaults to 2.
-    :type deg: int
-
-    :return: Tuple containing:
-             - Time quadrature points (1D numpy array).
-             - Corresponding weights (1D numpy array).
-    :rtype: Tuple[np.ndarray]
-    """
     self.grids["t"]["start"] = tmin
     x = np.geomspace(**self.grids["t"])
     x = np.insert(x, 0, 0.0)

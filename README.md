@@ -50,8 +50,7 @@ If you use this code or find this work useful in your research, please cite us:
   archivePrefix={arXiv},
   primaryClass={physics.comp-ph},
   url={https://arxiv.org/abs/2506.05483},
-  doi={10.48550/arXiv.2506.05483},
-  author+an={1=highlight}
+  doi={10.48550/arXiv.2506.05483}
 }
 ```
 

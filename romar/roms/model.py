@@ -6,14 +6,13 @@ from .utils import init_scaling_param
 
 
 class ROM(object):
-
   """
-  Reduced-Order Model (ROM) implementation using basis projection
-  and state-space transformations.
+  Reduced-Order Model (ROM) class using basis projection.
 
-  This class provides functionalities to:
-  - Construct trial (`phi`) and test (`psi`) bases.
-  - Encode and decode full-state representations in reduced-order coordinates.
+  This class provides encoding and decoding of full state vectors into
+  reduced coordinates using trial (`phi`) and test (`psi`) basis functions.
+  It also supports masking of unreduced variables and optional projection
+  using a projection operator.
   """
 
   # Initialization
@@ -26,10 +25,10 @@ class ROM(object):
     """
     Initialize the ROM model.
 
-    :param nb_eqs: Number of equations (full state dimension).
+    :param nb_eqs: Number of state variables (full system dimension).
     :type nb_eqs: int
-    :param use_proj: Whether to use the projection operator `proj` instead of
-                     `phi` and `psi` during encoding/decoding.
+    :param use_proj: If True, use the projection operator `proj` for
+                     encoding/decoding. Otherwise, use `phi` and `psi` bases.
     :type use_proj: bool
     """
     # Dimensions
@@ -49,19 +48,21 @@ class ROM(object):
     xscale: Optional[Union[str, np.ndarray]] = None
   ) -> None:
     """
-    Construct the Reduced-Order Model (ROM) by setting basis functions,
-    projection operators, and scaling transformations.
+    Construct the reduced-order model by defining basis matrices and scaling.
 
-    :param phi: Trial basis matrix.
+    :param phi: Trial basis matrix of shape (nb_reduced_features, r).
     :type phi: np.ndarray
-    :param psi: Test basis matrix.
+    :param psi: Test basis matrix of shape (nb_reduced_features, r).
     :type psi: np.ndarray
-    :param mask: Boolean mask indicating which states are reduced.
+    :param mask: Boolean mask of shape (nb_eqs,) indicating which features
+                 are reduced.
     :type mask: np.ndarray
-    :param xref: Reference values for state scaling (default: zeros).
-    :type xref: Optional[np.ndarray], optional
-    :param xscale: Scaling factors for state variables (default: identity).
-    :type xscale: Optional[np.ndarray], optional
+    :param xref: Reference vector for scaling (default: zeros).
+    :type xref: Optional[Union[str, np.ndarray]], optional
+    :param xscale: Scaling factors for state variables (default: ones).
+    :type xscale: Optional[Union[str, np.ndarray]], optional
+
+    :raises ValueError: If the mask length does not match the system dimension.
     """
     # Set flag
     self.built = False
@@ -106,12 +107,12 @@ class ROM(object):
   ) -> np.ndarray:
     """
     Constructs the full basis matrix, incorporating projection basis
-    and identity elements for excluded states.
+    and identity elements for excluded states (masked out).
 
-    :param pxi: Basis matrix (`phi` or `psi`).
+    :param pxi: Basis matrix (`phi` or `psi`) of shape (nb_reduced_features, r).
     :type pxi: np.ndarray
 
-    :return: Full basis matrix.
+    :return: Full basis matrix of shape (nb_eqs, r + nb_unreduced).
     :rtype: np.ndarray
     """
     # Allocate full basis matrix
@@ -132,21 +133,17 @@ class ROM(object):
     is_der: bool = False
   ) -> np.ndarray:
     """
-    Encode the full state vector into the reduced-order representation.
+    Encode full state vector(s) into reduced-order coordinates.
 
-    :param y: Full state vector of shape `(nb_eqs,)` or `(N, nb_eqs)`,
-              where `N` is the batch size (optional).
-    :type y: np.ndarray
-    :param is_der: If True, encodes a derivative vector instead of a state
-                   vector.
-    :type is_der: bool
+    :param x: Input full state of shape (nb_eqs,) or (N, nb_eqs).
+    :type x: np.ndarray
+    :param is_der: If True, encode a derivative vector without removing `xref`.
+    :type is_der: bool, optional
 
-    :return: Encoded reduced-state representation of shape `(rom_dim,)`
-             if `y` is `(nb_eqs,)`, or `(N, rom_dim)` if `y` is `(N, nb_eqs)`.
+    :return: Encoded reduced representation of shape (rom_dim,) or (N, rom_dim).
     :rtype: np.ndarray
 
-    :raises ValueError: If ROM is not built or if input shape
-                        mismatches `nb_eqs`.
+    :raises ValueError: If ROM is not built or input dimensions mismatch.
     """
     if (not self.built):
       raise ValueError("ROM model not built.")
@@ -165,21 +162,17 @@ class ROM(object):
     is_der: bool = False
   ) -> np.ndarray:
     """
-    Decode the reduced-order state back into full-state representation.
+    Decode reduced-order vector(s) into full-state coordinates.
 
-    :param z: Reduced state vector of shape `(rom_dim,)` or `(N, rom_dim)`,
-              where `N` is the batch size (optional).
+    :param z: Reduced representation of shape (rom_dim,) or (N, rom_dim).
     :type z: np.ndarray
-    :param is_der: If True, decodes a derivative vector instead of a state
-                   vector.
-    :type is_der: bool
+    :param is_der: If True, decode a derivative vector without adding `xref`.
+    :type is_der: bool, optional
 
-    :return: Reconstructed full state vector of shape `(nb_eqs,)`
-             if `z` is `(rom_dim,)`, or `(N, nb_eqs)` if `z` is `(N, rom_dim)`.
+    :return: Reconstructed full state vector of shape (nb_eqs,) or (N, nb_eqs).
     :rtype: np.ndarray
 
-    :raises ValueError: If ROM is not built or if input shape
-                        mismatches `rom_dim`.
+    :raises ValueError: If ROM is not built or input dimensions mismatch.
     """
     if (not self.built):
       raise ValueError("ROM model not built.")
@@ -198,12 +191,12 @@ class ROM(object):
     j: np.ndarray
   ) -> np.ndarray:
     """
-    Perform encoding and decoding on a Jacobian matrix.
+    Reduce a Jacobian matrix via basis projection.
 
-    :param j: Jacobian matrix of shape `(nb_eqs, nb_eqs)`.
+    :param j: Full Jacobian matrix of shape (nb_eqs, nb_eqs).
     :type j: np.ndarray
 
-    :return: Reduced Jacobian matrix.
+    :return: Reduced Jacobian matrix of shape (rom_dim, rom_dim).
     :rtype: np.ndarray
     """
     return self.encoder @ j @ self.decoder

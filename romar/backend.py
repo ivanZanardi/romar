@@ -74,6 +74,7 @@ def make_fun_np(fun_torch):
 
   :param fun_torch: Function that operates on PyTorch tensors.
   :type fun_torch: callable
+
   :return: A wrapped function that accepts NumPy arrays and returns NumPy
            arrays.
   :type fun_torch: callable

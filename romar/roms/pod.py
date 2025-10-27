@@ -11,38 +11,17 @@ from .. import env
 from .. import utils
 from .basic import Basic
 from .. import backend as bkd
-from typing import List, Optional, Union
+from typing import List, Optional
 
 
 class POD(Basic):
+  """
+  Proper Orthogonal Decomposition (POD) model reduction class.
 
-  # Initialization
-  # ===================================
-  def __init__(
-    self,
-    system: callable,
-    path_to_data: str,
-    scale: bool = False,
-    xref: Optional[Union[str, np.ndarray]] = None,
-    xscale: Optional[Union[str, np.ndarray]] = None,
-    path_to_saving: str = "./"
-  ) -> None:
-    """
-    Initialize the POD class.
-
-    :param scaling: Scaling method for normalization.
-    :type scaling: str, optional
-    :param rotation: Rotation method for principal components.
-    :type rotation: str, optional
-    :param path_to_saving: Directory path to save computed POD results.
-    :type path_to_saving: str
-
-    :raises ValueError: If the specified rotation and scaling method are
-                        invalid.
-    """
-    super(POD, self).__init__(
-      system, path_to_data, scale, xref, xscale, path_to_saving
-    )
+  This class implements methods for computing state covariance matrices
+  and extracting reduced-order bases via randomized SVD, with optional
+  component rotation.
+  """
 
   # Compute covariance matrices
   # ===================================
@@ -53,18 +32,22 @@ class POD(Basic):
     nb_workers: int = 1
   ) -> Dict[str, np.ndarray]:
     """
-    Compute state and gradient covariance matrices from system simulations.
+    Compute the state covariance matrix from simulation trajectories.
 
-    This method computes covariance matrices using quadrature points
-    and system dynamics, with optional parallel execution.
+    This method computes and aggregates the covariance contributions
+    over a given index range, using either sequential or parallel execution.
 
-    :param nb_workers: Number of parallel workers for computation.
-                       Defaults to 1 (sequential execution).
+    :param irange: List specifying the index range [start, stop) of trajectories.
+    :type irange: List[int]
+    :param use_quad_w: Whether to use quadrature weights for time and parameters.
+                       Default is ``False``.
+    :type use_quad_w: bool, optional
+    :param nb_workers: Number of parallel workers to use. If ``1``, runs
+                       sequentially. Default is ``1``.
     :type nb_workers: int, optional
 
-    :return: Tuple containing:
-            - `X` (np.ndarray): Weighted state covariance matrix.
-    :rtype: Tuple[np.ndarray]
+    :return: Dictionary containing the aggregated state covariance matrix.
+    :rtype: Dict[str, np.ndarray]
     """
     # Loop over computed solutions
     iterable = tqdm(
@@ -102,17 +85,23 @@ class POD(Basic):
     use_quad_w: bool = False
   ) -> None:
     """
-    Compute state and gradient covariance matrices using quadrature points
-    and system dynamics.
+    Compute and store a single sample's contribution to the state covariance
+    matrix.
 
-    This function evaluates state trajectories and their corresponding gradient
-    adjoint solutions to construct weighted covariance matrices. The computed
-    matrices are stored in the provided lists (`X`).
+    This method loads simulation data for one trajectory, computes its scaled
+    state matrix, and appends it to the shared list `X`.
 
-    :param X: List to store weighted state covariance matrix contributions.
+    :param index: Index of the trajectory to process.
+    :type index: int
+    :param X: Shared list for collecting state matrix contributions.
     :type X: List[np.ndarray]
+    :param nb_mu: Total number of parameter samples.
+    :type nb_mu: int
+    :param use_quad_w: Whether to use quadrature weights.
+                       Default is ``False``.
+    :type use_quad_w: bool, optional
 
-    :return: None (results are appended to `X`).
+    :return: None. Results are appended to the shared list `X`.
     :rtype: None
     """
     # Load data
@@ -122,9 +111,9 @@ class POD(Basic):
       Xi = self._compute_state_cov(data, nb_mu, use_quad_w)
       X.append(Xi)
 
-  # Compute principal components
+  # Compute basis
   # ===================================
-  def compute_modes(
+  def compute_basis(
     self,
     X: np.ndarray,
     rotation: Optional[str] = None,
@@ -133,25 +122,33 @@ class POD(Basic):
     niter: int = 50
   ) -> None:
     """
-    Compute POD modes for the given dataset using randomized SVD.
+    Compute POD modes via randomized SVD and optionally apply rotation.
 
-    :param X: Data matrix with shape (nb_features, nb_samples).
+    :param X: State matrix of shape (nb_features, nb_samples).
     :type X: np.ndarray
-    :param scale: If True, applies scaling to the dataset. Default is True.
-    :type scale: bool
-    :param xref: Mean reference values for scaling (array or file path).
-    :type xref: Optional[Union[str, np.ndarray]]
-    :param xscale: Scaling factors (array or file path).
-    :type xscale: Optional[Union[str, np.ndarray]]
-    :param xnot: List of feature indices to exclude from POD computation.
-    :type xnot: Optional[List[int]]
-    :param rank: Maximum rank for randomized SVD. Default is 100.
-    :type rank: int
-    :param niter: Number of iterations for randomized SVD. Default is 50.
-    :type niter: int
+    :param rotation: Optional rotation method to apply to the modes
+                     (e.g., "varimax", "quartimax"). Must be supported
+                     by `factor_analyzer`.
+    :type rotation: str, optional
+    :param xnot: List of feature indices to exclude from the decomposition.
+    :type xnot: List[int], optional
+    :param rank: Target rank (number of modes) for decomposition.
+                 Default is ``100``.
+    :type rank: int, optional
+    :param niter: Number of power iterations for randomized SVD.
+                  Default is ``50``.
+    :type niter: int, optional
 
-    :return: Dictionary containing computed POD components.
-    :rtype: Dict[str, np.ndarray]
+    :return: None. Saves computed POD components to disk.
+    :rtype: None
+
+    :notes:
+      - Saves the following data to disk:
+        - ``s``: Singular values
+        - ``phi``: Trial basis (POD modes, optionally rotated).
+        - ``psi``: Test basis (identical to ``phi`` since orthogonal projection).
+        - ``mask``: Feature inclusion mask
+        - ``xref``, ``xscale``: Scaling parameters
     """
     # Mask covariance matrices
     mask = self._make_mask(

@@ -140,12 +140,12 @@ class Basic(object):
     y: np.ndarray
   ) -> None:
     """
-    Compute the linearized full-order model (FOM) operators.
+    Compute and store the linearized full-order model (FOM) operators.
 
-    This function computes and stores the Jacobian matrix `A` and the residual
-    vector `b` for the system evaluated at the given state `y`.
+    This function evaluates the Jacobian matrix `A` and the residual vector `b`
+    at the given state `y`, and stores them as attributes (`self.A` and `self.b`).
 
-    :param y: The state vector at which the Jacobian and residual are computed.
+    :param y: State vector at which the linearization is performed.
     :type y: np.ndarray
     """
     # Compute Jacobian matrix
@@ -160,21 +160,21 @@ class Basic(object):
     use_rom: bool = False
   ) -> float:
     """
-    Compute the characteristic timescale of a given species.
+    Compute the smallest characteristic timescale of the system at state `y`.
 
-    This function calculates the timescale by linearizing the system,
-    extracting the sub-Jacobian corresponding to the specified species,
-    and evaluating the eigenvalues of the sub-Jacobian.
+    This method linearizes the system about the given state and computes the
+    eigenvalues of the Jacobian. The returned timescale is the inverse of the
+    eigenvalue with the largest real part magnitude.
 
-    :param y: The state vector at which the timescale is computed.
+    :param y: State vector at which the timescale is evaluated.
     :type y: np.ndarray
-    :param species: The species for which the timescale is calculated.
-                    Defaults to "Ar".
-    :type species: str, optional
-    :param index: The index of the timescale to return (sorted by magnitude).
-                  Defaults to -2.
-    :type index: int, optional
-    :return: The computed timescale for the given species.
+    :param rho: Mass density of the system.
+    :type rho: float
+    :param use_rom: If True, activates reduced-order model mode before
+                    evaluation.
+    :type use_rom: bool, optional
+
+    :return: Smallest (fastest) timescale based on linearized dynamics.
     :rtype: float
     """
     # Setting up
@@ -197,14 +197,18 @@ class Basic(object):
     include_em: bool = False
   ) -> None:
     """
-    Compute the observation matrix for a linear output model.
+    Construct the observation matrix `C` for linear output models.
 
-    This function constructs the `C` matrix that maps the state vector to
-    the output vector. It includes species contributions and their moments,
-    up to a specified maximum moment order.
+    This matrix maps state variables to physical observables, including
+    species mass/mole fractions and their moments up to order `max_mom`.
 
-    :param max_mom: The maximum number of moments to include for each species.
+    :param max_mom: Maximum number of polynomial moments to include per species.
     :type max_mom: int
+    :param state_specs: If True, include all state-specific components.
+    :type state_specs: bool, optional
+    :param include_em: If True, include electron contributions in the
+                       observation matrix.
+    :type include_em: bool, optional
     """
     max_mom = max(int(max_mom), 1)
     # Compose C matrix for a linear output

@@ -1,3 +1,17 @@
+"""
+Utility module for class management, file I/O, data processing, and
+numerical utilities.
+
+This module provides functionality for:
+- Dynamically retrieving classes from modules.
+- Saving and loading simulation cases using `dill`.
+- Parallel loading and generation of data with `joblib`.
+- Nested dictionary operations and key manipulation.
+- Error metrics and timeout-safe ODE solving.
+
+Used throughout ROMAr workflows for data handling and simulation orchestration.
+"""
+
 import os
 import sys
 import types
@@ -86,20 +100,16 @@ def save_case(
   filename: Optional[str] = None
 ) -> None:
   """
-  Save simluated case to a file with specific format.
+  Save a simulation case to disk using `dill`.
 
-  The file is saved with a name formatted as `case_{index}.p`, where `index`
-  is zero-padded to 5 digits.
-
-  :param path: Directory path where the file will be saved.
+  :param path: Output directory.
   :type path: str
-  :param index: Index used to generate the filename.
+  :param index: Integer index for file naming.
   :type index: int
-  :param data: Data to be saved in the file.
+  :param data: Data to be serialized and saved.
   :type data: Any
-
-  :return: None
-  :rtype: None
+  :param filename: Optional explicit filename. If None, uses `case_{index}.p`.
+  :type filename: str, optional
   """
   if (filename is None):
     filename = path + f"/case_{str(index).zfill(4)}.p"
@@ -113,20 +123,18 @@ def load_case(
   filename: Optional[str] = None
 ) -> Any:
   """
-  Load simluated case from a file and optionally retrieve a specific item.
+  Load a simulation case from file, optionally extracting a specific field.
 
-  Constructs the filename from the provided path and index, then loads
-  the data from this file. If a key is specified, return the value associated
-  with that key. Otherwise, return the entire data.
+  :param path: Directory containing the case.
+  :type path: str, optional
+  :param index: Index to construct the filename.
+  :type index: int, optional
+  :param key: If provided, returns only the specified key from the saved object.
+  :type key: str, optional
+  :param filename: Explicit path to the file. Overrides `path` and `index`.
+  :type filename: str, optional
 
-  :param path: Directory path where the case file is located.
-  :type path: str
-  :param index: Index used to generate the filename.
-  :type index: int
-  :param key: Optional key to retrieve a specific item from the data.
-  :type key: Optional[str]
-
-  :return: The data from the file, or the specific item if a key is provided.
+  :return: Loaded data or field from the case.
   :rtype: Any
   """
   if (filename is None):
@@ -149,22 +157,24 @@ def load_case_parallel(
   verbose: bool = True
 ) -> List[Any]:
   """
-  Load simluated cases in parallel or sequentially based on the number
-  of workers.
+  Load multiple cases in parallel or sequentially.
 
-  This function uses `joblib` to parallelize the loading of cases if
-  `nb_workers` is greater than 1. Otherwise, it loads the cases sequentially.
-
-  :param path: Path to the data source.
+  :param path: Directory containing cases.
   :type path: str
-  :param range: Range of indices for the cases to be loaded.
-  :type range: List[int]
-  :param key: Optional key to pass to the `load_case` function.
-  :type key: Optional[str]
-  :param nb_workers: Number of parallel workers to use. Default is 1.
+  :param irange: Index range [start, stop) of case files to load.
+  :type irange: List[int]
+  :param key: Optional key to extract from each case.
+  :type key: str, optional
+  :param nb_workers: Number of parallel workers (default: 1).
   :type nb_workers: int
+  :param desc: Description for progress bar.
+  :type desc: str, optional
+  :param delimiter: Prefix spacing for the progress bar.
+  :type delimiter: str, optional
+  :param verbose: Whether to display progress.
+  :type verbose: bool
 
-  :return: A list of loaded cases.
+  :return: List of loaded cases.
   :rtype: List[Any]
   """
   irange = np.sort(irange)
@@ -190,29 +200,28 @@ def generate_case_parallel(
   desc: Optional[str] = "Cases",
   verbose: bool = True,
   delimiter: str = "  "
-) -> None:
+) -> float:
   """
-  Generate cases in parallel and check solver convergence.
+  Run a solver in parallel over a range of indices, collecting convergence
+  statistics.
 
-  The `sol_fun` callable function should return 0 or 1 to indicate whether
-  the solver has converged or not.
-
-  :param sol_fun: A callable that performs the solver operation and returns
-                  convergence status as 0 or 1.
+  :param sol_fun: Solver function. Must return 0 or 1 to indicate convergence.
   :type sol_fun: callable
-  :param nb_samples: Number of samples or cases to generate.
-  :type nb_samples: int
-  :param nb_workers: Number of parallel workers to use. Defaults to 1.
+  :param irange: Index range [start, stop) for sample IDs.
+  :type irange: List[int]
+  :param sol_kwargs: Keyword arguments for the solver function.
+  :type sol_kwargs: Dict[str, Any]
+  :param nb_workers: Number of parallel workers.
   :type nb_workers: int
-  :param desc: Description to display in the progress bar. Defaults to
-               "> Cases".
-  :type desc: str
-  :param verbose: If True, prints the total number of converged cases.
-                  Defaults to True.
+  :param desc: Description for progress bar.
+  :type desc: str, optional
+  :param verbose: Whether to print convergence statistics.
   :type verbose: bool
+  :param delimiter: Prefix for progress output.
+  :type delimiter: str, optional
 
-  :return: None
-  :rtype: None
+  :return: Mean convergence rate across all runs.
+  :rtype: float
 
   This function uses `joblib` for parallel processing and `tqdm` for showing
   a progress bar. It applies the `sol_fun` function to a range of sample
@@ -269,10 +278,33 @@ def map_nested_dict(
     else:
       return fun(obj)
 
-def is_nan_inf(x):
+def is_nan_inf(x: np.ndarray) -> np.ndarray:
+  """
+  Check whether entries in an array are NaN or Inf.
+
+  :param x: Input array.
+  :type x: np.ndarray
+
+  :return: Boolean array of same shape.
+  :rtype: np.ndarray
+  """
   return (np.isnan(x)+np.isinf(x)).astype(bool)
 
-def replace_keys(d: dict, key_map: Dict[str, str]) -> dict:
+def replace_keys(
+  d: dict,
+  key_map: Dict[str, str]
+) -> dict:
+  """
+  Replace keys in a (possibly nested) dictionary using a mapping.
+
+  :param d: Input dictionary.
+  :type d: dict
+  :param key_map: Dictionary mapping old keys to new keys.
+  :type key_map: Dict[str, str]
+
+  :return: Dictionary with keys replaced.
+  :rtype: dict
+  """
   new_d = {}
   for (k, v) in d.items():
     if isinstance(v, dict):
@@ -284,13 +316,56 @@ def replace_keys(d: dict, key_map: Dict[str, str]) -> dict:
 # Statistics
 # =====================================
 def absolute_percentage_error(y_true, y_pred, eps=1e-7):
+  """
+  Compute absolute percentage error.
+
+  :param y_true: Ground truth values.
+  :type y_true: np.ndarray
+  :param y_pred: Predicted values.
+  :type y_pred: np.ndarray
+  :param eps: Small number to prevent division by zero.
+  :type eps: float
+
+  :return: Absolute percentage error (APE).
+  :rtype: np.ndarray
+  """
   return 100*np.abs(y_true-y_pred)/(np.abs(y_true)+eps)
 
 def mape(y_true, y_pred, eps=1e-7, axis=0):
+  """
+  Compute mean absolute percentage error (MAPE).
+
+  :param y_true: Ground truth values.
+  :type y_true: np.ndarray
+  :param y_pred: Predicted values.
+  :type y_pred: np.ndarray
+  :param eps: Small value to avoid division by zero.
+  :type eps: float
+  :param axis: Axis along which to average.
+  :type axis: int
+
+  :return: MAPE value.
+  :rtype: float
+  """
   err = absolute_percentage_error(y_true, y_pred, eps)
   return np.mean(err, axis=axis)
 
 def l2_relative_error(y_true, y_pred, axis=-1, eps=1e-7):
+  """
+  Compute L2 relative error.
+
+  :param y_true: Ground truth values.
+  :type y_true: np.ndarray
+  :param y_pred: Predicted values.
+  :type y_pred: np.ndarray
+  :param axis: Axis over which to compute norms.
+  :type axis: int
+  :param eps: Small value for numerical stability.
+  :type eps: float
+
+  :return: Relative error.
+  :rtype: np.ndarray
+  """
   err = np.linalg.norm(y_true-y_pred, axis=axis)
   err /= (np.linalg.norm(y_true, axis=axis) + eps)
   return err
@@ -298,15 +373,32 @@ def l2_relative_error(y_true, y_pred, axis=-1, eps=1e-7):
 # Timeout
 # =====================================
 class TimeoutException(Exception):
-  """Custom exception for timeout handling."""
+  """
+  Custom exception raised when solver execution exceeds allowed time.
+  """
   pass
 
 def timeout_handler(signum, frame):
+  """
+  Signal handler for triggering timeout exception.
+
+  :param signum: Signal number.
+  :param frame: Execution frame.
+  """
   raise TimeoutException("Solver exceeded the allowed execution time.")
 
 def make_solve_ivp(
   tout: float = 0.0
 ) -> callable:
+  """
+  Wrap `scipy.integrate.solve_ivp` with a timeout handler.
+
+  :param tout: Timeout in seconds (0 disables timeout).
+  :type tout: float
+
+  :return: A callable wrapper around `solve_ivp`.
+  :rtype: callable
+  """
   def solve_ivp(*args, **kwargs):
     # Timeout active
     active = (tout > 0.0)

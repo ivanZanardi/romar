@@ -1,12 +1,13 @@
 """
-Module for parsing and extracting parameters from chemical equations.
+Module for parsing and extracting parameters from chemical reaction strings.
 
-This module defines functions to parse a chemical equation string and extract
-various parameters such as reactants, products, stoichiometric coefficients,
-species, and quantum levels. The primary function, `get_param`, returns a
-dictionary containing the parsed details from the equation, while helper
-functions facilitate processing individual sides (reactants or products) of
-the equation.
+This module provides utilities to parse chemical equations and extract
+quantitative and qualitative information such as:
+
+- Reactants and products
+- Stoichiometric coefficients
+- Species names
+- Quantum state indices
 
 Example usage:
   Given the chemical equation "O2(*)+O=3O", the function `get_param`
@@ -28,7 +29,6 @@ The dictionary includes:
   - "nb_reactants": Number of reactant species.
   - "nb_products": Number of product species.
 """
-
 
 import numpy as np
 
@@ -52,14 +52,19 @@ def get_param(
   min_i: int = 0
 ) -> dict:
   """
-  Parse a chemical equation string and return a dictionary of parameters.
+  Parse a chemical equation string into structured reaction parameters.
 
-  :param eq: A string representing the chemical equation.
+  :param eq: A chemical equation string (e.g., "O2(*) + O = 3O").
   :type eq: str
-  :param min_i: Minimum index for quantum levels (default is 0).
+  :param min_i: Minimum quantum index used to offset state labels. Default is 0.
   :type min_i: int
-  :return: A dictionary containing the parsed parameters, including the
-           species, reactants, products, and process information.
+
+  :return: Dictionary with extracted fields:
+           - "species": List of unique species names.
+           - "reactants": List of (coefficient, species, quantum level).
+           - "products": List of (coefficient, species, quantum level).
+           - "nb_reactants": Number of reactant terms.
+           - "nb_products": Number of product terms.
   :rtype: dict
   """
   # Equation name
@@ -83,18 +88,18 @@ def _get_side(
   min_i: int = 0
 ) -> tuple:
   """
-  Extract species and their details from a side of the equation
-  (reactants/products).
+  Parse one side (reactants or products) of the equation.
 
-  :param eq: The parsed chemical reaction object.
+  :param eq: Parsed reaction object from `pyvalem.reaction.Reaction`.
   :type eq: pvl_reac.Reaction
-  :param side: The side of the equation, either 'reactants' or 'products'.
+  :param side: "reactants" or "products".
   :type side: str
-  :param min_i: Minimum index for quantum levels (default is 0).
+  :param min_i: Minimum allowed quantum index (used to offset levels).
   :type min_i: int
-  :return: A tuple containing:
-           - A list of species as tuples (stoichiometric coeff, name, level).
-           - A list of species names.
+
+  :return: Tuple of:
+           - Parsed species list: List of (coefficient, species, quantum level)
+           - Raw species names (before deduplication)
   :rtype: tuple
   """
   species = []
