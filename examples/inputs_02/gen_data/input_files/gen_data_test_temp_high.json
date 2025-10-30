@@ -1,0 +1,61 @@
+{
+  "path_to_lib": "{{paths.library}}",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "{{paths.database}}/species/Ar.json",
+        "Arp": "{{paths.database}}/species/Arp.json",
+        "em": "{{paths.database}}/species/em.json"
+      },
+      "kin_dtb": "{{paths.database}}/rates/kin_fit.p",
+      "rad_dtb": "{{paths.database}}/rates/rad_fit.p",
+      "use_rad": true,
+      "use_factorial": true
+    }
+  },
+  "data": {
+    "grids": {
+      "t": {
+        "start": 1e-09,
+        "stop": 0.1,
+        "num": 500
+      }
+    },
+    "sampled": {
+      "limits": {
+        "rho": [
+          0.005,
+          0.1
+        ],
+        "Th": [
+          50000.0,
+          70000.0
+        ],
+        "Te": [
+          293.6,
+          293.6
+        ]
+      },
+      "nb_samples": 50,
+      "log_vars": [
+        "Te",
+        "rho"
+      ],
+      "eps": 1e-08,
+      "nb_workers": 10
+    }
+  },
+  "paths": {
+    "saving": "{{paths.saving}}/data/temp_high/"
+  }
+}

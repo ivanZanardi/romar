@@ -1,0 +1,8 @@
+{
+  "paths": {
+    "library": "/u/zanardi3/Codes/ML/ROMAr/romar/",
+    "saving": "/u/zanardi3/Workspace/cr_argon/roms/run02/",
+    "database": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/",
+    "mpl_style": "/u/zanardi3/scratch/Workspace/styles/matplotlib/paper_1column.mplstyle"
+  }
+}

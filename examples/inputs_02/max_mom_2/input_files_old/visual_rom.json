@@ -1,0 +1,89 @@
+{
+  "path_to_lib": "/u/zanardi3/Codes/ML/ROMAr/romar/",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Ar.json",
+        "Arp": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/Arp.json",
+        "em": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/species/em.json"
+      },
+      "kin_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/kin_fit.p",
+      "rad_dtb": "/u/zanardi3/Codes/ML/ROMAr/romar/examples/database/rates/rad_fit.p",
+      "use_rad": true,
+      "use_factorial": true
+    }
+  },
+  "models": {
+    "cobras": {
+      "active": true,
+      "name": "CoBRAS",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run01/max_mom_2/models/cobras/basis_varimax.p"
+    },
+    "pod": {
+      "active": true,
+      "name": "POD",
+      "basis": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run01/max_mom_2/models/pod/basis_varimax.p"
+    }
+  },
+  "paths": {
+    "saving": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run01/max_mom_2/"
+  },
+  "data": {
+    "cases": [
+      "lrho_lT",
+      "lrho_hT",
+      "hrho_lT",
+      "hrho_hT",
+      "mrho_mT"
+    ],
+    "path": "/u/zanardi3/scratch/Workspace/cr_argon/roms/runs/run01/data/test/",
+    "eps": 1e-8,
+    "tout": 0.0,
+    "tlim": [0.0]
+  },
+  "rom_range": [7,11],
+  "mpl_style": "/u/zanardi3/scratch/Workspace/styles/matplotlib/paper_1column.mplstyle",
+  "plot": {
+    "labels": {
+      "Th": "T_h",
+      "Te": "T_e",
+      "Ar": "\\text{Ar}",
+      "Arp": "\\text{Ar$^+$}",
+      "em": "\\text{e$^-$}"
+    },
+    "tlim": {
+      "lrho_lT": null,
+      "lrho_hT": null,
+      "hrho_lT": null,
+      "hrho_hT": null,
+      "mrho_mT": null
+    },
+    "teval": {
+      "lrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4],
+      "lrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4],
+      "hrho_lT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4],
+      "hrho_hT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4],
+      "mrho_mT": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4]
+    },
+    "ylim_err": null,
+    "err_scale": "log",
+    "hline": {
+      "temp": 1.0,
+      "mom": 1.0,
+      "dist": 10.0
+    },
+    "max_mom": 2,
+    "animate": false,
+    "markersize": 6
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "path_to_lib": "{{paths.library}}",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "{{paths.database}}/species/Ar.json",
+        "Arp": "{{paths.database}}/species/Arp.json",
+        "em": "{{paths.database}}/species/em.json"
+      },
+      "kin_dtb": "{{paths.database}}/rates/kin_fit.p",
+      "rad_dtb": "{{paths.database}}/rates/rad_fit.p",
+      "use_rad": true,
+      "use_factorial": true
+    },
+    "c_mat": {
+      "max_mom": 2
+    }
+  },
+  "scaling": {
+    "active": true,
+    "filename": "{{paths.saving}}/data/train/scalings.p",
+    "method": "pareto"
+  },
+  "models": {
+    "pod": {
+      "name": "POD",
+      "cov_mats": {
+        "compute": {
+          "irange": [
+            0,
+            320
+          ],
+          "use_quad_w": false,
+          "nb_workers": 15
+        },
+        "read": false,
+        "save": true,
+        "filename": "{{paths.saving}}/max_mom_2/models/pod/cov_mats.p"
+      },
+      "modes": {
+        "rotation": "varimax",
+        "xnot": [
+          0,
+          -2,
+          -1
+        ],
+        "rank": 50,
+        "niter": 50
+      }
+    },
+    "cobras": {
+      "name": "CoBRAS",
+      "cov_mats": {
+        "compute": {
+          "irange": [
+            0,
+            320
+          ],
+          "dt_log": 2.0,
+          "t0_perc": 0.1,
+          "rtol": 0.005,
+          "atol": 1e-06,
+          "tout": 30.0,
+          "nb_meas": 5,
+          "use_quad_w": false,
+          "nb_workers": 15
+        },
+        "read": false,
+        "save": true,
+        "filename": "{{paths.saving}}/max_mom_2/models/cobras/cov_mats.p"
+      },
+      "modes": {
+        "rotation": "varimax",
+        "xnot": [
+          0,
+          -2,
+          -1
+        ],
+        "max_y_norm": null,
+        "rank": 50,
+        "niter": 50
+      }
+    }
+  },
+  "paths": {
+    "data": "{{paths.saving}}/data/train/",
+    "saving": "{{paths.saving}}/max_mom_2/"
+  }
+}

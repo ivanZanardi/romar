@@ -1,0 +1,61 @@
+{
+  "path_to_lib": "{{paths.library}}",
+  "env": {
+    "backend": "numpy",
+    "device": "cpu",
+    "device_idx": 0,
+    "nb_threads": 4,
+    "epsilon": null,
+    "floatx": "float64",
+    "seed": 0
+  },
+  "system": {
+    "name": "BoxAd",
+    "init": {
+      "species": {
+        "Ar": "{{paths.database}}/species/Ar.json",
+        "Arp": "{{paths.database}}/species/Arp.json",
+        "em": "{{paths.database}}/species/em.json"
+      },
+      "kin_dtb": "{{paths.database}}/rates/kin_fit.p",
+      "rad_dtb": "{{paths.database}}/rates/rad_fit.p",
+      "use_rad": true,
+      "use_factorial": true
+    }
+  },
+  "data": {
+    "grids": {
+      "t": {
+        "start": 1e-10,
+        "stop": 0.01,
+        "num": 51
+      },
+      "mu": {
+        "rho": {
+          "start": 0.005,
+          "stop": 0.1,
+          "num": 5
+        },
+        "Th": {
+          "start": 20000.0,
+          "stop": 50000.0,
+          "num": 21
+        },
+        "Te": {
+          "start": 293.6,
+          "stop": 293.6,
+          "num": 1
+        }
+      }
+    },
+    "generate": {
+      "noise": true,
+      "sigma": 0.1,
+      "fix_tmin": false,
+      "nb_workers": 10
+    }
+  },
+  "paths": {
+    "saving": "{{paths.saving}}/data/"
+  }
+}
