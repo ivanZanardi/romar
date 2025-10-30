@@ -1,6 +1,6 @@
 # ROMAr
 
-**Reduced order modeling for Argon plasma**
+**Reduced Order Modeling for Argon plasma**
 
 ---
 
