@@ -32,11 +32,12 @@ Each `./inputs/<stage>/allrun.sh` script is the main driver for that stage of th
 
 ### Running the Pipeline
 
-You can either run the full pipeline with **SLURM** using `jobscript.sh`, or execute each stage manually on a local machine.
+You can either run the full pipeline with **SLURM** using `./inputs/jobscript.sh`, or execute each stage manually on a local machine.
 
 **Option 1: Run with SLURM (HPC)**
 
 ```bash
+cd ./inputs/
 sbatch jobscript.sh
 ```
 
