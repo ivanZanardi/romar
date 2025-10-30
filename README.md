@@ -57,6 +57,7 @@ If you use this code or find this work useful in your research, please cite us:
 ## Explore
 
 Check out the [examples](https://github.com/ivanZanardi/romar/tree/main/examples) provided in the repository to see ROMAr in action.
+These examples reproduce the results presented in the original paper.
 
 ## License
 
