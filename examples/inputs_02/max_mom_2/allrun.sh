@@ -1,34 +1,92 @@
 #!/bin/bash -i
+set -euo pipefail
 
-# Set paths
-path_to_scripts=/u/zanardi3/Codes/ML/ROMAr/romar/scripts/
-path_to_saving=/u/zanardi3/Workspace/cr_argon/roms/run02/
+# -----------------------------------------------------------------------------
+# Script purpose:
+#   Automates the end-to-end Reduced-Order Model (ROM) pipeline:
+#     - Generates input configuration files
+#     - Builds the reduced-order model (ROM)
+#     - Evaluates ROM accuracy under multiple test scenarios
+#     - Visualizes results
+#
+# Requirements:
+#   - jq:           For parsing JSON configuration
+#   - conda:        Must be initialized via `conda init`
+#   - Python:       Environment must contain all ROMAr dependencies
+# -----------------------------------------------------------------------------
 
-# Load Conda environment
-source /sw/apps/anaconda3/2024.10/bin/activate
-conda activate sciml
+# --------------------------
+# USER CONFIGURATION
+# --------------------------
+# Modify only the two lines below:
+#
+#   1. paths_file → Path to your custom paths.json
+#   2. conda_env  → Name of the conda environment with required packages
+#
+# Your paths.json must define the following keys:
+#   - paths.saving     → Base directory for saving results
+#   - paths.library    → Absolute path to the ROMAr codebase
+#   - paths.anaconda   → Path to Anaconda installation
+# --------------------------
 
-# Run scripts
-echo -e "\nRunning 'gen_input_files' script ..."
-python -u $path_to_scripts/gen_input_files.py --inpfile ./../paths.json
+conda_env="sciml"
+paths_file="./../paths.json"
 
-echo -e "\nRunning 'build_rom' script ..."
-python -u $path_to_scripts/build_rom.py --inpfile $path_to_saving/inputs/build_rom.json
+# --------------------------
+# Validate Environment
+# --------------------------
+if ! command -v jq &> /dev/null; then
+  echo " Error: 'jq' is not installed. Install it with:"
+  echo " > sudo apt install jq     # or"
+  echo " > brew install jq         # on macOS"
+  exit 1
+fi
 
-# echo -e "\nRunning 'eval_rom_acc' script ..."
-# python -u $path_to_scripts/eval_rom_acc.py --inpfile $path_to_saving/inputs/eval_rom_acc.json
+if [[ ! -f "$paths_file" ]]; then
+  echo "Error: paths.json not found at $paths_file"
+  exit 1
+fi
 
-# echo -e "\nRunning 'eval_rom_acc' script (high temperatures) ..."
-# python -u $path_to_scripts/eval_rom_acc.py --inpfile $path_to_saving/inputs/eval_rom_acc_temp_high.json
+# --------------------------
+# Load Paths from JSON
+# --------------------------
+path_to_inputs="$(jq -r '.paths.saving' "$paths_file")/inputs"
+path_to_scripts="$(jq -r '.paths.library' "$paths_file")/scripts"
 
-# echo -e "\nRunning 'eval_rom_acc' script (low temperatures) ..."
-# python -u $path_to_scripts/eval_rom_acc.py --inpfile $path_to_saving/inputs/eval_rom_acc_temp_low.json
+# --------------------------
+# Activate Conda
+# --------------------------
+source "$(jq -r '.paths.anaconda' "$paths_file")/bin/activate"
+conda activate $conda_env
 
-# echo -e "\nRunning 'visual_rom' script ..."
-# python -u $path_to_scripts/visual_rom.py --inpfile $path_to_saving/inputs/visual_rom.json
+# --------------------------
+# Run Workflow
+# --------------------------
+echo -e "\n[1/6] Generating input files ..."
+python -u "$path_to_scripts/gen_input_files.py" --inpfile "$paths_file"
 
-# # Remove generated inputs
-# rm -rf $path_to_saving/inputs/
+echo -e "\n[2/6] Building Reduced-Order Model (ROM) ..."
+python -u "$path_to_scripts/build_rom.py" --inpfile "$path_to_inputs/build_rom.json"
 
-# Purge Conda environment
+echo -e "\n[3/6] Evaluating ROM Accuracy ..."
+python -u "$path_to_scripts/eval_rom_acc.py" --inpfile "$path_to_inputs/eval_rom_acc.json"
+
+echo -e "\n[4/6] Evaluating ROM Accuracy (high temperatures) ..."
+python -u "$path_to_scripts/eval_rom_acc.py" --inpfile "$path_to_inputs/eval_rom_acc_temp_high.json"
+
+echo -e "\n[5/6] Evaluating ROM Accuracy (low temperatures) ..."
+python -u "$path_to_scripts/eval_rom_acc.py" --inpfile "$path_to_inputs/eval_rom_acc_temp_low.json"
+
+echo -e "\n[6/6] Visualizing ROM Results ..."
+python -u "$path_to_scripts/visual_rom.py" --inpfile "$path_to_inputs/visual_rom.json"
+
+# --------------------------
+# Cleanup
+# --------------------------
+echo -e "\nCleaning up generated input files ..."
+rm -rf "$path_to_inputs"
+
+# --------------------------
+# Deactivate Conda
+# --------------------------
 conda deactivate

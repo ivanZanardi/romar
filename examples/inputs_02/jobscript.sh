@@ -15,9 +15,9 @@
 ##SBATCH --mail-user=zanardi3@illinois.edu
 ##SBATCH --mail-type=BEGIN,END
 
-# cd gen_data
-# bash allrun.sh
-# cd ../
+cd gen_data
+bash allrun.sh
+cd ../
 
 cd max_mom_2
 bash allrun.sh
