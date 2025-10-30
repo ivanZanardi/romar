@@ -330,7 +330,14 @@ class Basic(object):
     t, y0, rho, y_fom = [icase[k] for k in ("t", "y0", "rho", "y")]
     # Time window
     if (tlim is not None):
-      i = (t >= np.amin(tlim)) * (t <= np.amax(tlim))
+      tlim = np.sort(np.asarray(tlim).reshape(-1))
+      if (len(tlim) != 2):
+        raise ValueError(
+          "`tlim` must contain exactly two elements: [t_min, t_max]."
+        )
+      # Create boolean mask for the time window
+      i = (t >= tlim[0]) & (t <= tlim[1])
+      # Apply mask
       t = t[i]
       y_fom = y_fom[:,i]
     # Solve ROM
