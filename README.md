@@ -68,3 +68,5 @@ ROMAr is distributed under the [MIT License](https://github.com/ivanZanardi/roma
 1. Kapper, M. G., Cambier, J.-L. (2011). *Ionizing shocks in argon. Part I: Collisional-radiative model and steady-state structure*. Journal of Applied Physics, **109**(11), 113308. https://doi.org/10.1063/1.3585688
 
 2. Otto, S. E., Padovan, A., Rowley, C. W. (2023). *Model reduction for nonlinear systems by balanced truncation of state and gradient covariance*. SIAM Journal on Scientific Computing, **45**(5), A2325–A2355. https://doi.org/10.1137/22M1513228
+
+3. Zanardi, I., Padovan, A., Bodony, D. J., Panesi, M. (2025). *Petrov-Galerkin model reduction for thermochemical nonequilibrium gas mixtures*. Journal of Computational Physics, **533**, 113999. https://doi.org/10.1016/J.JCP.2025.113999
