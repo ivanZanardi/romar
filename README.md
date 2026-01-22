@@ -41,16 +41,19 @@ conda activate romar
 If you use this code or find this work useful in your research, please cite us:
 
 ```bibtex
-@misc{Zanardi_ROMAr_2025,
-  title={Petrov-Galerkin model reduction for collisional-radiative argon plasma},
-  author={Ivan Zanardi and Alessandro Meini and Alberto Padovan and Daniel J. Bodony and Marco Panesi},
-  month={06},
-  year={2025},
-  eprint={2506.05483},
-  archivePrefix={arXiv},
-  primaryClass={physics.comp-ph},
-  url={https://arxiv.org/abs/2506.05483},
-  doi={10.48550/arXiv.2506.05483}
+@article{Zanardi_ROMAr_2026,
+    author = {Zanardi, Ivan and Meini, Alessandro and Padovan, Alberto and Bodony, Daniel J. and Panesi, Marco},
+    title = {Petrov–Galerkin model reduction for collisional–radiative argon plasma},
+    journal = {Physics of Plasmas},
+    volume = {33},
+    number = {1},
+    pages = {013905},
+    year = {2026},
+    month = {01},
+    issn = {1070-664X},
+    doi = {10.1063/5.0306085},
+    url = {https://doi.org/10.1063/5.0306085},
+    eprint = {https://pubs.aip.org/aip/pop/article-pdf/doi/10.1063/5.0306085/20875731/013905_1_5.0306085.pdf}
 }
 ```
 
